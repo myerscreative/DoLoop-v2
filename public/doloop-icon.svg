@@ -1,0 +1,17 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- First Arrow (top-right, going clockwise) -->
+  <path d="M 30 10 A 14 14 0 0 1 38 18 L 35 18 L 38 22 L 41 18 L 38 18 A 14 14 0 0 0 30 10 Z" fill="#FFB800"/>
+  
+  <!-- Second Arrow (bottom, going clockwise) -->
+  <path d="M 18 38 A 14 14 0 0 1 10 30 L 10 33 L 6 30 L 10 27 L 10 30 A 14 14 0 0 0 18 38 Z" fill="#FFB800"/>
+  
+  <!-- Third Arrow (left-top, going clockwise) -->
+  <path d="M 10 18 A 14 14 0 0 1 18 10 L 18 13 L 22 10 L 18 7 L 18 10 A 14 14 0 0 0 10 18 Z" fill="#FFB800"/>
+  
+  <!-- Plus Sign - Vertical Bar -->
+  <rect x="22" y="16" width="4" height="16" rx="1" fill="#000000"/>
+  
+  <!-- Plus Sign - Horizontal Bar -->
+  <rect x="16" y="22" width="16" height="4" rx="1" fill="#000000"/>
+</svg>
+
