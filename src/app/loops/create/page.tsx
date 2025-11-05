@@ -54,25 +54,15 @@ export default function CreateLoopWelcomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
         onClick={handleContinue}
-        className="w-20 h-20 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow relative"
+        className="w-20 h-20 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
       >
         <Image
-          src="/arrow-circle.svg"
-          alt="Loop"
+          src="/arrow-circle-plus-complete.svg"
+          alt="Create Loop"
           width={50}
           height={50}
-          className="brightness-0 absolute"
+          className="brightness-0"
         />
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="absolute"
-        >
-          <path d="M 12 6 L 12 18 M 6 12 L 18 12" stroke="black" strokeWidth="3" strokeLinecap="round" />
-        </svg>
       </motion.button>
     </div>
   );
