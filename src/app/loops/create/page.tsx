@@ -18,14 +18,17 @@ export default function CreateLoopWelcomePage() {
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.5, type: 'spring' }}
-        className="mb-8 flex justify-center"
+        className="mb-8 flex justify-center items-center w-full"
       >
-        <Image
-          src="/doloop-bee.svg"
-          alt="DoLoop Bee"
-          width={200}
-          height={200}
-        />
+        <div className="flex justify-center items-center">
+          <Image
+            src="/doloop-bee.svg"
+            alt="DoLoop Bee"
+            width={200}
+            height={200}
+            style={{ display: 'block', margin: '0 auto' }}
+          />
+        </div>
       </motion.div>
 
       {/* Title */}
