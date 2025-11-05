@@ -54,34 +54,24 @@ export default function CreateLoopWelcomePage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
         onClick={handleContinue}
-        className="w-20 h-20 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
+        className="w-20 h-20 rounded-full bg-yellow-500 flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow relative"
       >
+        <Image
+          src="/arrow-circle.svg"
+          alt="Loop"
+          width={50}
+          height={50}
+          className="brightness-0 absolute"
+        />
         <svg
-          width="48"
-          height="48"
-          viewBox="0 0 100 100"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          className="absolute"
         >
-          {/* Three circular arrows - evenly spaced */}
-          {/* Top arrow */}
-          <path
-            d="M 50 15 A 25 25 0 0 1 68 32 L 62 35 L 70 40 L 73 29 L 67 32 A 30 30 0 0 0 50 10 Z"
-            fill="black"
-          />
-          {/* Bottom right arrow */}
-          <path
-            d="M 71.65 61 A 25 25 0 0 1 46.34 83.66 L 44.5 77.5 L 38 84 L 48.5 87.5 L 46.65 81.34 A 30 30 0 0 0 76.65 56 Z"
-            fill="black"
-          />
-          {/* Bottom left arrow */}
-          <path
-            d="M 28.35 61 A 25 25 0 0 1 50 15 L 50 10 A 30 30 0 0 0 23.35 56 L 20 50 L 15 60 L 25.35 62 Z"
-            fill="black"
-          />
-          {/* Plus sign in center */}
-          <rect x="47" y="35" width="6" height="30" fill="black"/>
-          <rect x="35" y="47" width="30" height="6" fill="black"/>
+          <path d="M 12 6 L 12 18 M 6 12 L 18 12" stroke="black" strokeWidth="3" strokeLinecap="round" />
         </svg>
       </motion.button>
     </div>
