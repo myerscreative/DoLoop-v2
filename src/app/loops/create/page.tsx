@@ -21,7 +21,7 @@ export default function CreateLoopWelcomePage() {
         className="mb-8 flex justify-center items-center w-full"
         style={{ border: '2px solid red' }}
       >
-        <div className="flex justify-center items-center" style={{ transform: 'translateX(60px)', border: '2px solid blue' }}>
+        <div className="flex justify-center items-center" style={{ border: '2px solid blue' }}>
           <Image
             src="/doloop-bee.svg"
             alt="DoLoop Bee"
