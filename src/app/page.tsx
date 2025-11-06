@@ -6,6 +6,7 @@ import LoopCard from '@/components/loops/LoopCard';
 import { LoopType, Loop, LOOP_LIBRARY_COLORS } from '@/types/loop';
 import { motion } from 'framer-motion';
 import { getAllLoops, deleteLoop, addLoop } from '@/lib/loopStorage';
+import { supabase, getCurrentUser } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
 import SearchBar from '@/components/ui/SearchBar';
@@ -127,34 +128,37 @@ export default function Home() {
     { id: '3', name: 'Camping Trip', color: '#34D399', icon: '🏕️', tasks: ['Pack tent', 'Fill water', 'Check stove'], autoReloop: 'manual' },
   ];
 
-  const handleTryLoop = (template) => {
-    const newId = Date.now().toString();
-    const newLoop = {
-      id: newId,
-      title: template.name,
-      type: template.autoReloop === 'daily' ? 'daily' : 'personal',
-      status: 'active',
-      totalTasks: template.tasks.length,
-      completedTasks: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      currentStreak: 0,
-      longestStreak: 0,
-      completionHistory: [],
-      isFavorite: false,
+const handleTryLoop = async (template) => {
+  const user = await getCurrentUser();
+  if (!user) {
+    showToast('Please log in to create loops', 'error');
+    return;
+  }
+
+  const { data: loop } = await supabase
+    .from('loops')
+    .insert({
+      name: template.name,
+      owner_id: user.id,
       color: template.color,
-      items: template.tasks.map((title, order) => ({
-        id: `${newId}-${order}`,
-        title,
-        completed: false,
-        order,
-      })),
-    };
-    addLoop(newLoop);
-    showToast(`Created "${template.name}" from template`, 'success');
-    loadLoops();
-    router.push(`/loops/${newId}`);
-  };
+      reset_rule: template.autoReloop,
+    })
+    .select()
+    .single();
+
+  await supabase.from('tasks').insert(
+    template.tasks.map((t, i) => ({
+      loop_id: loop.id,
+      description: t,
+      order: i,
+      is_recurring: true,
+    }))
+  );
+
+  showToast(`Created "${template.name}" from template`, 'success');
+  loadLoops();
+  router.push(`/loops/${loop.id}`);
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
