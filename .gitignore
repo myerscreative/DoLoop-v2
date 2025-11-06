@@ -39,3 +39,28 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.aab
+*.apk
+
+# Native build folders
+/ios
+/android
+
+# Metro
+.metro-health-check*
+
+# CocoaPods
+/ios/Pods/

@@ -1,0 +1,426 @@
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  RefreshControl,
+} from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+import { RootStackParamList } from '../../App';
+
+import { useTheme } from '../contexts/ThemeContext';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { Task, LoopWithTasks } from '../types/loop';
+import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
+import { FAB } from '../components/native/FAB';
+
+type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
+type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
+
+export const LoopDetailScreen: React.FC = () => {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const navigation = useNavigation<LoopDetailScreenNavigationProp>();
+  const route = useRoute<LoopDetailScreenRouteProp>();
+  const { loopId } = route.params;
+
+  const [loopData, setLoopData] = useState<LoopWithTasks | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [showResetMenu, setShowResetMenu] = useState(false);
+
+  useEffect(() => {
+    loadLoopData();
+  }, [loopId]);
+
+  const loadLoopData = async () => {
+    try {
+      const { data: loop, error: loopError } = await supabase
+        .from('loops')
+        .select('*')
+        .eq('id', loopId)
+        .single();
+
+      if (loopError) throw loopError;
+
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('loop_id', loopId)
+        .order('created_at', { ascending: true });
+
+      if (tasksError) throw tasksError;
+
+      const { data: streak, error: streakError } = await supabase
+        .from('user_streaks')
+        .select('current_streak')
+        .eq('user_id', user?.id)
+        .eq('loop_id', loopId)
+        .single();
+
+      const completedCount = tasks?.filter(task => task.status === 'done' && task.is_recurring).length || 0;
+      const totalCount = tasks?.filter(task => task.is_recurring).length || 0;
+
+      setLoopData({
+        ...loop,
+        tasks: tasks || [],
+        completedCount,
+        totalCount,
+        streak: streak?.current_streak || 0,
+      });
+    } catch (error) {
+      console.error('Error loading loop data:', error);
+      Alert.alert('Error', 'Failed to load loop data');
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadLoopData();
+    setRefreshing(false);
+  };
+
+  const toggleTask = async (task: Task) => {
+    try {
+      const newStatus = task.status === 'done' ? 'pending' : 'done';
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', task.id);
+
+      if (error) throw error;
+
+      // Haptic feedback
+      if (newStatus === 'done') {
+        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      // Handle one-time tasks
+      if (task.is_one_time && newStatus === 'done') {
+        // Archive the task
+        await supabase.from('archived_tasks').insert({
+          original_task_id: task.id,
+          loop_id: task.loop_id,
+          description: task.description,
+          completed_at: new Date().toISOString(),
+        });
+
+        // Remove from tasks
+        await supabase.from('tasks').delete().eq('id', task.id);
+      }
+
+      // Update streak if this is a recurring task completion
+      if (task.is_recurring && newStatus === 'done') {
+        await supabase.rpc('update_user_streak', {
+          p_user_id: user?.id,
+          p_loop_id: loopId,
+        });
+      }
+
+      await loadLoopData();
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      Alert.alert('Error', 'Failed to update task');
+    }
+  };
+
+  const handleAddTask = async (description: string, isOneTime: boolean) => {
+    try {
+      const { error } = await supabase.from('tasks').insert({
+        loop_id: loopId,
+        description,
+        is_recurring: !isOneTime,
+        is_one_time: isOneTime,
+        status: 'pending',
+        assigned_user_id: user?.id,
+      });
+
+      if (error) throw error;
+
+      await loadLoopData();
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
+  };
+
+  const handleReloop = async () => {
+    if (showResetMenu) {
+      // Manual reset override
+      await resetLoop();
+    } else {
+      // Regular reloop - reset if scheduled
+      const now = new Date();
+      const nextReset = new Date(loopData?.next_reset_at || '');
+
+      if (loopData?.reset_rule === 'manual' || now >= nextReset) {
+        await resetLoop();
+      } else {
+        Alert.alert(
+          'Not yet',
+          `This loop resets ${loopData.reset_rule} at ${nextReset.toLocaleTimeString()}`
+        );
+      }
+    }
+  };
+
+  const resetLoop = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      const { error } = await supabase
+        .from('tasks')
+        .update({
+          status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('loop_id', loopId)
+        .eq('is_recurring', true);
+
+      if (error) throw error;
+
+      // Update next reset time if scheduled
+      if (loopData?.reset_rule !== 'manual') {
+        let nextResetAt: string;
+        if (loopData.reset_rule === 'daily') {
+          nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        } else { // weekly
+          nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        }
+
+        await supabase
+          .from('loops')
+          .update({ next_reset_at: nextResetAt })
+          .eq('id', loopId);
+      }
+
+      await loadLoopData();
+      setShowResetMenu(false);
+    } catch (error) {
+      console.error('Error resetting loop:', error);
+      Alert.alert('Error', 'Failed to reset loop');
+    }
+  };
+
+  const longPressReloop = () => {
+    setShowResetMenu(true);
+    // Auto-hide after a delay
+    setTimeout(() => setShowResetMenu(false), 3000);
+  };
+
+  if (!loopData) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: colors.text }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const progress = loopData.totalCount > 0 ? (loopData.completedCount / loopData.totalCount) * 100 : 0;
+  const recurringTasks = loopData.tasks.filter(task => task.is_recurring);
+  const oneTimeTasks = loopData.tasks.filter(task => !task.is_recurring);
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {/* Header with Progress Ring */}
+        <View style={{
+          alignItems: 'center',
+          paddingVertical: 40,
+          paddingHorizontal: 20,
+        }}>
+          <AnimatedCircularProgress
+            size={120}
+            width={12}
+            fill={progress}
+            tintColor={loopData.color}
+            backgroundColor={colors.border}
+          >
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: colors.text,
+              textAlign: 'center',
+            }}>
+              {loopData.name}
+              {loopData.is_favorite && ' ⭐'}
+            </Text>
+          </AnimatedCircularProgress>
+
+          {loopData.streak > 0 && (
+            <Text style={{
+              fontSize: 16,
+              color: '#FFE066',
+              fontWeight: 'bold',
+              marginTop: 8,
+            }}>
+              🔥 {loopData.streak} day streak
+            </Text>
+          )}
+        </View>
+
+        {/* Recurring Tasks */}
+        {recurringTasks.length > 0 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: colors.text,
+              marginBottom: 12,
+            }}>
+              Tasks ({loopData.completedCount}/{loopData.totalCount})
+            </Text>
+
+            {recurringTasks.map((task) => (
+              <TouchableOpacity
+                key={task.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  padding: 16,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                }}
+                onPress={() => toggleTask(task)}
+              >
+                <View style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: task.status === 'done' ? colors.primary : colors.border,
+                  backgroundColor: task.status === 'done' ? colors.primary : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}>
+                  {task.status === 'done' && (
+                    <Text style={{ color: 'white', fontSize: 14 }}>✓</Text>
+                  )}
+                </View>
+
+                <Text style={{
+                  flex: 1,
+                  fontSize: 16,
+                  color: colors.text,
+                  textDecorationLine: task.status === 'done' ? 'line-through' : 'none',
+                  opacity: task.status === 'done' ? 0.6 : 1,
+                }}>
+                  {task.description}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* One-time Tasks */}
+        {oneTimeTasks.length > 0 && (
+          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: colors.text,
+              marginBottom: 12,
+            }}>
+              One-time Tasks
+            </Text>
+
+            {oneTimeTasks.map((task) => (
+              <TouchableOpacity
+                key={task.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surface,
+                  padding: 16,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  opacity: 0.8,
+                }}
+                onPress={() => toggleTask(task)}
+              >
+                <View style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 12,
+                  borderWidth: 2,
+                  borderColor: task.status === 'done' ? colors.primary : colors.border,
+                  backgroundColor: task.status === 'done' ? colors.primary : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                }}>
+                  {task.status === 'done' && (
+                    <Text style={{ color: 'white', fontSize: 14 }}>✓</Text>
+                  )}
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    color: colors.text,
+                    textDecorationLine: task.status === 'done' ? 'line-through' : 'none',
+                    opacity: task.status === 'done' ? 0.6 : 1,
+                  }}>
+                    {task.description}
+                  </Text>
+                  <Text style={{
+                    fontSize: 12,
+                    color: colors.textSecondary,
+                    marginTop: 4,
+                  }}>
+                    Expires after check
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Reloop Button */}
+      <View style={{
+        position: 'absolute',
+        bottom: 100,
+        left: 20,
+        right: 20,
+      }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: showResetMenu ? colors.error : colors.primary,
+            paddingVertical: 12,
+            paddingHorizontal: 24,
+            borderRadius: 25,
+            alignItems: 'center',
+          }}
+          onPress={handleReloop}
+          onLongPress={longPressReloop}
+          delayLongPress={500}
+        >
+          <Text style={{
+            color: 'white',
+            fontSize: 16,
+            fontWeight: 'bold',
+          }}>
+            {showResetMenu ? 'Reset Now' : 'Reloop'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* FAB */}
+      <FAB onAddTask={handleAddTask} />
+    </SafeAreaView>
+  );
+};
