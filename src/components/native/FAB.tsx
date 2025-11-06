@@ -142,14 +142,14 @@ export const FAB: React.FC<FABProps> = ({
                   fontSize: 16,
                   color: colors.text,
                   marginBottom: 16,
-                  minHeight: 80,
-                  textAlignVertical: 'top',
                 }}
                 placeholder="Enter task description..."
                 placeholderTextColor={colors.textSecondary}
                 value={description}
                 onChangeText={setDescription}
-                multiline
+                onSubmitEditing={handleSubmit}
+                returnKeyType="done"
+                blurOnSubmit={false}
                 autoFocus
               />
 
