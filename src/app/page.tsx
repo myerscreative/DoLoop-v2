@@ -12,7 +12,7 @@ import { useToast } from '@/lib/useToast';
 export default function Home() {
   const router = useRouter();
   const pathname = usePathname();
-  const [allLoops, setAllLoops] = useState([]);
+  const [allLoops, setAllLoops] = useState<Loop[]>([]);
   const { toast, showToast, hideToast } = useToast();
   const carouselRef = useRef(null);
 
