@@ -139,36 +139,36 @@ export default function Home() {
       {/* Search + CTA */}
       <div className="flex items-center px-5 mb-6">
         <div className="flex-1 mr-3">
-          <div className="bg-white rounded-xl px-4 py-3 text-gray-700">
+          <div className="bg-white rounded-xl px-4 py-3 text-gray-500">
             🔍 Search loops and tasks...
           </div>
         </div>
         <button
           onClick={() => router.push('/loops/create')}
-          className="bg-yellow-400 px-5 py-3 rounded-xl"
+          className="bg-yellow-400 hover:bg-yellow-500 px-5 py-3 rounded-xl transition-colors"
         >
           <span className="text-black font-semibold">+ Create a new Loop</span>
         </button>
       </div>
 
       {/* Greeting */}
-      <div className="px-5 mb-6">
-        <h1 className="text-2xl font-bold">Good Morning, Robert! 👋</h1>
+      <div className="px-5 mb-6 text-center">
+        <h1 className="text-2xl font-bold text-gray-900">Good Morning, Robert! 👋</h1>
         <p className="text-gray-600 mt-1">Today, {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
       </div>
 
       {/* All Loops Title */}
-      <h2 className="px-5 font-bold text-lg mb-4">All Loops</h2>
+      <h2 className="px-5 font-bold text-lg mb-4 text-center text-gray-900">All Loops</h2>
 
       {/* Template Prompt */}
-      <div className="px-5 mb-4">
-        <p className="text-center text-gray-700">Ready to loop your day? Pick a starter:</p>
+      <div className="px-5 mb-6">
+        <p className="text-center text-gray-600">Ready to loop your day? Pick a starter:</p>
       </div>
 
       {/* Horizontal Carousel */}
       <div
         ref={carouselRef}
-        className="flex overflow-x-auto snap-x snap-mandatory pb-4 px-5"
+        className="flex overflow-x-auto snap-x snap-mandatory pb-4 px-5 justify-center"
         style={{ scrollSnapType: 'x mandatory' }}
       >
         {templateLoops.map((item, index) => (
@@ -177,31 +177,33 @@ export default function Home() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: index * 0.1, duration: 0.3 }}
-            className="mr-4 flex-shrink-0"
+            className="mr-4 flex-shrink-0 snap-center"
           >
             <button
               onClick={() => handleTryLoop(item)}
-              className="w-[300px] bg-white rounded-3xl p-5 shadow-lg hover:shadow-xl transition-shadow text-left"
+              className="w-[300px] bg-white rounded-3xl p-5 shadow-lg hover:shadow-xl transition-shadow"
             >
-              <div className="flex items-center mb-3">
+              <div className="flex items-center justify-center mb-3">
                 <span className="text-3xl mr-2">{item.icon}</span>
-                <span className="font-bold text-lg">{item.name}</span>
+                <span className="font-bold text-lg text-gray-900">{item.name}</span>
               </div>
 
-              {item.tasks.map((task, i) => (
-                <div key={i} className="flex items-center my-1">
-                  <div className="w-5 h-5 rounded-full border-2 border-gray-300 mr-3" />
-                  <span className="text-gray-700">{task}</span>
-                </div>
-              ))}
+              <div className="space-y-2 mb-4">
+                {item.tasks.map((task, i) => (
+                  <div key={i} className="flex items-center">
+                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 mr-3 flex-shrink-0" />
+                    <span className="text-gray-700 text-sm">{task}</span>
+                  </div>
+                ))}
+              </div>
 
               <div className="mt-4 h-2 bg-gray-200 rounded-full overflow-hidden">
                 <div style={{ width: `${item.progress}%`, backgroundColor: item.color }} className="h-full rounded-full" />
               </div>
 
-              <div className="mt-3 h-10 bg-purple-600 rounded-full flex justify-center items-center">
-                <span className="text-white text-center font-semibold">Try This Loop</span>
-              </div>
+              <button className="w-full mt-3 py-2.5 bg-purple-600 hover:bg-purple-700 rounded-full transition-colors">
+                <span className="text-white font-semibold">Try This Loop</span>
+              </button>
             </button>
           </motion.div>
         ))}
