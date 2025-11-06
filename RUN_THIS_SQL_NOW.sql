@@ -102,8 +102,16 @@ ALTER TABLE tasks ALTER COLUMN completed SET NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 CREATE INDEX IF NOT EXISTS idx_tasks_is_one_time ON tasks(is_one_time);
 
+-- ============== MIGRATION 3: Add Notes Column ==============
+
+-- Add notes column to tasks
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Add index for searching notes (optional but useful)
+CREATE INDEX IF NOT EXISTS idx_tasks_notes ON tasks(notes) WHERE notes IS NOT NULL;
+
 -- =====================================================
 -- DONE! Now test by running:
--- SELECT id, description, status, completed FROM tasks LIMIT 5;
+-- SELECT id, description, notes, status, completed FROM tasks LIMIT 5;
 -- =====================================================
 
