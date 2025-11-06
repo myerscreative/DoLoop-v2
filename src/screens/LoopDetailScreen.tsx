@@ -316,6 +316,35 @@ export const LoopDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Back Button */}
+      <View style={{
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+      }}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 8,
+            marginLeft: -8,
+          }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={{
+            fontSize: 28,
+            color: colors.primary,
+            lineHeight: 28,
+          }}>‹</Text>
+          <Text style={{
+            fontSize: 17,
+            color: colors.primary,
+            marginLeft: 4,
+            fontWeight: '500',
+          }}>Back</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView
         style={{ flex: 1 }}
         refreshControl={
@@ -325,7 +354,7 @@ export const LoopDetailScreen: React.FC = () => {
         {/* Header with Progress Ring */}
         <View style={{
           alignItems: 'center',
-          paddingVertical: 40,
+          paddingVertical: 20,
           paddingHorizontal: 20,
         }}>
           <AnimatedCircularProgress
