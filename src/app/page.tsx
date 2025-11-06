@@ -164,172 +164,178 @@ export default function Home() {
       <div className="flex">
         {/* Left Sidebar */}
         <aside className="w-80 bg-white border-r border-gray-200 min-h-screen p-6">
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">My Lists</h2>
-              <button
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M 8 4 L 8 8 L 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M 16 4 L 16 8 L 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </button>
-            </div>
-
-            {/* Navigation Items */}
-            <div className="space-y-1">
-              <button
-                onClick={() => setFilter('all')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                  filter === 'all' ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-600">
-                    <path d="M 3 9 L 12 3 L 21 9 L 21 20 L 15 20 L 15 14 L 9 14 L 9 20 L 3 20 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="text-gray-700 font-medium">All Lists</span>
+          {allLoops.length > 0 && (
+            <>
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900">My Lists</h2>
+                  <button
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path d="M 8 4 L 8 8 L 4 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M 16 4 L 16 8 L 20 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
                 </div>
-                <span className="text-gray-500 text-sm">{allLoops.length}</span>
-              </button>
 
-              <button
-                onClick={() => setFilter('favorites')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                  filter === 'favorites' ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400">
-                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                  </svg>
-                  <span className="text-gray-700 font-medium">Favorites</span>
+                {/* Navigation Items */}
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setFilter('all')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      filter === 'all' ? 'bg-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="text-gray-600">
+                        <path d="M 3 9 L 12 3 L 21 9 L 21 20 L 15 20 L 15 14 L 9 14 L 9 20 L 3 20 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                      </svg>
+                      <span className="text-gray-700 font-medium">All Lists</span>
+                    </div>
+                    <span className="text-gray-500 text-sm">{allLoops.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setFilter('favorites')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      filter === 'favorites' ? 'bg-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="text-yellow-400">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                      <span className="text-gray-700 font-medium">Favorites</span>
+                    </div>
+                    <span className="text-gray-500 text-sm">{favoriteLoops.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setFilter('personal')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      filter === 'personal' ? 'bg-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded border-2 border-purple-500"></div>
+                      <span className="text-gray-700 font-medium">Personal</span>
+                    </div>
+                    <span className="text-gray-500 text-sm">{personalLoops.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setFilter('work')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      filter === 'work' ? 'bg-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded border-2 border-blue-500"></div>
+                      <span className="text-gray-700 font-medium">Work</span>
+                    </div>
+                    <span className="text-gray-500 text-sm">{workLoops.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => setFilter('daily')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
+                      filter === 'daily' ? 'bg-gray-100' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded border-2 border-orange-500"></div>
+                      <span className="text-gray-700 font-medium">Daily</span>
+                    </div>
+                    <span className="text-gray-500 text-sm">{dailyLoops.length}</span>
+                  </button>
                 </div>
-                <span className="text-gray-500 text-sm">{favoriteLoops.length}</span>
-              </button>
 
-              <button
-                onClick={() => setFilter('personal')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                  filter === 'personal' ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-purple-500"></div>
-                  <span className="text-gray-700 font-medium">Personal</span>
-                </div>
-                <span className="text-gray-500 text-sm">{personalLoops.length}</span>
-              </button>
-
-              <button
-                onClick={() => setFilter('work')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                  filter === 'work' ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-blue-500"></div>
-                  <span className="text-gray-700 font-medium">Work</span>
-                </div>
-                <span className="text-gray-500 text-sm">{workLoops.length}</span>
-              </button>
-
-              <button
-                onClick={() => setFilter('daily')}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                  filter === 'daily' ? 'bg-gray-100' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded border-2 border-orange-500"></div>
-                  <span className="text-gray-700 font-medium">Daily</span>
-                </div>
-                <span className="text-gray-500 text-sm">{dailyLoops.length}</span>
-              </button>
-            </div>
-
-            {/* Create New List Button */}
-            <button
-              onClick={() => router.push('/loops/create')}
-              className="w-full mt-4 flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-600">
-                  <path d="M 12 6 L 12 18 M 6 12 L 18 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                <span className="text-gray-600 text-sm font-medium">Create new list</span>
+                {/* Create New List Button */}
+                <button
+                  onClick={() => router.push('/loops/create')}
+                  className="w-full mt-4 flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-gray-600">
+                      <path d="M 12 6 L 12 18 M 6 12 L 18 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                    </svg>
+                    <span className="text-gray-600 text-sm font-medium">Create new list</span>
+                  </div>
+                  <span className="text-gray-400 text-xs">⌘L</span>
+                </button>
               </div>
-              <span className="text-gray-400 text-xs">⌘L</span>
-            </button>
-          </div>
+            </>
+          )}
 
           {/* Library Section */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Loop Library</h3>
-            <div className="grid grid-cols-2 gap-2">
+          {allLoops.length > 0 && (
+            <div className="border-t border-gray-200 pt-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Loop Library</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFilter('favorites')}
+                  className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
+                    filter === 'favorites'
+                      ? 'text-white opacity-90'
+                      : 'text-white opacity-100 hover:opacity-90'
+                  }`}
+                  style={{ backgroundColor: LOOP_LIBRARY_COLORS[0] }}
+                >
+                  Favorites
+                </button>
+                <button
+                  onClick={() => setFilter('personal')}
+                  className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
+                    filter === 'personal'
+                      ? 'text-white opacity-90'
+                      : 'text-white opacity-100 hover:opacity-90'
+                  }`}
+                  style={{ backgroundColor: LOOP_LIBRARY_COLORS[1] }}
+                >
+                  Personal
+                </button>
+                <button
+                  onClick={() => setFilter('work')}
+                  className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
+                    filter === 'work'
+                      ? 'text-white opacity-90'
+                      : 'text-white opacity-100 hover:opacity-90'
+                  }`}
+                  style={{ backgroundColor: LOOP_LIBRARY_COLORS[2] }}
+                >
+                  Work
+                </button>
+                <button
+                  className="py-3 px-3 rounded-lg font-medium transition-all text-center text-sm text-white opacity-100 hover:opacity-90"
+                  style={{ backgroundColor: LOOP_LIBRARY_COLORS[3] }}
+                >
+                  Shared
+                </button>
+              </div>
               <button
-                onClick={() => setFilter('favorites')}
-                className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
-                  filter === 'favorites'
-                    ? 'text-white opacity-90'
-                    : 'text-white opacity-100 hover:opacity-90'
-                }`}
-                style={{ backgroundColor: LOOP_LIBRARY_COLORS[0] }}
+                onClick={() => router.push('/library')}
+                className="w-full mt-3 py-3 px-3 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
               >
-                Favorites
-              </button>
-              <button
-                onClick={() => setFilter('personal')}
-                className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
-                  filter === 'personal'
-                    ? 'text-white opacity-90'
-                    : 'text-white opacity-100 hover:opacity-90'
-                }`}
-                style={{ backgroundColor: LOOP_LIBRARY_COLORS[1] }}
-              >
-                Personal
-              </button>
-              <button
-                onClick={() => setFilter('work')}
-                className={`py-3 px-3 rounded-lg font-medium transition-all text-center text-sm ${
-                  filter === 'work'
-                    ? 'text-white opacity-90'
-                    : 'text-white opacity-100 hover:opacity-90'
-                }`}
-                style={{ backgroundColor: LOOP_LIBRARY_COLORS[2] }}
-              >
-                Work
-              </button>
-              <button
-                className="py-3 px-3 rounded-lg font-medium transition-all text-center text-sm text-white opacity-100 hover:opacity-90"
-                style={{ backgroundColor: LOOP_LIBRARY_COLORS[3] }}
-              >
-                Shared
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="text-gray-400"
+                >
+                  <path
+                    d="M 12 5 L 12 19 M 5 12 L 19 12"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <span className="text-gray-600 text-sm font-medium">Manage Folders</span>
               </button>
             </div>
-            <button
-              onClick={() => router.push('/library')}
-              className="w-full mt-3 py-3 px-3 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-gray-400"
-              >
-                <path
-                  d="M 12 5 L 12 19 M 5 12 L 19 12"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <span className="text-gray-600 text-sm font-medium">Manage Folders</span>
-            </button>
-          </div>
+          )}
         </aside>
 
         {/* Main Content */}
@@ -341,31 +347,33 @@ export default function Home() {
               <div className="flex-[2]">
                 <SearchBar loops={allLoops} onSelect={handleLoopClick} />
               </div>
-              <div className="flex-1 flex items-center">
-                <button
-                  onClick={() => router.push('/loops/create')}
-                  className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 md:py-4 px-4 md:px-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm md:text-base"
-                  aria-label="Create a new loop"
-                >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="flex-shrink-0"
+              {allLoops.length > 0 && (
+                <div className="flex-1 flex items-center">
+                  <button
+                    onClick={() => router.push('/loops/create')}
+                    className="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-3 md:py-4 px-4 md:px-6 rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm md:text-base"
+                    aria-label="Create a new loop"
                   >
-                    <path
-                      d="M 12 5 L 12 19 M 5 12 L 19 12"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Create a new Loop</span>
-                  <span className="sm:hidden">New Loop</span>
-                </button>
-              </div>
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="flex-shrink-0"
+                    >
+                      <path
+                        d="M 12 5 L 12 19 M 5 12 L 19 12"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <span className="hidden sm:inline">Create a new Loop</span>
+                    <span className="sm:hidden">New Loop</span>
+                  </button>
+                </div>
+              )}
             </div>
             
             {/* Header with greeting */}
@@ -454,28 +462,46 @@ export default function Home() {
                     </div>
                   </motion.div>
                 ) : (
-                  <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-                    <div className="text-gray-400 mb-4">
-                      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" className="mx-auto mb-4">
-                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2"/>
-                        <path d="M 12 8 L 12 12 L 15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    </div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                    className="bg-white rounded-xl shadow-sm p-12 text-center"
+                  >
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      No {filter === 'favorites' ? 'favorite' : filter} loops yet
+                      No {filter === 'favorites' ? 'favorite' : filter} loops
                     </h3>
                     <p className="text-gray-500 mb-6">
                       Create one to get started!
                     </p>
-                    <button
-                      onClick={() => router.push('/loops/create')}
-                      className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
-                    >
-                      Create Loop
-                    </button>
-                  </div>
+                  </motion.div>
                 )
               )}
+            </motion.div>
+            <div className="mt-8 p-4 bg-gray-50 rounded-2xl">
+              <p className="text-center text-sm text-gray-700">
+                <span className="font-bold">Why Loops? ✨</span> Check off tasks → Hit Reloop → Repeat tomorrow. Perfect for habits that stick.
+              </p>
+            </div>
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="fixed bottom-8 left-0 right-0 mx-auto max-w-md px-5 z-50"
+            >
+              <button
+                onClick={() => router.push('/loops/create')}
+                className="w-full bg-yellow-400 hover:bg-yellow-500 py-4 rounded-full flex items-center justify-center shadow-lg transition-colors"
+              >
+                <span className="text-black font-bold text-lg mr-2">🚀 Create Your First Loop</span>
+                <motion.span
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  className="text-black text-lg"
+                >
+                  →
+                </motion.span>
+              </button>
             </motion.div>
             </div>
           </div>
