@@ -43,8 +43,8 @@ export const AnimatedCircularProgress: React.FC<AnimatedCircularProgressProps> =
   });
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      <Svg width={size} height={size}>
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      <Svg width={size} height={size} style={{ position: 'absolute' }}>
         {/* Background circle */}
         <Circle
           cx={size / 2}
@@ -68,7 +68,9 @@ export const AnimatedCircularProgress: React.FC<AnimatedCircularProgressProps> =
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </Svg>
-      {children}
+      <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center', maxWidth: size * 0.7 }}>
+        {children}
+      </View>
     </View>
   );
 };
