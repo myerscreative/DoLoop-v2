@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getAllLoops, deleteLoop, addLoop } from '@/lib/loopStorage';
-import { supabase, getCurrentUser } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { usePathname } from 'next/navigation';
+import { Loop, LoopType } from '@/types/loop';
 import Toast from '@/components/ui/Toast';
 import { useToast } from '@/lib/useToast';
 
@@ -96,59 +96,77 @@ export default function Home() {
     },
   ];
 
-  const handleTryLoop = async (template) => {
-    const user = await getCurrentUser();
-    if (!user) {
-      showToast('Please log in to create loops', 'error');
-      return;
+  const handleTryLoop = (template) => {
+    // Generate unique ID
+    const loopId = `loop-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Determine loop type from template name
+    let loopType: LoopType = 'personal';
+    if (template.name.includes('Morning') || template.name.includes('Workday')) {
+      loopType = 'daily';
+    } else if (template.name.includes('Work') || template.name.includes('Standup')) {
+      loopType = 'work';
     }
-
-    const { data: loop } = await supabase
-      .from('loops')
-      .insert({
-        name: template.name,
-        owner_id: user.id,
-        color: template.color,
-        reset_rule: template.name.includes('Morning') || template.name.includes('Workday') ? 'daily' : 'manual',
-      })
-      .select()
-      .single();
-
-    await supabase.from('tasks').insert(
-      template.tasks.map((t, i) => ({
-        loop_id: loop.id,
-        description: t,
-        order: i,
-        is_recurring: true,
-        status: 'pending',
-      }))
-    );
-
+    
+    // Create loop items from template tasks
+    const loopItems = template.tasks.map((taskTitle: string, index: number) => ({
+      id: `item-${Date.now()}-${index}`,
+      title: taskTitle,
+      completed: false,
+      order: index,
+      isRecurring: true,
+    }));
+    
+    // Create the new loop object
+    const newLoop: Loop = {
+      id: loopId,
+      title: template.name,
+      description: `Template: ${template.name}`,
+      type: loopType,
+      status: 'active',
+      color: template.color,
+      totalTasks: template.tasks.length,
+      completedTasks: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      completionHistory: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      items: loopItems,
+      isFavorite: false,
+    };
+    
+    // Save to localStorage
+    addLoop(newLoop);
+    
+    // UI feedback and navigation
     showToast(`Created "${template.name}" from template`, 'success');
     loadLoops();
-    router.push(`/loops/${loop.id}`);
+    router.push(`/loops/${loopId}`);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
       {/* Header */}
-      <div className="flex justify-between items-center px-5 pt-6 pb-2">
-        <span className="text-xs text-gray-500">Wednesday, November 5</span>
-      </div>
-
-      {/* Search + CTA */}
-      <div className="flex items-center px-5 mb-6">
-        <div className="flex-1 mr-3">
-          <div className="bg-white rounded-xl px-4 py-3 text-gray-500">
-            🔍 Search loops and tasks...
-          </div>
+      <div className="max-w-[80vw] mx-auto">
+        <div className="flex justify-between items-center px-5 pt-6 pb-2">
+          <span className="text-xs text-gray-500">Wednesday, November 5</span>
         </div>
-        <button
-          onClick={() => router.push('/loops/create')}
-          className="bg-yellow-400 hover:bg-yellow-500 px-5 py-3 rounded-xl transition-colors"
-        >
-          <span className="text-black font-semibold">+ Create a new Loop</span>
-        </button>
+
+        {/* Search + CTA */}
+        <div className="flex items-center px-5 mb-6">
+          <div className="flex-1 mr-3">
+            <div className="bg-white rounded-xl px-4 py-3 text-gray-500">
+              🔍 Search loops and tasks...
+            </div>
+          </div>
+          <button
+            onClick={() => router.push('/loops/create')}
+            className="bg-yellow-400 hover:bg-yellow-500 px-5 py-3 rounded-xl transition-colors"
+          >
+            <span className="text-black font-semibold">+ Create a new Loop</span>
+          </button>
+        </div>
       </div>
 
       {/* Greeting */}
