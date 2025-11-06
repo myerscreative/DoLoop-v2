@@ -14,7 +14,7 @@ export default function Home() {
   const pathname = usePathname();
   const [allLoops, setAllLoops] = useState<Loop[]>([]);
   const { toast, showToast, hideToast } = useToast();
-  const carouselRef = useRef(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   // Function to load loops
   const loadLoops = () => {
