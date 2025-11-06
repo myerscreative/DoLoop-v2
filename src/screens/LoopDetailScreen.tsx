@@ -593,13 +593,6 @@ export const LoopDetailScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* FAB - Always visible */}
-      <FAB 
-        onAddTask={handleAddTask} 
-        modalVisible={showAddTaskModal}
-        setModalVisible={setShowAddTaskModal}
-      />
     </SafeAreaView>
   );
 };
