@@ -18,19 +18,38 @@
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.doloop.app",
-      "buildNumber": "1.0.0"
+      "bundleIdentifier": "com.myerscreative.doloop",
+      "buildNumber": "1",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
+        "NSUserTrackingUsageDescription": "This app does not track you."
+      }
     },
     "android": {
-      "package": "com.doloop.app",
-      "versionCode": 1
+      "package": "com.myerscreative.doloop",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          }
+        }
+      ]
     ],
     "extra": {
       "supabaseUrl": "https://faaidvdogakvrdwloxjf.supabase.co",
-      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhYWlkdmRvZ2FrdnJkd2xveGpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNDgwMjAsImV4cCI6MjA3NDgyNDAyMH0.TK1IAFq5QV7i3CLHWkDI9rARk9OMKabRDGfKYlgfc8Y"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZhYWlkdmRvZ2FrdnJkd2xveGpmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkyNDgwMjAsImV4cCI6MjA3NDgyNDAyMH0.TK1IAFq5QV7i3CLHWkDI9rARk9OMKabRDGfKYlgfc8Y",
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
     }
   }
 }
