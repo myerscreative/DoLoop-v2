@@ -78,13 +78,6 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (tasksError) throw tasksError;
 
-      const { data: streak, error: streakError } = await supabase
-        .from('user_streaks')
-        .select('current_streak')
-        .eq('user_id', user?.id)
-        .eq('loop_id', loopId)
-        .single();
-
       const completedCount = tasks?.filter(task => task.status === 'done' && task.is_recurring).length || 0;
       const totalCount = tasks?.filter(task => task.is_recurring).length || 0;
 
@@ -93,7 +86,6 @@ export const LoopDetailScreen: React.FC = () => {
         tasks: tasks || [],
         completedCount,
         totalCount,
-        streak: streak?.current_streak || 0,
       });
     } catch (error) {
       console.error('Error loading loop data:', error);
@@ -135,14 +127,6 @@ export const LoopDetailScreen: React.FC = () => {
 
         // Remove from tasks
         await supabase.from('tasks').delete().eq('id', task.id);
-      }
-
-      // Update streak if this is a recurring task completion
-      if (task.is_recurring && newStatus === 'done') {
-        await supabase.rpc('update_user_streak', {
-          p_user_id: user?.id,
-          p_loop_id: loopId,
-        });
       }
 
       await loadLoopData();
@@ -196,6 +180,82 @@ export const LoopDetailScreen: React.FC = () => {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
+      // === STREAK LOGIC: Update global user streak for daily loops ===
+      if (loopData?.reset_rule === 'daily' && loopData.completedCount === loopData.totalCount) {
+        // Check if ALL daily loops are complete
+        const { data: allDailyLoops } = await supabase
+          .from('loops')
+          .select('id')
+          .eq('owner', user?.id)
+          .eq('reset_rule', 'daily');
+
+        let allDailyLoopsComplete = true;
+        
+        if (allDailyLoops && allDailyLoops.length > 0) {
+          for (const loop of allDailyLoops) {
+            const { data: tasks } = await supabase
+              .from('tasks')
+              .select('id, status, is_recurring')
+              .eq('loop_id', loop.id)
+              .eq('is_recurring', true);
+
+            const completed = tasks?.filter(t => t.status === 'done').length || 0;
+            const total = tasks?.length || 0;
+            
+            if (total > 0 && completed < total && loop.id !== loopId) {
+              allDailyLoopsComplete = false;
+              break;
+            }
+          }
+        }
+
+        // Update streak if all daily loops are complete
+        if (allDailyLoopsComplete) {
+          const today = new Date().toISOString().split('T')[0];
+          
+          const { data: currentStreak } = await supabase
+            .from('user_streaks')
+            .select('*')
+            .eq('user_id', user?.id)
+            .single();
+
+          let newStreak = 1;
+          let longestStreak = 1;
+
+          if (currentStreak) {
+            const lastDate = currentStreak.last_completed_date?.split('T')[0];
+            
+            if (lastDate && lastDate !== today) {
+              // Check if it was yesterday
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = yesterday.toISOString().split('T')[0];
+              
+              if (lastDate === yesterdayStr) {
+                newStreak = currentStreak.current_streak + 1;
+              } else {
+                newStreak = 1; // Streak broken
+              }
+            } else if (lastDate === today) {
+              newStreak = currentStreak.current_streak; // Already counted today
+            }
+            
+            longestStreak = Math.max(newStreak, currentStreak.longest_streak || 0);
+          }
+
+          await supabase
+            .from('user_streaks')
+            .upsert({
+              user_id: user?.id,
+              current_streak: newStreak,
+              longest_streak: longestStreak,
+              last_completed_date: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+        }
+      }
+
+      // Reset tasks
       const { error } = await supabase
         .from('tasks')
         .update({
@@ -290,17 +350,6 @@ export const LoopDetailScreen: React.FC = () => {
           }}>
             Resets {loopData.reset_rule} • Next: {formatNextReset(loopData.next_reset_at)}
           </Text>
-
-          {loopData.streak > 0 && (
-            <Text style={{
-              fontSize: 16,
-              color: '#FFE066',
-              fontWeight: 'bold',
-              marginTop: 8,
-            }}>
-              🔥 {loopData.streak} day streak
-            </Text>
-          )}
         </View>
 
         {/* Recurring Tasks */}

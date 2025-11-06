@@ -83,15 +83,17 @@ export const HomeScreen: React.FC = () => {
         shared: { id: 'shared', name: 'Shared', color: FOLDER_COLORS.shared, icon: FOLDER_ICONS.shared, count: 0 },
       };
 
-      // Get user streaks
-      const { data: streaks, error: streaksError } = await supabase
+      // Get global user streak
+      const { data: streakData, error: streaksError } = await supabase
         .from('user_streaks')
         .select('current_streak')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .single();
 
-      if (!streaksError && streaks) {
-        const total = streaks.reduce((sum, streak) => sum + streak.current_streak, 0);
-        setTotalStreak(total);
+      if (!streaksError && streakData) {
+        setTotalStreak(streakData.current_streak || 0);
+      } else {
+        setTotalStreak(0);
       }
 
       // Categorize loops by type
@@ -193,22 +195,26 @@ export const HomeScreen: React.FC = () => {
           {currentDate}
         </Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{
-            fontSize: 24,
-            fontWeight: 'bold',
-            color: colors.text,
-          }}>
-            Good morning! 🌅
-          </Text>
+          <View>
+            <Text style={{
+              fontSize: 24,
+              fontWeight: 'bold',
+              color: colors.text,
+            }}>
+              Good morning! 🌅
+            </Text>
+          </View>
           {totalStreak > 0 && (
             <View style={{
               backgroundColor: '#FFE066',
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
             }}>
               <Text style={{
-                fontSize: 14,
+                fontSize: 18,
                 fontWeight: 'bold',
                 color: '#000',
               }}>
