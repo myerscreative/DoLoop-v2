@@ -106,7 +106,7 @@ export const LoopDetailScreen: React.FC = () => {
 
       const { error } = await supabase
         .from('tasks')
-        .update({ completed: newCompleted, updated_at: new Date().toISOString() })
+        .update({ completed: newCompleted })
         .eq('id', task.id);
 
       if (error) throw error;
@@ -269,8 +269,7 @@ export const LoopDetailScreen: React.FC = () => {
       const { error } = await supabase
         .from('tasks')
         .update({
-          completed: false,
-          updated_at: new Date().toISOString()
+          completed: false
         })
         .eq('loop_id', loopId)
         .eq('is_one_time', false);

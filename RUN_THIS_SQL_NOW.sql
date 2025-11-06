@@ -102,10 +102,13 @@ ALTER TABLE tasks ALTER COLUMN completed SET NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
 CREATE INDEX IF NOT EXISTS idx_tasks_is_one_time ON tasks(is_one_time);
 
--- ============== MIGRATION 3: Add Notes Column ==============
+-- ============== MIGRATION 3: Add Missing Columns ==============
 
 -- Add notes column to tasks
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Add updated_at column to tasks (if missing)
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
 
 -- Add index for searching notes (optional but useful)
 CREATE INDEX IF NOT EXISTS idx_tasks_notes ON tasks(notes) WHERE notes IS NOT NULL;
