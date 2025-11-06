@@ -8,6 +8,17 @@ ALTER TABLE loops ADD COLUMN IF NOT EXISTS loop_type TEXT DEFAULT 'personal';
 ALTER TABLE loops ADD CONSTRAINT IF NOT EXISTS check_loop_type CHECK (loop_type IN ('personal', 'work', 'daily', 'shared'));
 CREATE INDEX IF NOT EXISTS idx_loops_loop_type ON loops(loop_type);
 
+-- 1b. Add next_reset_at column to loops table for scheduled resets
+ALTER TABLE loops ADD COLUMN IF NOT EXISTS next_reset_at TIMESTAMP WITH TIME ZONE;
+UPDATE loops 
+SET next_reset_at = CASE 
+  WHEN reset_rule = 'daily' THEN NOW() + INTERVAL '1 day'
+  WHEN reset_rule = 'weekly' THEN NOW() + INTERVAL '7 days'
+  ELSE NULL
+END
+WHERE next_reset_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_loops_next_reset_at ON loops(next_reset_at);
+
 -- 2. Add is_one_time column to tasks table
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_one_time BOOLEAN DEFAULT FALSE;
 UPDATE tasks SET is_one_time = FALSE WHERE is_one_time IS NULL;

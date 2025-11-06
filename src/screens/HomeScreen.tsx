@@ -132,6 +132,9 @@ export const HomeScreen: React.FC = () => {
 
     setCreating(true);
     try {
+      // Calculate next reset time based on reset rule
+      const nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours from now for daily
+
       const { data, error } = await supabase
         .from('loops')
         .insert({
@@ -140,6 +143,7 @@ export const HomeScreen: React.FC = () => {
           loop_type: selectedLoopType,
           color: FOLDER_COLORS[selectedLoopType],
           reset_rule: 'daily',
+          next_reset_at: nextResetAt,
         })
         .select()
         .single();

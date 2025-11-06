@@ -9,6 +9,7 @@ The following database tables/columns are missing:
 2. `user_streaks` table
 3. `archived_tasks` table  
 4. `loop_type` column in `loops` table
+5. `next_reset_at` column in `loops` table (for scheduled resets)
 
 ## 🚀 How to Apply
 
@@ -51,12 +52,14 @@ After running the migrations, refresh your web app and:
 
 If you see errors like:
 - ❌ `Could not find the 'is_one_time' column` → Run migrations
+- ❌ `Could not find the 'next_reset_at' column` → Run migrations
 - ❌ `404 on user_streaks` → Run migrations
 - ❌ `Table 'archived_tasks' does not exist` → Run migrations
 
 ## 📝 What Each Migration Does
 
 - **loop_type** - Categorizes loops (personal, work, daily, shared)
+- **next_reset_at** - Stores when a loop should automatically reset (for daily/weekly loops)
 - **is_one_time** - Distinguishes one-time tasks from recurring tasks
 - **archived_tasks** - Stores completed one-time tasks
 - **user_streaks** - Tracks daily completion streaks per loop

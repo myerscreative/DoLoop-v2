@@ -34,6 +34,28 @@ export const LoopDetailScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showResetMenu, setShowResetMenu] = useState(false);
 
+  const formatNextReset = (nextResetAt: string | null) => {
+    if (!nextResetAt) return 'Not scheduled';
+    
+    const date = new Date(nextResetAt);
+    if (isNaN(date.getTime())) return 'Not scheduled';
+    
+    const now = new Date();
+    const diffMs = date.getTime() - now.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays > 1) {
+      return `${diffDays} days`;
+    } else if (diffHours > 1) {
+      return `${diffHours} hours`;
+    } else if (diffHours < -24) {
+      return 'Overdue';
+    } else {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  };
+
   useEffect(() => {
     loadLoopData();
   }, [loopId]);
@@ -241,22 +263,33 @@ export const LoopDetailScreen: React.FC = () => {
           paddingHorizontal: 20,
         }}>
           <AnimatedCircularProgress
-            size={120}
-            width={12}
+            size={90}
+            width={8}
             fill={progress}
             tintColor={loopData.color}
             backgroundColor={colors.border}
           >
             <Text style={{
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: 'bold',
               color: colors.text,
               textAlign: 'center',
+              paddingHorizontal: 4,
             }}>
               {loopData.name}
               {loopData.is_favorite && ' ⭐'}
             </Text>
           </AnimatedCircularProgress>
+
+          {/* Reset Info */}
+          <Text style={{
+            fontSize: 14,
+            color: colors.textSecondary,
+            marginTop: 12,
+            textAlign: 'center',
+          }}>
+            Resets {loopData.reset_rule} • Next: {formatNextReset(loopData.next_reset_at)}
+          </Text>
 
           {loopData.streak > 0 && (
             <Text style={{
@@ -399,15 +432,17 @@ export const LoopDetailScreen: React.FC = () => {
       }}>
         <TouchableOpacity
           style={{
-            backgroundColor: showResetMenu ? colors.error : colors.primary,
-            paddingVertical: 12,
+            backgroundColor: showResetMenu ? colors.error : (progress >= 100 ? loopData.color : colors.border),
+            paddingVertical: 16,
             paddingHorizontal: 24,
             borderRadius: 25,
             alignItems: 'center',
+            opacity: (progress >= 100 || showResetMenu) ? 1 : 0.5,
           }}
           onPress={handleReloop}
           onLongPress={longPressReloop}
           delayLongPress={500}
+          disabled={progress < 100 && !showResetMenu}
         >
           <Text style={{
             color: 'white',
