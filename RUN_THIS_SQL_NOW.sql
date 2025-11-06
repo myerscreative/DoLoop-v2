@@ -5,7 +5,7 @@
 
 -- ============== MIGRATION 1: Fix RLS Policies ==============
 
--- Drop all existing policies on loops
+-- Step 1: Drop ALL policies first (before dropping function)
 DROP POLICY IF EXISTS "Users can view their own loops" ON loops;
 DROP POLICY IF EXISTS "Users can create loops" ON loops;
 DROP POLICY IF EXISTS "Users can update their own loops" ON loops;
@@ -13,24 +13,35 @@ DROP POLICY IF EXISTS "Users can delete their own loops" ON loops;
 DROP POLICY IF EXISTS "Users can view shared loops" ON loops;
 DROP POLICY IF EXISTS "Users can manage their own loops" ON loops;
 
--- Create simple policy for loops
-CREATE POLICY "Users can manage their own loops"
-  ON loops
-  FOR ALL
-  USING (owner_id = auth.uid())
-  WITH CHECK (owner_id = auth.uid());
-
--- Drop all existing policies on tasks
 DROP POLICY IF EXISTS "Users can view tasks in their loops" ON tasks;
 DROP POLICY IF EXISTS "Users can create tasks in their loops" ON tasks;
 DROP POLICY IF EXISTS "Users can update tasks in their loops" ON tasks;
 DROP POLICY IF EXISTS "Users can delete tasks in their loops" ON tasks;
 DROP POLICY IF EXISTS "Users can manage tasks in their loops" ON tasks;
 
--- Drop function if it exists
+DROP POLICY IF EXISTS "Users can view archived tasks" ON archived_tasks;
+DROP POLICY IF EXISTS "Users can create archived tasks" ON archived_tasks;
+DROP POLICY IF EXISTS "Users can manage archived tasks" ON archived_tasks;
+
+DROP POLICY IF EXISTS "Users can view their own streaks" ON user_streaks;
+DROP POLICY IF EXISTS "Users can update their own streaks" ON user_streaks;
+DROP POLICY IF EXISTS "Users can manage their own streaks" ON user_streaks;
+
+DROP POLICY IF EXISTS "Users can view loop members" ON loop_members;
+DROP POLICY IF EXISTS "Loop owners can manage members" ON loop_members;
+DROP POLICY IF EXISTS "Users can manage loop members" ON loop_members;
+
+-- Step 2: Now drop function (safe because all policies are gone)
 DROP FUNCTION IF EXISTS user_owns_loop(UUID);
 
--- Create security definer function
+-- Step 3: Create simple policy for loops
+CREATE POLICY "Users can manage their own loops"
+  ON loops
+  FOR ALL
+  USING (owner_id = auth.uid())
+  WITH CHECK (owner_id = auth.uid());
+
+-- Step 4: Create security definer function
 CREATE OR REPLACE FUNCTION user_owns_loop(loop_uuid UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -44,17 +55,12 @@ AS $$
   );
 $$;
 
--- Create policy for tasks
+-- Step 5: Create all policies
 CREATE POLICY "Users can manage tasks in their loops"
   ON tasks
   FOR ALL
   USING (user_owns_loop(loop_id))
   WITH CHECK (user_owns_loop(loop_id));
-
--- Fix other policies
-DROP POLICY IF EXISTS "Users can view archived tasks" ON archived_tasks;
-DROP POLICY IF EXISTS "Users can create archived tasks" ON archived_tasks;
-DROP POLICY IF EXISTS "Users can manage archived tasks" ON archived_tasks;
 
 CREATE POLICY "Users can manage archived tasks"
   ON archived_tasks
@@ -62,19 +68,11 @@ CREATE POLICY "Users can manage archived tasks"
   USING (user_owns_loop(loop_id))
   WITH CHECK (user_owns_loop(loop_id));
 
-DROP POLICY IF EXISTS "Users can view their own streaks" ON user_streaks;
-DROP POLICY IF EXISTS "Users can update their own streaks" ON user_streaks;
-DROP POLICY IF EXISTS "Users can manage their own streaks" ON user_streaks;
-
 CREATE POLICY "Users can manage their own streaks"
   ON user_streaks
   FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
-
-DROP POLICY IF EXISTS "Users can view loop members" ON loop_members;
-DROP POLICY IF EXISTS "Loop owners can manage members" ON loop_members;
-DROP POLICY IF EXISTS "Users can manage loop members" ON loop_members;
 
 CREATE POLICY "Users can manage loop members"
   ON loop_members
