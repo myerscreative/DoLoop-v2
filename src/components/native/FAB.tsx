@@ -16,13 +16,15 @@ interface FABProps {
   centered?: boolean;
   modalVisible?: boolean;
   setModalVisible?: (visible: boolean) => void;
+  hideButton?: boolean;
 }
 
 export const FAB: React.FC<FABProps> = ({ 
   onAddTask, 
   centered = false,
   modalVisible: externalModalVisible,
-  setModalVisible: externalSetModalVisible
+  setModalVisible: externalSetModalVisible,
+  hideButton = false
 }) => {
   const { colors } = useTheme();
   const [internalModalVisible, setInternalModalVisible] = useState(false);
@@ -55,39 +57,41 @@ export const FAB: React.FC<FABProps> = ({
 
   return (
     <>
-      <TouchableOpacity
-        style={centered ? {
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          backgroundColor: colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-        } : {
-          position: 'absolute',
-          bottom: 24,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-        }}
-        onPress={() => setModalVisible(true)}
-      >
-        <Text style={{ fontSize: centered ? 32 : 24, color: 'white', fontWeight: 'bold' }}>+</Text>
-      </TouchableOpacity>
+      {!hideButton && (
+        <TouchableOpacity
+          style={centered ? {
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+          } : {
+            position: 'absolute',
+            bottom: 24,
+            right: 24,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+          }}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={{ fontSize: centered ? 32 : 24, color: 'white', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      )}
 
       <Modal
         visible={modalVisible}

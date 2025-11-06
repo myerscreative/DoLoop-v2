@@ -593,6 +593,14 @@ export const LoopDetailScreen: React.FC = () => {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Task Modal (no button, just the modal) */}
+      <FAB 
+        onAddTask={handleAddTask} 
+        modalVisible={showAddTaskModal}
+        setModalVisible={setShowAddTaskModal}
+        hideButton={true}
+      />
     </SafeAreaView>
   );
 };
