@@ -5,6 +5,11 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Modal,
+  TextInput,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -26,11 +31,20 @@ export const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [totalStreak, setTotalStreak] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [newLoopName, setNewLoopName] = useState('');
+  const [selectedLoopType, setSelectedLoopType] = useState<LoopType>('personal');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    loadData();
     updateDate();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -56,15 +70,8 @@ export const HomeScreen: React.FC = () => {
       // Get all loops for the user
       const { data: userLoops, error: loopsError } = await supabase
         .from('loops')
-        .select(`
-          *,
-          tasks (
-            id,
-            status,
-            is_recurring
-          )
-        `)
-        .or(`owner_id.eq.${user.id},loop_members.user_id.eq.${user.id}`);
+        .select('*')
+        .eq('owner', user.id);
 
       if (loopsError) throw loopsError;
 
@@ -87,11 +94,9 @@ export const HomeScreen: React.FC = () => {
         setTotalStreak(total);
       }
 
-      // Categorize loops by type (simplified - you might want more complex logic)
+      // Categorize loops by type
       userLoops?.forEach((loop: any) => {
-        // For now, assign loops to folders based on some criteria
-        // You can enhance this logic based on your requirements
-        const loopType: LoopType = 'personal'; // Default, you can determine based on loop properties
+        const loopType: LoopType = loop.loop_type || 'personal'; // Use loop_type from database
         if (folderMap[loopType]) {
           folderMap[loopType].count += 1;
         }
@@ -117,6 +122,45 @@ export const HomeScreen: React.FC = () => {
   const handleSignOut = async () => {
     await signOut();
     navigation.replace('Login');
+  };
+
+  const handleCreateLoop = async () => {
+    if (!newLoopName.trim()) {
+      Alert.alert('Error', 'Please enter a loop name');
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const { data, error } = await supabase
+        .from('loops')
+        .insert({
+          name: newLoopName.trim(),
+          owner: user?.id,
+          loop_type: selectedLoopType,
+          color: FOLDER_COLORS[selectedLoopType],
+          reset_rule: 'daily',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setModalVisible(false);
+      setNewLoopName('');
+      setSelectedLoopType('personal');
+      await loadData();
+      
+      // Navigate to the newly created loop
+      if (data) {
+        navigation.navigate('LoopDetail', { loopId: data.id });
+      }
+    } catch (error) {
+      console.error('Error creating loop:', error);
+      Alert.alert('Error', 'Failed to create loop');
+    } finally {
+      setCreating(false);
+    }
   };
 
   // Show loading screen while checking auth
@@ -265,6 +309,151 @@ export const HomeScreen: React.FC = () => {
       >
         <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
       </TouchableOpacity>
+
+      {/* FAB - Floating Action Button */}
+      <TouchableOpacity
+        style={{
+          position: 'absolute',
+          bottom: 24,
+          right: 24,
+          width: 56,
+          height: 56,
+          borderRadius: 28,
+          backgroundColor: colors.primary,
+          alignItems: 'center',
+          justifyContent: 'center',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 4,
+        }}
+        onPress={() => setModalVisible(true)}
+      >
+        <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
+      </TouchableOpacity>
+
+      {/* Create Loop Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
+        >
+          <TouchableOpacity
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              justifyContent: 'center',
+              padding: 20,
+            }}
+            activeOpacity={1}
+            onPress={() => setModalVisible(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {}}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: 12,
+                padding: 20,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  marginBottom: 16,
+                }}
+              >
+                Create New Loop
+              </Text>
+
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 16,
+                  color: colors.text,
+                  marginBottom: 16,
+                }}
+                placeholder="Loop name..."
+                placeholderTextColor={colors.textSecondary}
+                value={newLoopName}
+                onChangeText={setNewLoopName}
+                autoFocus
+              />
+
+              <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>
+                Loop Type:
+              </Text>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                {(['personal', 'work', 'daily', 'shared'] as LoopType[]).map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 12,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: selectedLoopType === type ? FOLDER_COLORS[type] : colors.border,
+                      backgroundColor: selectedLoopType === type ? `${FOLDER_COLORS[type]}20` : 'transparent',
+                    }}
+                    onPress={() => setSelectedLoopType(type)}
+                  >
+                    <Text style={{ fontSize: 18, marginRight: 6 }}>{FOLDER_ICONS[type]}</Text>
+                    <Text style={{
+                      color: selectedLoopType === type ? colors.text : colors.textSecondary,
+                      fontWeight: selectedLoopType === type ? 'bold' : 'normal',
+                      textTransform: 'capitalize',
+                    }}>
+                      {type}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                <TouchableOpacity
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                  }}
+                  onPress={() => setModalVisible(false)}
+                >
+                  <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: colors.primary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                  }}
+                  onPress={handleCreateLoop}
+                  disabled={creating}
+                >
+                  <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                    {creating ? 'Creating...' : 'Create'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 };
