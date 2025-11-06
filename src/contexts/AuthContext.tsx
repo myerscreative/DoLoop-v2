@@ -9,6 +9,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
   signUp: (email: string, password: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
+  devModeLogin: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -82,6 +83,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Development mode - auto login with test account
+  const devModeLogin = async () => {
+    console.log('[Auth] Dev Mode Login - Creating/logging in test account');
+    const testEmail = 'dev@dev.com';
+    const testPassword = 'dev123';
+    
+    return { error: { message: 'Account not found. Please sign up first with these credentials:\n\nEmail: dev@dev.com\nPassword: dev123' } };
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +101,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signOut,
+        devModeLogin,
       }}
     >
       {children}

@@ -28,10 +28,10 @@ export interface Task {
   id: string;
   loop_id: string;
   description: string;
-  is_recurring: boolean;
-  assigned_user_id?: string;
-  status: TaskStatus;
+  completed: boolean;
+  completed_at?: string;
   is_one_time: boolean;
+  order_index?: number;
   created_at: string;
   updated_at: string;
 }

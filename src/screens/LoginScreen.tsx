@@ -29,7 +29,7 @@ const showAlert = (title: string, message: string) => {
 
 export const LoginScreen: React.FC = () => {
   const { colors } = useTheme();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, devModeLogin } = useAuth();
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const [email, setEmail] = useState('');
@@ -187,6 +187,67 @@ export const LoginScreen: React.FC = () => {
             }
           </Text>
         </TouchableOpacity>
+
+        {/* Development Mode Section */}
+        <View style={{ marginTop: 32, alignItems: 'center' }}>
+          <View style={{
+            backgroundColor: colors.surface,
+            padding: 16,
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
+            marginBottom: 12,
+          }}>
+            <Text style={{
+              color: colors.textSecondary,
+              fontSize: 12,
+              textAlign: 'center',
+              marginBottom: 8,
+            }}>
+              Dev Credentials (Sign Up first time):
+            </Text>
+            <Text style={{
+              color: colors.text,
+              fontSize: 14,
+              fontWeight: 'bold',
+              textAlign: 'center',
+            }}>
+              dev@dev.com
+            </Text>
+            <Text style={{
+              color: colors.text,
+              fontSize: 14,
+              fontWeight: 'bold',
+              textAlign: 'center',
+            }}>
+              dev123
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={{
+              paddingVertical: 12,
+              paddingHorizontal: 20,
+              backgroundColor: '#FFE066',
+              borderRadius: 8,
+              borderWidth: 2,
+              borderColor: '#FFD700',
+            }}
+            onPress={async () => {
+              setEmail('dev@dev.com');
+              setPassword('dev123');
+              await handleAuth();
+            }}
+          >
+            <Text style={{
+              color: '#000',
+              fontSize: 14,
+              fontWeight: 'bold',
+            }}>
+              🚀 Auto-Fill Login
+            </Text>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

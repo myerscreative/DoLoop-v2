@@ -79,8 +79,8 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (tasksError) throw tasksError;
 
-      const completedCount = tasks?.filter(task => task.status === 'done' && task.is_recurring).length || 0;
-      const totalCount = tasks?.filter(task => task.is_recurring).length || 0;
+      const completedCount = tasks?.filter(task => task.completed && !task.is_one_time).length || 0;
+      const totalCount = tasks?.filter(task => !task.is_one_time).length || 0;
 
       setLoopData({
         ...loop,
@@ -102,22 +102,22 @@ export const LoopDetailScreen: React.FC = () => {
 
   const toggleTask = async (task: Task) => {
     try {
-      const newStatus = task.status === 'done' ? 'pending' : 'done';
+      const newCompleted = !task.completed;
 
       const { error } = await supabase
         .from('tasks')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ completed: newCompleted, updated_at: new Date().toISOString() })
         .eq('id', task.id);
 
       if (error) throw error;
 
       // Haptic feedback
-      if (newStatus === 'done') {
+      if (newCompleted) {
         await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
 
       // Handle one-time tasks
-      if (task.is_one_time && newStatus === 'done') {
+      if (task.is_one_time && newCompleted) {
         // Archive the task
         await supabase.from('archived_tasks').insert({
           original_task_id: task.id,
@@ -139,21 +139,24 @@ export const LoopDetailScreen: React.FC = () => {
 
   const handleAddTask = async (description: string, isOneTime: boolean) => {
     try {
+      console.log('[LoopDetail] Adding task:', { description, isOneTime });
       const { error } = await supabase.from('tasks').insert({
         loop_id: loopId,
         description,
-        is_recurring: !isOneTime,
         is_one_time: isOneTime,
-        status: 'pending',
-        assigned_user_id: user?.id,
+        completed: false,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[LoopDetail] Database error:', error);
+        throw error;
+      }
 
+      console.log('[LoopDetail] Task added successfully');
       await loadLoopData();
       setShowAddTaskModal(false);
     } catch (error) {
-      console.error('Error adding task:', error);
+      console.error('[LoopDetail] Error adding task:', error);
       throw error;
     }
   };
@@ -201,11 +204,11 @@ export const LoopDetailScreen: React.FC = () => {
           for (const loop of allDailyLoops) {
             const { data: tasks } = await supabase
               .from('tasks')
-              .select('id, status, is_recurring')
+              .select('id, completed, is_one_time')
               .eq('loop_id', loop.id)
-              .eq('is_recurring', true);
+              .eq('is_one_time', false);
 
-            const completed = tasks?.filter(t => t.status === 'done').length || 0;
+            const completed = tasks?.filter(t => t.completed).length || 0;
             const total = tasks?.length || 0;
             
             if (total > 0 && completed < total && loop.id !== loopId) {
@@ -265,11 +268,11 @@ export const LoopDetailScreen: React.FC = () => {
       const { error } = await supabase
         .from('tasks')
         .update({
-          status: 'pending',
+          completed: false,
           updated_at: new Date().toISOString()
         })
         .eq('loop_id', loopId)
-        .eq('is_recurring', true);
+        .eq('is_one_time', false);
 
       if (error) throw error;
 
@@ -311,8 +314,8 @@ export const LoopDetailScreen: React.FC = () => {
   }
 
   const progress = loopData.totalCount > 0 ? (loopData.completedCount / loopData.totalCount) * 100 : 0;
-  const recurringTasks = loopData.tasks.filter(task => task.is_recurring);
-  const oneTimeTasks = loopData.tasks.filter(task => !task.is_recurring);
+  const recurringTasks = loopData.tasks.filter(task => !task.is_one_time);
+  const oneTimeTasks = loopData.tasks.filter(task => task.is_one_time);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
@@ -470,13 +473,13 @@ export const LoopDetailScreen: React.FC = () => {
                   height: 24,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: task.status === 'done' ? colors.primary : colors.border,
-                  backgroundColor: task.status === 'done' ? colors.primary : 'transparent',
+                  borderColor: task.completed ? colors.primary : colors.border,
+                  backgroundColor: task.completed ? colors.primary : 'transparent',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 12,
                 }}>
-                  {task.status === 'done' && (
+                  {task.completed && (
                     <Text style={{ color: 'white', fontSize: 14 }}>✓</Text>
                   )}
                 </View>
@@ -485,8 +488,8 @@ export const LoopDetailScreen: React.FC = () => {
                   flex: 1,
                   fontSize: 16,
                   color: colors.text,
-                  textDecorationLine: task.status === 'done' ? 'line-through' : 'none',
-                  opacity: task.status === 'done' ? 0.6 : 1,
+                  textDecorationLine: task.completed ? 'line-through' : 'none',
+                  opacity: task.completed ? 0.6 : 1,
                 }}>
                   {task.description}
                 </Text>
@@ -526,13 +529,13 @@ export const LoopDetailScreen: React.FC = () => {
                   height: 24,
                   borderRadius: 12,
                   borderWidth: 2,
-                  borderColor: task.status === 'done' ? colors.primary : colors.border,
-                  backgroundColor: task.status === 'done' ? colors.primary : 'transparent',
+                  borderColor: task.completed ? colors.primary : colors.border,
+                  backgroundColor: task.completed ? colors.primary : 'transparent',
                   alignItems: 'center',
                   justifyContent: 'center',
                   marginRight: 12,
                 }}>
-                  {task.status === 'done' && (
+                  {task.completed && (
                     <Text style={{ color: 'white', fontSize: 14 }}>✓</Text>
                   )}
                 </View>
@@ -541,8 +544,8 @@ export const LoopDetailScreen: React.FC = () => {
                   <Text style={{
                     fontSize: 16,
                     color: colors.text,
-                    textDecorationLine: task.status === 'done' ? 'line-through' : 'none',
-                    opacity: task.status === 'done' ? 0.6 : 1,
+                    textDecorationLine: task.completed ? 'line-through' : 'none',
+                    opacity: task.completed ? 0.6 : 1,
                   }}>
                     {task.description}
                   </Text>
