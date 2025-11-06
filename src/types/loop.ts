@@ -28,6 +28,7 @@ export interface Task {
   id: string;
   loop_id: string;
   description: string;
+  notes?: string;
   completed: boolean;
   completed_at?: string;
   is_one_time: boolean;

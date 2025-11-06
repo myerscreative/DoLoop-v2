@@ -137,12 +137,13 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
-  const handleAddTask = async (description: string, isOneTime: boolean) => {
+  const handleAddTask = async (description: string, isOneTime: boolean, notes?: string) => {
     try {
-      console.log('[LoopDetail] Adding task:', { description, isOneTime });
+      console.log('[LoopDetail] Adding task:', { description, isOneTime, notes });
       const { error } = await supabase.from('tasks').insert({
         loop_id: loopId,
         description,
+        notes: notes || null,
         is_one_time: isOneTime,
         completed: false,
       });
@@ -484,15 +485,26 @@ export const LoopDetailScreen: React.FC = () => {
                   )}
                 </View>
 
-                <Text style={{
-                  flex: 1,
-                  fontSize: 16,
-                  color: colors.text,
-                  textDecorationLine: task.completed ? 'line-through' : 'none',
-                  opacity: task.completed ? 0.6 : 1,
-                }}>
-                  {task.description}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    fontSize: 16,
+                    color: colors.text,
+                    textDecorationLine: task.completed ? 'line-through' : 'none',
+                    opacity: task.completed ? 0.6 : 1,
+                  }}>
+                    {task.description}
+                  </Text>
+                  {task.notes && (
+                    <Text style={{
+                      fontSize: 13,
+                      color: colors.textSecondary,
+                      marginTop: 4,
+                      opacity: task.completed ? 0.5 : 0.8,
+                    }}>
+                      {task.notes}
+                    </Text>
+                  )}
+                </View>
               </TouchableOpacity>
             ))}
 

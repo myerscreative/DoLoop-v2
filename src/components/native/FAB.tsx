@@ -12,7 +12,7 @@ import {
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface FABProps {
-  onAddTask: (description: string, isOneTime: boolean) => Promise<void>;
+  onAddTask: (description: string, isOneTime: boolean, notes?: string) => Promise<void>;
   centered?: boolean;
   modalVisible?: boolean;
   setModalVisible?: (visible: boolean) => void;
@@ -29,6 +29,7 @@ export const FAB: React.FC<FABProps> = ({
   const { colors } = useTheme();
   const [internalModalVisible, setInternalModalVisible] = useState(false);
   const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
   const [isOneTime, setIsOneTime] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -44,9 +45,10 @@ export const FAB: React.FC<FABProps> = ({
 
     setLoading(true);
     try {
-      await onAddTask(description.trim(), isOneTime);
+      await onAddTask(description.trim(), isOneTime, notes.trim() || undefined);
       setModalVisible(false);
       setDescription('');
+      setNotes('');
       setIsOneTime(false);
     } catch (error) {
       Alert.alert('Error', 'Failed to add task');
@@ -141,16 +143,37 @@ export const FAB: React.FC<FABProps> = ({
                   padding: 12,
                   fontSize: 16,
                   color: colors.text,
-                  marginBottom: 16,
+                  marginBottom: 12,
                 }}
-                placeholder="Enter task description..."
+                placeholder="Task name (e.g., 'Call dentist')..."
                 placeholderTextColor={colors.textSecondary}
                 value={description}
                 onChangeText={setDescription}
+                onSubmitEditing={() => {
+                  // Focus next field if exists, otherwise submit
+                }}
+                returnKeyType="next"
+                blurOnSubmit={false}
+                autoFocus
+              />
+
+              <TextInput
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: 14,
+                  color: colors.text,
+                  marginBottom: 16,
+                }}
+                placeholder="Add note (optional)..."
+                placeholderTextColor={colors.textSecondary}
+                value={notes}
+                onChangeText={setNotes}
                 onSubmitEditing={handleSubmit}
                 returnKeyType="done"
                 blurOnSubmit={false}
-                autoFocus
               />
 
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
