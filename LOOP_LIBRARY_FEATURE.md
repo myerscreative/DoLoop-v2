@@ -1,5 +1,22 @@
 # Loop Library Feature
 
+## 🎉 What's New - v2.0 Enhancements
+
+**Major Update - November 15, 2025**
+
+The Loop Library just got a massive upgrade! Here's what's new:
+
+- ⭐ **Ratings & Reviews** - Rate templates 1-5 stars and help others discover the best loops
+- ❤️ **Favorites System** - Save your favorite templates for quick access with a dedicated Favorites tab
+- 📖 **My Library Tab** - See all templates you've added in one organized place
+- 📤 **Share Templates** - Share templates with friends via native share sheet
+- 🎯 **4 New Templates** - Deep Work, 5 AM Club, Tiny Habits, and 7 Habits templates added
+- 🎨 **Enhanced UI** - Beautiful star ratings, favorite hearts, and "Added" badges
+
+Now with **7 premium templates** from world-class experts!
+
+---
+
 ## Overview
 
 The Loop Library is a new feature that allows DoLoop users to browse and add pre-made loops inspired by teachings from renowned trainers, coaches, and business leaders. This feature enables users to quickly get started with proven productivity systems and habit frameworks from experts they trust.
@@ -33,6 +50,31 @@ Each template has a detailed page that includes:
 - When users view templates, they can click "Learn More" to purchase the source material
 - Supports creator partnerships and revenue sharing opportunities
 
+### 5. Ratings & Reviews System ⭐ NEW
+- Users can rate templates from 1-5 stars
+- Optional text reviews to share detailed feedback
+- Average rating displayed prominently on template cards
+- Review count shows social proof and template popularity
+- Real-time rating statistics via automatic database triggers
+
+### 6. Favorites System ❤️ NEW
+- Heart icon on each template card to favorite/unfavorite
+- Dedicated "Favorites" tab for quick access
+- Favorites persist across sessions
+- Visual indication of favorited templates
+
+### 7. My Library Tab 📖 NEW
+- Three-tab navigation: Browse, My Library, Favorites
+- "My Library" shows all templates user has added to their loops
+- "✓ Added" badges on template cards
+- Easy organization and filtering of owned content
+
+### 8. Template Sharing 📤 NEW
+- Share button on each template card
+- Native share sheet integration (iOS/Android)
+- Shares template name, creator, and book info
+- Drives viral adoption and discovery
+
 ## User Flow
 
 1. **Discovery**
@@ -60,7 +102,7 @@ Each template has a detailed page that includes:
 
 ## Sample Templates
 
-The feature launches with three high-quality templates:
+The feature now includes **7 high-quality templates** from renowned experts:
 
 ### 1. Atomic Habits Daily Reset
 - **Creator**: James Clear
@@ -79,6 +121,34 @@ The feature launches with three high-quality templates:
 - **Source**: The 4-Hour Workweek
 - **Category**: Personal
 - **Tasks**: 6 tasks for a high-performance morning routine
+
+### 4. Deep Work Session ⭐ NEW
+- **Creator**: Cal Newport
+- **Source**: Deep Work
+- **Category**: Work
+- **Tasks**: 6 tasks for distraction-free, focused work sessions
+- **Popularity**: 150 uses
+
+### 5. The 5 AM Club Routine ⭐ NEW
+- **Creator**: Robin Sharma
+- **Source**: The 5 AM Club
+- **Category**: Daily
+- **Tasks**: 6 tasks following the 20/20/20 formula (Move, Reflect, Grow)
+- **Popularity**: 200 uses
+
+### 6. Tiny Habits Starter Pack ⭐ NEW
+- **Creator**: BJ Fogg
+- **Source**: Tiny Habits
+- **Category**: Personal
+- **Tasks**: 6 tiny habit anchors using behavior design principles
+- **Popularity**: 175 uses
+
+### 7. 7 Habits Weekly Check-In ⭐ NEW
+- **Creator**: Stephen Covey
+- **Source**: The 7 Habits of Highly Effective People
+- **Category**: Work
+- **Tasks**: 6 tasks covering Covey's foundational principles
+- **Popularity**: 250 uses
 
 ## Technical Implementation
 
@@ -106,6 +176,8 @@ Stores the loop templates:
 - `category`: Loop category (personal, work, daily, shared)
 - `is_featured`: Boolean flag for featured templates
 - `popularity_score`: Integer tracking usage count
+- `average_rating`: Decimal (3,2) for average star rating ⭐ NEW
+- `review_count`: Integer count of reviews ⭐ NEW
 - `created_at`, `updated_at`: Timestamps
 
 #### `template_tasks`
@@ -126,26 +198,52 @@ Tracks which users have added which templates:
 - `loop_id`: Foreign key to loops (the created loop)
 - `added_at`: Timestamp
 
+#### `template_reviews` ⭐ NEW
+User ratings and reviews for templates:
+- `id`: UUID (primary key)
+- `template_id`: Foreign key to loop_templates
+- `user_id`: Foreign key to auth.users
+- `rating`: Integer (1-5 stars)
+- `review_text`: Optional text review
+- `created_at`, `updated_at`: Timestamps
+- UNIQUE constraint: One review per user per template
+
+#### `template_favorites` ⭐ NEW
+User favorites for quick access:
+- `id`: UUID (primary key)
+- `template_id`: Foreign key to loop_templates
+- `user_id`: Foreign key to auth.users
+- `created_at`: Timestamp
+- UNIQUE constraint: One favorite per user per template
+
 ### Security (RLS Policies)
 
 - **Templates and Creators**: Public read access (anyone can browse)
 - **Template Usage**: Users can only view/modify their own usage records
+- **Template Reviews** ⭐ NEW: Public read, users can CRUD their own reviews
+- **Template Favorites** ⭐ NEW: Users can only view/manage their own favorites
 - **Popularity Tracking**: Automatic trigger increments score when template is added
+- **Rating Statistics** ⭐ NEW: Automatic trigger updates average_rating and review_count
 
 ### UI Components
 
-1. **TemplateLibraryScreen** (`src/screens/TemplateLibraryScreen.tsx`)
-   - Main browsing interface
-   - Search and filter functionality
-   - Template cards with key information
-   - Loading and empty states
+1. **TemplateLibraryScreen** (`src/screens/TemplateLibraryScreen.tsx`) ⭐ ENHANCED
+   - Three-tab navigation: Browse, My Library, Favorites
+   - Main browsing interface with search and filters
+   - Template cards with ratings, favorites, and share buttons
+   - Heart icon for favoriting templates
+   - "✓ Added" badges for owned templates
+   - Share button for viral distribution
+   - Enhanced empty states for each tab
+   - Real-time favorite toggling
 
 2. **TemplateDetailScreen** (`src/screens/TemplateDetailScreen.tsx`)
-   - Detailed template view
-   - Creator bio section
-   - Task preview
+   - Detailed template view with ratings display
+   - Creator bio section with photo
+   - Full task preview
    - Add to My Loops functionality
-   - Affiliate link integration
+   - Affiliate link integration with confirmation dialog
+   - Rating and review submission (coming soon)
 
 3. **HomeScreen Update** (`src/screens/HomeScreen.tsx`)
    - New "Discover Loops" section
@@ -183,30 +281,49 @@ The migration includes:
 
 Potential improvements for future iterations:
 
-1. **Admin Panel**
+### ✅ Already Implemented
+- ✅ Template reviews and ratings (5-star system)
+- ✅ Favorite templates for quick access
+- ✅ Share templates with friends (native share)
+- ✅ My Library tab for owned templates
+
+### 🚀 Coming Soon
+
+1. **Enhanced Review System**
+   - Full review submission interface on detail screen
+   - Display all user reviews with pagination
+   - Helpful/unhelpful voting on reviews
+   - Filter reviews by rating
+
+2. **Admin Panel**
    - Web interface to add new templates
    - Manage creators and templates
    - Review and approve community submissions
+   - Analytics dashboard for template performance
 
-2. **Community Templates**
+3. **Community Templates**
    - Allow users to submit their own templates
    - Voting system for community templates
    - Template collections and bundles
+   - Curator badges for top contributors
 
-3. **Personalization**
+4. **Personalization**
    - Recommend templates based on user behavior
-   - Favorite templates for quick access
-   - Template reviews and ratings
+   - AI-powered template suggestions
+   - "Templates you might like" section
+   - Trending templates this week
 
-4. **Enhanced Monetization**
-   - Multiple affiliate programs
+5. **Enhanced Monetization**
+   - Multiple affiliate programs support
    - Premium template marketplace
    - Subscription for exclusive templates
+   - Revenue sharing with template creators
 
-5. **Social Features**
-   - Share templates with friends
+6. **Social Features**
    - See which templates are trending
    - Follow favorite creators
+   - Creator profiles with all their templates
+   - Template usage statistics and leaderboards
 
 ## Access the Feature
 
