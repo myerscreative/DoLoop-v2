@@ -158,7 +158,7 @@ CREATE POLICY "Users can manage task tags" ON task_tags
     task_id IN (
       SELECT t.id FROM tasks t
       JOIN loops l ON t.loop_id = l.id
-      WHERE l.owner_id = auth.uid() OR l.owner = auth.uid()
+      WHERE l.owner_id = auth.uid()
     )
   );
 
@@ -202,7 +202,7 @@ CREATE POLICY "Users can manage subtasks" ON subtasks
     parent_task_id IN (
       SELECT t.id FROM tasks t
       JOIN loops l ON t.loop_id = l.id
-      WHERE l.owner_id = auth.uid() OR l.owner = auth.uid()
+      WHERE l.owner_id = auth.uid()
     )
   );
 
@@ -236,7 +236,7 @@ CREATE POLICY "Users can manage task attachments" ON attachments
     task_id IN (
       SELECT t.id FROM tasks t
       JOIN loops l ON t.loop_id = l.id
-      WHERE l.owner_id = auth.uid() OR l.owner = auth.uid()
+      WHERE l.owner_id = auth.uid()
     )
   );
 
