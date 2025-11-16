@@ -75,7 +75,7 @@ export default function App() {
     }
   }, []);
 
-  const handleStateChange = useCallback((state) => {
+  const handleStateChange = useCallback((state: any) => {
     if (Platform.OS === 'web') {
       try {
         localStorage.setItem(NAV_STATE_KEY, JSON.stringify(state));

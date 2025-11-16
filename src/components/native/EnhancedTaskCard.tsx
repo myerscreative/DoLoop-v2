@@ -31,10 +31,11 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
     return date.toLocaleDateString();
   };
 
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done';
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
   const completedSubtasks = task.subtasks?.filter(st => st.status === 'done').length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
+  const taskStatus = task.completed ? 'done' : 'pending';
 
   return (
     <TouchableOpacity
@@ -50,12 +51,12 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
           style={[
             styles.checkbox,
             {
-              borderColor: task.status === 'done' ? colors.primary : colors.border,
-              backgroundColor: task.status === 'done' ? colors.primary : 'transparent',
+              borderColor: taskStatus === 'done' ? colors.primary : colors.border,
+              backgroundColor: taskStatus === 'done' ? colors.primary : 'transparent',
             },
           ]}
         >
-          {task.status === 'done' && (
+          {taskStatus === 'done' && (
             <Text style={styles.checkmark}>✓</Text>
           )}
         </TouchableOpacity>

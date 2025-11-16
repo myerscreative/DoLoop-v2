@@ -26,6 +26,7 @@ import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
 import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 import { EnhancedTaskCard } from '../components/native/EnhancedTaskCard';
 import { TaskEditModal } from '../components/native/TaskEditModal';
+import { BeeIcon } from '../components/native/BeeIcon';
 import { getUserTags, getTaskTags, updateTaskExtended, createTag } from '../lib/taskHelpers';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;

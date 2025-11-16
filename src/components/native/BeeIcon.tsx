@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Circle, Ellipse, Defs, Style } from 'react-native-svg';
+import Svg, { Path, Circle, Ellipse, Defs } from 'react-native-svg';
 
 interface BeeIconProps {
   size?: number;
