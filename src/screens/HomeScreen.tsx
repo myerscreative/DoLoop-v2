@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -46,6 +47,10 @@ export const HomeScreen: React.FC = () => {
   const [selectionModalVisible, setSelectionModalVisible] = useState(false);
   const [loopsToSelect, setLoopsToSelect] = useState<any[]>([]);
   const [selectedFolderName, setSelectedFolderName] = useState('');
+
+  // Loop editing state
+  const [editingLoop, setEditingLoop] = useState<any | null>(null);
+  const [isEditingLoop, setIsEditingLoop] = useState(false);
 
   // AI Loop Creation state
   const [createMode, setCreateMode] = useState<'manual' | 'ai'>('manual');
@@ -139,6 +144,18 @@ export const HomeScreen: React.FC = () => {
   const handleSignOut = async () => {
     await signOut();
     navigation.replace('Login');
+  };
+
+  const openCreateLoopModal = () => {
+    setIsEditingLoop(false);
+    setEditingLoop(null);
+    setCreateMode('manual');
+    setNewLoopName('');
+    setSelectedLoopType('manual');
+    setAiPrompt('');
+    setGeneratedLoop(null);
+    setAiError(null);
+    setModalVisible(true);
   };
 
   const handleCreateLoop = async () => {
@@ -320,12 +337,144 @@ export const HomeScreen: React.FC = () => {
     handleGenerateAI();
   };
 
+  const handleUpdateLoop = async () => {
+    if (!editingLoop) return;
+
+    if (!newLoopName.trim()) {
+      Alert.alert('Error', 'Please enter a loop name');
+      return;
+    }
+
+    setCreating(true);
+
+    try {
+      let nextResetAt: string | null = editingLoop.next_reset_at ?? null;
+
+      if (selectedLoopType === 'manual') {
+        nextResetAt = null;
+      } else if (selectedLoopType === 'daily') {
+        if (editingLoop.reset_rule !== 'daily' || !editingLoop.next_reset_at) {
+          nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        }
+      } else if (selectedLoopType === 'weekly') {
+        if (editingLoop.reset_rule !== 'weekly' || !editingLoop.next_reset_at) {
+          nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('loops')
+        .update({
+          name: newLoopName.trim(),
+          loop_type: 'personal',
+          color:
+            selectedLoopType === 'manual'
+              ? '#10B981'
+              : selectedLoopType === 'daily'
+              ? '#F59E0B'
+              : '#8B5CF6',
+          reset_rule: selectedLoopType,
+          next_reset_at: nextResetAt,
+        })
+        .eq('id', editingLoop.id);
+
+      if (error) {
+        console.error('[HomeScreen] Error updating loop:', error);
+        throw error;
+      }
+
+      resetModalState();
+      await loadData();
+    } catch (error: any) {
+      console.error('[HomeScreen] Error updating loop:', error);
+      Alert.alert('Error', `Failed to update loop: ${error?.message || 'Unknown error'}`);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const confirmDeleteLoop = (loop: any) => {
+    console.log('[HomeScreen] Confirm delete tapped for loop:', loop.id);
+
+    if (Platform.OS === 'web') {
+      // Use browser confirm for reliable web behavior
+      const confirmed = window.confirm(
+        `Are you sure you want to delete "${loop.name}"? This cannot be undone.`
+      );
+      if (confirmed) {
+        handleDeleteLoop(loop);
+      }
+      return;
+    }
+
+    Alert.alert(
+      'Delete Loop',
+      `Are you sure you want to delete "${loop.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => handleDeleteLoop(loop),
+        },
+      ]
+    );
+  };
+
+  const handleDeleteLoop = async (loop: any) => {
+    try {
+      // Delete tasks first to be safe
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('loop_id', loop.id);
+
+      if (tasksError) {
+        console.warn('[HomeScreen] Error deleting loop tasks:', tasksError);
+      }
+
+      const { error: loopError } = await supabase
+        .from('loops')
+        .delete()
+        .eq('id', loop.id);
+
+      if (loopError) {
+        console.error('[HomeScreen] Error deleting loop:', loopError);
+        throw loopError;
+      }
+
+      if (editingLoop && editingLoop.id === loop.id) {
+        setEditingLoop(null);
+        setIsEditingLoop(false);
+      }
+
+      await loadData();
+    } catch (error: any) {
+      console.error('[HomeScreen] Error deleting loop:', error);
+      Alert.alert('Error', `Failed to delete loop: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  const startEditLoop = (loop: any) => {
+    setEditingLoop(loop);
+    setIsEditingLoop(true);
+    setCreateMode('manual');
+    setNewLoopName(loop.name || '');
+    setSelectedLoopType(loop.reset_rule || 'manual');
+    setAiPrompt('');
+    setGeneratedLoop(null);
+    setAiError(null);
+    setModalVisible(true);
+  };
+
   const resetModalState = () => {
     setCreateMode('manual');
     setNewLoopName('');
     setAiPrompt('');
     setGeneratedLoop(null);
     setAiError(null);
+    setEditingLoop(null);
+    setIsEditingLoop(false);
     setModalVisible(false);
   };
 
@@ -411,7 +560,7 @@ export const HomeScreen: React.FC = () => {
         >
         <View style={{ padding: 20 }}>
           {filteredLoops.map((loop) => (
-            <TouchableOpacity
+            <Pressable
               key={loop.id}
               style={{
                 flexDirection: 'row',
@@ -480,11 +629,36 @@ export const HomeScreen: React.FC = () => {
                 )}
               </View>
 
-              <Text style={{
-                fontSize: 20,
-                color: colors.primary,
-              }}>›</Text>
-            </TouchableOpacity>
+              <View style={{ alignItems: 'flex-end', justifyContent: 'center' }}>
+                {Platform.OS === 'web' && (
+                  <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+                    <TouchableOpacity
+                      onPress={(e: any) => {
+                        if (e && typeof e.stopPropagation === 'function') {
+                          e.stopPropagation();
+                        }
+                        startEditLoop(loop);
+                      }}
+                      style={{ marginRight: 12 }}
+                    >
+                      <Text style={{ fontSize: 14, color: colors.primary }}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={(e: any) => {
+                        if (e && typeof e.stopPropagation === 'function') {
+                          e.stopPropagation();
+                        }
+                        confirmDeleteLoop(loop);
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: colors.error || '#ff4444' }}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <Text style={{ fontSize: 20, color: colors.primary }}>›</Text>
+              </View>
+            </Pressable>
           ))}
 
           {filteredLoops.length === 0 && (
@@ -609,7 +783,7 @@ export const HomeScreen: React.FC = () => {
             shadowOpacity: 0.25,
             shadowRadius: 4,
           }}
-          onPress={() => setModalVisible(true)}
+          onPress={openCreateLoopModal}
         >
           <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
         </TouchableOpacity>
@@ -660,54 +834,56 @@ export const HomeScreen: React.FC = () => {
                     marginBottom: 16,
                   }}
                 >
-                  Create New Loop
+                  {isEditingLoop ? 'Edit Loop' : 'Create New Loop'}
                 </Text>
 
-                {/* Mode Toggle Tabs */}
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      borderRadius: 8,
-                      backgroundColor: createMode === 'manual' ? colors.primary : colors.border + '40',
-                      alignItems: 'center',
-                    }}
-                    onPress={() => setCreateMode('manual')}
-                  >
-                    <Text style={{
-                      color: createMode === 'manual' ? '#fff' : colors.textSecondary,
-                      fontWeight: createMode === 'manual' ? 'bold' : 'normal',
-                      fontSize: 15,
-                    }}>
-                      ✏️ Manual
-                    </Text>
-                  </TouchableOpacity>
+                {/* Mode Toggle Tabs (only when creating) */}
+                {!isEditingLoop && (
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                        backgroundColor: createMode === 'manual' ? colors.primary : colors.border + '40',
+                        alignItems: 'center',
+                      }}
+                      onPress={() => setCreateMode('manual')}
+                    >
+                      <Text style={{
+                        color: createMode === 'manual' ? '#fff' : colors.textSecondary,
+                        fontWeight: createMode === 'manual' ? 'bold' : 'normal',
+                        fontSize: 15,
+                      }}>
+                        ✏️ Manual
+                      </Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={{
-                      flex: 1,
-                      paddingVertical: 10,
-                      paddingHorizontal: 16,
-                      borderRadius: 8,
-                      backgroundColor: createMode === 'ai' ? '#10b981' : colors.border + '40',
-                      alignItems: 'center',
-                    }}
-                    onPress={() => setCreateMode('ai')}
-                  >
-                    <Text style={{
-                      color: createMode === 'ai' ? '#fff' : colors.textSecondary,
-                      fontWeight: createMode === 'ai' ? 'bold' : 'normal',
-                      fontSize: 15,
-                    }}>
-                      ✨ AI Helper
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1,
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        borderRadius: 8,
+                        backgroundColor: createMode === 'ai' ? '#10b981' : colors.border + '40',
+                        alignItems: 'center',
+                      }}
+                      onPress={() => setCreateMode('ai')}
+                    >
+                      <Text style={{
+                        color: createMode === 'ai' ? '#fff' : colors.textSecondary,
+                        fontWeight: createMode === 'ai' ? 'bold' : 'normal',
+                        fontSize: 15,
+                      }}>
+                        ✨ AI Helper
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
 
-                {/* Manual Mode */}
-                {createMode === 'manual' && (
+                {/* Manual Mode (also used for editing) */}
+                {(createMode === 'manual' || isEditingLoop) && (
                   <>
                     <TextInput
                       style={{
@@ -780,11 +956,17 @@ export const HomeScreen: React.FC = () => {
                           paddingVertical: 8,
                           borderRadius: 6,
                         }}
-                        onPress={handleCreateLoop}
+                        onPress={isEditingLoop ? handleUpdateLoop : handleCreateLoop}
                         disabled={creating}
                       >
                         <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-                          {creating ? 'Creating...' : 'Create'}
+                          {creating
+                            ? isEditingLoop
+                              ? 'Saving...'
+                              : 'Creating...'
+                            : isEditingLoop
+                            ? 'Save'
+                            : 'Create'}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -792,7 +974,7 @@ export const HomeScreen: React.FC = () => {
                 )}
 
                 {/* AI Mode */}
-                {createMode === 'ai' && !generatedLoop && (
+                {createMode === 'ai' && !generatedLoop && !isEditingLoop && (
                   <>
                     <Text style={{ color: colors.text, fontSize: 14, marginBottom: 8 }}>
                       Describe what you want to accomplish:
@@ -875,7 +1057,7 @@ export const HomeScreen: React.FC = () => {
                 )}
 
                 {/* AI Preview Mode */}
-                {createMode === 'ai' && generatedLoop && (
+                {createMode === 'ai' && generatedLoop && !isEditingLoop && (
                   <>
                     <View style={{
                       backgroundColor: colors.background,

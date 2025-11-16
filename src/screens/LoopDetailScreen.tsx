@@ -47,6 +47,16 @@ export const LoopDetailScreen: React.FC = () => {
 
   const THEME_PROMPT_SHOWN_KEY = '@doloop_theme_prompt_shown';
 
+  const safeHapticImpact = async (style: Haptics.ImpactFeedbackStyle) => {
+    try {
+      if (Platform.OS !== 'web') {
+        await Haptics.impactAsync(style);
+      }
+    } catch (error) {
+      console.warn('[LoopDetail] Haptics not available:', error);
+    }
+  };
+
   const formatNextReset = (nextResetAt: string | null) => {
     if (!nextResetAt) return 'Not scheduled';
     
@@ -127,9 +137,9 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (error) throw error;
 
-      // Haptic feedback
+      // Haptic feedback (no-op on web)
       if (newCompleted) {
-        await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
       }
 
       // Handle one-time tasks
@@ -350,7 +360,7 @@ export const LoopDetailScreen: React.FC = () => {
 
   const resetLoop = async () => {
     try {
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
 
       // === STREAK LOGIC: Update global user streak for daily loops ===
       if (loopData?.reset_rule === 'daily' && loopData.completedCount === loopData.totalCount) {
