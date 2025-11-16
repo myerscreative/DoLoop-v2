@@ -10,7 +10,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -44,6 +46,13 @@ export const HomeScreen: React.FC = () => {
   const [selectionModalVisible, setSelectionModalVisible] = useState(false);
   const [loopsToSelect, setLoopsToSelect] = useState<any[]>([]);
   const [selectedFolderName, setSelectedFolderName] = useState('');
+
+  // AI Loop Creation state
+  const [createMode, setCreateMode] = useState<'manual' | 'ai'>('manual');
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLoop, setGeneratedLoop] = useState<any>(null);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   useEffect(() => {
     updateDate();
@@ -134,7 +143,7 @@ export const HomeScreen: React.FC = () => {
 
   const handleCreateLoop = async () => {
     console.log('[HomeScreen] Create loop button clicked');
-    
+
     if (!newLoopName.trim()) {
       console.log('[HomeScreen] Empty loop name');
       Alert.alert('Error', 'Please enter a loop name');
@@ -143,7 +152,7 @@ export const HomeScreen: React.FC = () => {
 
     console.log('[HomeScreen] Creating loop:', newLoopName, selectedLoopType);
     setCreating(true);
-    
+
     try {
       // Calculate next reset time based on reset rule
       let nextResetAt: string | null = null;
@@ -179,7 +188,7 @@ export const HomeScreen: React.FC = () => {
       setNewLoopName('');
       setSelectedLoopType('manual');
       await loadData();
-      
+
       // Navigate to the newly created loop
       if (data) {
         console.log('[HomeScreen] Navigating to loop:', data.id);
@@ -191,6 +200,133 @@ export const HomeScreen: React.FC = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleGenerateAI = async () => {
+    if (!aiPrompt.trim()) {
+      Alert.alert('Required', 'Please describe what kind of loop you need');
+      return;
+    }
+
+    setIsGenerating(true);
+    setAiError(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('You must be logged in to use AI features');
+      }
+
+      const { data, error: functionError } = await supabase.functions.invoke('generate_ai_loop', {
+        body: { prompt: aiPrompt },
+      });
+
+      if (functionError) {
+        throw new Error(functionError.message);
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to generate loop');
+      }
+
+      setGeneratedLoop(data.loop);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      console.error('Error generating loop:', err);
+      setAiError(err.message || 'Failed to generate loop. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCreateFromAI = async () => {
+    if (!generatedLoop) return;
+
+    setCreating(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      // Calculate next reset time based on reset rule
+      let nextResetAt: string;
+      const now = new Date();
+
+      if (generatedLoop.resetRule === 'daily') {
+        nextResetAt = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+      } else if (generatedLoop.resetRule === 'weekly') {
+        nextResetAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      } else {
+        nextResetAt = new Date('2099-12-31').toISOString(); // Far future for manual
+      }
+
+      // Create the loop
+      const { data: newLoop, error: loopError } = await supabase
+        .from('loops')
+        .insert({
+          owner_id: user?.id,
+          name: generatedLoop.name,
+          color: generatedLoop.color,
+          reset_rule: generatedLoop.resetRule,
+          next_reset_at: nextResetAt,
+          is_favorite: false,
+          loop_type: 'personal',
+        })
+        .select()
+        .single();
+
+      if (loopError) throw loopError;
+
+      // Create the tasks
+      const tasksToInsert = generatedLoop.tasks.map((task: any, index: number) => ({
+        loop_id: newLoop.id,
+        description: task.description,
+        notes: task.notes || null,
+        completed: false,
+        is_one_time: generatedLoop.resetRule === 'manual',
+        order_index: index,
+      }));
+
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .insert(tasksToInsert);
+
+      if (tasksError) throw tasksError;
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Reset modal state
+      setModalVisible(false);
+      setCreateMode('manual');
+      setAiPrompt('');
+      setGeneratedLoop(null);
+      setAiError(null);
+      await loadData();
+
+      // Navigate to the new loop
+      navigation.navigate('LoopDetail', { loopId: newLoop.id });
+    } catch (err: any) {
+      console.error('Error creating loop:', err);
+      Alert.alert('Error', err.message || 'Failed to create loop. Please try again.');
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRegenerateAI = () => {
+    setGeneratedLoop(null);
+    setAiError(null);
+    handleGenerateAI();
+  };
+
+  const resetModalState = () => {
+    setCreateMode('manual');
+    setNewLoopName('');
+    setAiPrompt('');
+    setGeneratedLoop(null);
+    setAiError(null);
+    setModalVisible(false);
   };
 
   // Show loading screen while checking auth
@@ -400,47 +536,6 @@ export const HomeScreen: React.FC = () => {
               Discover Loops
             </Text>
 
-            {/* AI Loop Creator Card */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#10b981',
-                padding: 20,
-                borderRadius: 16,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 4,
-                marginBottom: 16,
-              }}
-              onPress={() => navigation.navigate('AILoopCreation')}
-            >
-              <View style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginBottom: 8,
-              }}>
-                <Text style={{ fontSize: 28, marginRight: 12 }}>✨</Text>
-                <Text style={{
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  flex: 1,
-                }}>
-                  AI Loop Creator
-                </Text>
-                <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
-              </View>
-              <Text style={{
-                fontSize: 14,
-                color: '#fff',
-                opacity: 0.9,
-                lineHeight: 20,
-              }}>
-                Describe what you need and let AI create a custom loop for you
-              </Text>
-            </TouchableOpacity>
-
             <TouchableOpacity
               style={{
                 backgroundColor: '#667eea',
@@ -525,7 +620,7 @@ export const HomeScreen: React.FC = () => {
         visible={modalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setModalVisible(false)}
+        onRequestClose={resetModalState}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -540,110 +635,342 @@ export const HomeScreen: React.FC = () => {
               alignItems: 'center',
             }}
             activeOpacity={1}
-            onPress={() => setModalVisible(false)}
+            onPress={resetModalState}
           >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
-              style={{
-                backgroundColor: colors.surface,
-                borderRadius: 12,
-                padding: 20,
-                width: '100%',
-                maxWidth: 600,
-              }}
+            <ScrollView
+              style={{ flex: 1, width: '100%', maxWidth: 600 }}
+              contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+              keyboardShouldPersistTaps="handled"
             >
-              <Text
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={() => {}}
                 style={{
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                  color: colors.text,
-                  marginBottom: 16,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  maxHeight: Platform.OS === 'web' ? '80vh' : undefined,
                 }}
               >
-                Create New Loop
-              </Text>
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: colors.text,
+                    marginBottom: 16,
+                  }}
+                >
+                  Create New Loop
+                </Text>
 
-              <TextInput
-                style={{
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 8,
-                  padding: 12,
-                  fontSize: 16,
-                  color: colors.text,
-                  marginBottom: 16,
-                }}
-                placeholder="Loop name..."
-                placeholderTextColor={colors.textSecondary}
-                value={newLoopName}
-                onChangeText={setNewLoopName}
-                autoFocus
-              />
-
-              <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>
-                Loop Type:
-              </Text>
-
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
-                {[
-                  { id: 'manual', label: 'Checklist', icon: '✓', description: 'Manual reset' },
-                  { id: 'daily', label: 'Daily Routine', icon: '☀️', description: 'Resets daily' },
-                  { id: 'weekly', label: 'Weekly Goal', icon: '🎯', description: 'Resets weekly' },
-                ].map((type) => (
+                {/* Mode Toggle Tabs */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
                   <TouchableOpacity
-                    key={type.id}
                     style={{
-                      flexDirection: 'row',
+                      flex: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      backgroundColor: createMode === 'manual' ? colors.primary : colors.border + '40',
                       alignItems: 'center',
-                      paddingHorizontal: 12,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      borderWidth: 2,
-                      borderColor: selectedLoopType === type.id ? colors.primary : colors.border,
-                      backgroundColor: selectedLoopType === type.id ? `${colors.primary}20` : 'transparent',
                     }}
-                    onPress={() => setSelectedLoopType(type.id as LoopType)}
+                    onPress={() => setCreateMode('manual')}
                   >
-                    <Text style={{ fontSize: 18, marginRight: 6 }}>{type.icon}</Text>
                     <Text style={{
-                      color: selectedLoopType === type.id ? colors.text : colors.textSecondary,
-                      fontWeight: selectedLoopType === type.id ? 'bold' : 'normal',
+                      color: createMode === 'manual' ? '#fff' : colors.textSecondary,
+                      fontWeight: createMode === 'manual' ? 'bold' : 'normal',
+                      fontSize: 15,
                     }}>
-                      {type.label}
+                      ✏️ Manual
                     </Text>
                   </TouchableOpacity>
-                ))}
-              </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
-                <TouchableOpacity
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 6,
-                  }}
-                  onPress={() => setModalVisible(false)}
-                >
-                  <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{
+                      flex: 1,
+                      paddingVertical: 10,
+                      paddingHorizontal: 16,
+                      borderRadius: 8,
+                      backgroundColor: createMode === 'ai' ? '#10b981' : colors.border + '40',
+                      alignItems: 'center',
+                    }}
+                    onPress={() => setCreateMode('ai')}
+                  >
+                    <Text style={{
+                      color: createMode === 'ai' ? '#fff' : colors.textSecondary,
+                      fontWeight: createMode === 'ai' ? 'bold' : 'normal',
+                      fontSize: 15,
+                    }}>
+                      ✨ AI Helper
+                    </Text>
+                  </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: colors.primary,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 6,
-                  }}
-                  onPress={handleCreateLoop}
-                  disabled={creating}
-                >
-                  <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
-                    {creating ? 'Creating...' : 'Create'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+                {/* Manual Mode */}
+                {createMode === 'manual' && (
+                  <>
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 8,
+                        padding: 12,
+                        fontSize: 16,
+                        color: colors.text,
+                        marginBottom: 16,
+                      }}
+                      placeholder="Loop name..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={newLoopName}
+                      onChangeText={setNewLoopName}
+                      autoFocus
+                    />
+
+                    <Text style={{ color: colors.text, fontSize: 16, marginBottom: 12 }}>
+                      Loop Type:
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                      {[
+                        { id: 'manual', label: 'Checklist', icon: '✓', description: 'Manual reset' },
+                        { id: 'daily', label: 'Daily Routine', icon: '☀️', description: 'Resets daily' },
+                        { id: 'weekly', label: 'Weekly Goal', icon: '🎯', description: 'Resets weekly' },
+                      ].map((type) => (
+                        <TouchableOpacity
+                          key={type.id}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            paddingHorizontal: 12,
+                            paddingVertical: 8,
+                            borderRadius: 20,
+                            borderWidth: 2,
+                            borderColor: selectedLoopType === type.id ? colors.primary : colors.border,
+                            backgroundColor: selectedLoopType === type.id ? `${colors.primary}20` : 'transparent',
+                          }}
+                          onPress={() => setSelectedLoopType(type.id as LoopType)}
+                        >
+                          <Text style={{ fontSize: 18, marginRight: 6 }}>{type.icon}</Text>
+                          <Text style={{
+                            color: selectedLoopType === type.id ? colors.text : colors.textSecondary,
+                            fontWeight: selectedLoopType === type.id ? 'bold' : 'normal',
+                          }}>
+                            {type.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                      <TouchableOpacity
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          borderRadius: 6,
+                        }}
+                        onPress={resetModalState}
+                      >
+                        <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: colors.primary,
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          borderRadius: 6,
+                        }}
+                        onPress={handleCreateLoop}
+                        disabled={creating}
+                      >
+                        <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                          {creating ? 'Creating...' : 'Create'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+
+                {/* AI Mode */}
+                {createMode === 'ai' && !generatedLoop && (
+                  <>
+                    <Text style={{ color: colors.text, fontSize: 14, marginBottom: 8 }}>
+                      Describe what you want to accomplish:
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 12, lineHeight: 18 }}>
+                      Examples: "morning routine for productivity", "weekly fitness plan", "project launch checklist"
+                    </Text>
+
+                    <TextInput
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        borderRadius: 8,
+                        padding: 12,
+                        fontSize: 16,
+                        color: colors.text,
+                        marginBottom: 12,
+                        minHeight: 100,
+                        textAlignVertical: 'top',
+                      }}
+                      placeholder="Describe your loop..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={aiPrompt}
+                      onChangeText={setAiPrompt}
+                      multiline
+                      numberOfLines={4}
+                      autoFocus
+                    />
+
+                    {aiError && (
+                      <View style={{
+                        backgroundColor: '#fee2e2',
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 12,
+                        borderLeftWidth: 4,
+                        borderLeftColor: '#ef4444',
+                      }}>
+                        <Text style={{ color: '#991b1b', fontSize: 14 }}>
+                          ⚠️ {aiError}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }}>
+                      <TouchableOpacity
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          borderRadius: 6,
+                        }}
+                        onPress={resetModalState}
+                        disabled={isGenerating}
+                      >
+                        <Text style={{ color: colors.textSecondary, fontSize: 16 }}>Cancel</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          backgroundColor: '#10b981',
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 6,
+                          minWidth: 120,
+                          alignItems: 'center',
+                        }}
+                        onPress={handleGenerateAI}
+                        disabled={isGenerating}
+                      >
+                        {isGenerating ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                            ✨ Generate
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+
+                {/* AI Preview Mode */}
+                {createMode === 'ai' && generatedLoop && (
+                  <>
+                    <View style={{
+                      backgroundColor: colors.background,
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 16,
+                      borderLeftWidth: 4,
+                      borderLeftColor: generatedLoop.color,
+                    }}>
+                      <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 8 }}>
+                        {generatedLoop.name}
+                      </Text>
+                      <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 8, lineHeight: 20 }}>
+                        {generatedLoop.description}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: '#10b981', fontWeight: '600', marginBottom: 12 }}>
+                        {generatedLoop.resetRule === 'manual' ? '✓ Checklist' :
+                         generatedLoop.resetRule === 'daily' ? '☀️ Daily Routine' : '🎯 Weekly Goal'}
+                      </Text>
+
+                      <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
+                        Tasks ({generatedLoop.tasks.length})
+                      </Text>
+                      {generatedLoop.tasks.map((task: any, index: number) => (
+                        <View key={index} style={{ flexDirection: 'row', marginBottom: 8, gap: 10 }}>
+                          <View style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 5,
+                            borderWidth: 2,
+                            borderColor: colors.border,
+                            marginTop: 2,
+                          }} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, color: colors.text, lineHeight: 20 }}>
+                              {task.description}
+                            </Text>
+                            {task.notes && (
+                              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2, lineHeight: 16 }}>
+                                {task.notes}
+                              </Text>
+                            )}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={{ flexDirection: 'row', gap: 12 }}>
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 6,
+                          borderWidth: 2,
+                          borderColor: '#10b981',
+                          alignItems: 'center',
+                        }}
+                        onPress={handleRegenerateAI}
+                        disabled={isGenerating || creating}
+                      >
+                        {isGenerating ? (
+                          <ActivityIndicator color="#10b981" />
+                        ) : (
+                          <Text style={{ color: '#10b981', fontSize: 16, fontWeight: '600' }}>
+                            🔄 Regenerate
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          paddingHorizontal: 16,
+                          borderRadius: 6,
+                          backgroundColor: '#10b981',
+                          alignItems: 'center',
+                        }}
+                        onPress={handleCreateFromAI}
+                        disabled={creating || isGenerating}
+                      >
+                        {creating ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>
+                            ✓ Create Loop
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>

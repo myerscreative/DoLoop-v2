@@ -15,21 +15,19 @@ The AI Loop Creator allows users to describe what they want to accomplish, and A
 
 ## Architecture
 
-The AI feature consists of three main components:
+The AI feature is integrated directly into the loop creation flow with two main components:
 
 1. **Supabase Edge Function** (`supabase/functions/generate_ai_loop/index.ts`)
    - Securely handles OpenAI API calls
    - Keeps API keys server-side
    - Processes and validates AI responses
 
-2. **AI Creation Screen** (`src/screens/AILoopCreationScreen.tsx`)
-   - User-friendly interface for describing loop needs
-   - Preview of generated loops
+2. **HomeScreen Create Loop Modal** (`src/screens/HomeScreen.tsx`)
+   - Tabbed interface with "Manual" and "AI Helper" modes
+   - User-friendly interface for describing loop needs in AI mode
+   - Live preview of AI-generated loops
    - Regeneration capability
-
-3. **HomeScreen Integration** (`src/screens/HomeScreen.tsx`)
-   - Prominent "AI Loop Creator" card in the Discover Loops section
-   - Easy access to AI features
+   - Seamless integration with existing manual creation flow
 
 ## Setup Instructions
 
@@ -93,16 +91,18 @@ You should receive a JSON response with a generated loop structure.
 ### For Users
 
 1. Open the Doloop app
-2. On the Home screen, scroll to the "Discover Loops" section
-3. Tap on the **✨ AI Loop Creator** card (green card)
+2. On the Home screen, tap the **+** button (FAB in the bottom right)
+3. In the "Create New Loop" modal, tap the **✨ AI Helper** tab
 4. Describe what you want to accomplish, for example:
    - "morning routine for productivity"
    - "weekly fitness plan with cardio and strength training"
    - "reading habit tracker for 30 minutes daily"
    - "project launch checklist for a new product"
-5. Tap **✨ Generate Loop**
-6. Review the generated loop and tasks
+5. Tap **✨ Generate**
+6. Review the generated loop and tasks in the preview
 7. Tap **✓ Create Loop** to add it to your loops, or **🔄 Regenerate** to try again
+
+**Tip:** You can easily switch between **✏️ Manual** and **✨ AI Helper** modes using the tabs at the top of the modal!
 
 ### Example Prompts
 
@@ -134,10 +134,12 @@ The system uses a carefully crafted system prompt that:
 ### Data Flow
 
 ```
-User Input → AILoopCreationScreen
-→ Supabase Edge Function → OpenAI API
-→ JSON Response → Validation → User Preview
-→ Create Loop & Tasks in Database
+User clicks + button → Create Loop Modal opens
+→ User switches to AI Helper tab
+→ User enters prompt → Supabase Edge Function
+→ OpenAI API → JSON Response → Validation
+→ Preview displayed in modal
+→ User creates loop → Tasks saved to Database
 ```
 
 ### Error Handling
