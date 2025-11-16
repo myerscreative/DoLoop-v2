@@ -88,9 +88,25 @@ CREATE TABLE IF NOT EXISTS task_tags (
   PRIMARY KEY (task_id, tag_id)
 );
 
--- Add foreign key constraints (will be skipped if they already exist)
-ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
-ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_tag_id FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE;
+-- Verify table was created and add foreign key constraints
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_tags' AND column_name = 'task_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_tags_task_id') THEN
+      ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column task_id does not exist in task_tags table. Table creation may have failed.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_tags' AND column_name = 'tag_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_tags_tag_id') THEN
+      ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_tag_id FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column tag_id does not exist in task_tags table. Table creation may have failed.';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
@@ -109,8 +125,17 @@ CREATE TABLE IF NOT EXISTS subtasks (
   CONSTRAINT check_subtask_status CHECK (status IN ('pending', 'done'))
 );
 
--- Add foreign key constraints (will be skipped if they already exist)
-ALTER TABLE subtasks ADD CONSTRAINT fk_subtasks_parent_task_id FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+-- Verify table was created and add foreign key constraints
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'subtasks' AND column_name = 'parent_task_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_subtasks_parent_task_id') THEN
+      ALTER TABLE subtasks ADD CONSTRAINT fk_subtasks_parent_task_id FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column parent_task_id does not exist in subtasks table. Table creation may have failed.';
+  END IF;
+END $$;
 
 -- Add constraint only if it doesn't exist
 DO $$
@@ -140,9 +165,25 @@ CREATE TABLE IF NOT EXISTS attachments (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
--- Add foreign key constraints (will be skipped if they already exist)
-ALTER TABLE attachments ADD CONSTRAINT fk_attachments_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
-ALTER TABLE attachments ADD CONSTRAINT fk_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- Verify table was created and add foreign key constraints
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'attachments' AND column_name = 'task_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_task_id') THEN
+      ALTER TABLE attachments ADD CONSTRAINT fk_attachments_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column task_id does not exist in attachments table. Table creation may have failed.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'attachments' AND column_name = 'uploaded_by') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_uploaded_by') THEN
+      ALTER TABLE attachments ADD CONSTRAINT fk_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column uploaded_by does not exist in attachments table. Table creation may have failed.';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
 
@@ -158,9 +199,25 @@ CREATE TABLE IF NOT EXISTS task_reminders (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
--- Add foreign key constraints (will be skipped if they already exist)
-ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
-ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_user_id FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+-- Verify table was created and add foreign key constraints
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_reminders' AND column_name = 'task_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_reminders_task_id') THEN
+      ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column task_id does not exist in task_reminders table. Table creation may have failed.';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'task_reminders' AND column_name = 'user_id') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_reminders_user_id') THEN
+      ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_user_id FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+    END IF;
+  ELSE
+    RAISE EXCEPTION 'Column user_id does not exist in task_reminders table. Table creation may have failed.';
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_task_reminders_task_id ON task_reminders(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_reminders_reminder_at ON task_reminders(reminder_at);
