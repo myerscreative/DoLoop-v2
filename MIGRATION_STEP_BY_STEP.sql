@@ -138,17 +138,38 @@ SELECT 'STEP 2 COMPLETE: Tags table created' AS status;
 -- Must run AFTER tasks and tags tables exist
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS task_tags (
-  task_id UUID NOT NULL,
-  tag_id UUID NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  PRIMARY KEY (task_id, tag_id)
-);
-
--- Verify table was created and add foreign key constraints
+-- Create table if it doesn't exist, or recreate if schema is wrong
 DO $$
 BEGIN
-  -- Check if task_id column exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'task_tags' AND table_schema = 'public'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'task_tags' AND column_name = 'task_id'
+    ) THEN
+      DROP TABLE IF EXISTS task_tags CASCADE;
+      CREATE TABLE task_tags (
+        task_id UUID NOT NULL,
+        tag_id UUID NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        PRIMARY KEY (task_id, tag_id)
+      );
+    END IF;
+  ELSE
+    CREATE TABLE task_tags (
+      task_id UUID NOT NULL,
+      tag_id UUID NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+      PRIMARY KEY (task_id, tag_id)
+    );
+  END IF;
+END $$;
+
+-- Add foreign key constraints
+DO $$
+BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'task_tags' AND column_name = 'task_id'
@@ -157,11 +178,8 @@ BEGIN
       ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_task_id 
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column task_id does not exist in task_tags table. Table creation may have failed.';
   END IF;
 
-  -- Check if tag_id column exists
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'task_tags' AND column_name = 'tag_id'
@@ -170,8 +188,6 @@ BEGIN
       ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_tag_id 
         FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column tag_id does not exist in task_tags table. Table creation may have failed.';
   END IF;
 END $$;
 
@@ -199,21 +215,46 @@ SELECT 'STEP 3 COMPLETE: Task-tags junction table created' AS status;
 -- STEP 4: CREATE SUBTASKS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS subtasks (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  parent_task_id UUID NOT NULL,
-  description TEXT NOT NULL,
-  status TEXT DEFAULT 'pending' NOT NULL,
-  sort_order INTEGER DEFAULT 0 NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
-  CONSTRAINT check_subtask_status CHECK (status IN ('pending', 'done'))
-);
-
--- Verify table was created and add foreign key constraints
+-- Create table if it doesn't exist, or recreate if schema is wrong
 DO $$
 BEGIN
-  -- Check if parent_task_id column exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'subtasks' AND table_schema = 'public'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'subtasks' AND column_name = 'parent_task_id'
+    ) THEN
+      DROP TABLE IF EXISTS subtasks CASCADE;
+      CREATE TABLE subtasks (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        parent_task_id UUID NOT NULL,
+        description TEXT NOT NULL,
+        status TEXT DEFAULT 'pending' NOT NULL,
+        sort_order INTEGER DEFAULT 0 NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+        CONSTRAINT check_subtask_status CHECK (status IN ('pending', 'done'))
+      );
+    END IF;
+  ELSE
+    CREATE TABLE subtasks (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      parent_task_id UUID NOT NULL,
+      description TEXT NOT NULL,
+      status TEXT DEFAULT 'pending' NOT NULL,
+      sort_order INTEGER DEFAULT 0 NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
+      CONSTRAINT check_subtask_status CHECK (status IN ('pending', 'done'))
+    );
+  END IF;
+END $$;
+
+-- Add foreign key constraints
+DO $$
+BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'subtasks' AND column_name = 'parent_task_id'
@@ -222,8 +263,6 @@ BEGIN
       ALTER TABLE subtasks ADD CONSTRAINT fk_subtasks_parent_task_id 
         FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column parent_task_id does not exist in subtasks table. Table creation may have failed.';
   END IF;
 END $$;
 
@@ -261,50 +300,74 @@ SELECT 'STEP 4 COMPLETE: Subtasks table created' AS status;
 -- STEP 5: CREATE ATTACHMENTS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS attachments (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_id UUID NOT NULL,
-  file_name TEXT NOT NULL,
-  file_url TEXT NOT NULL,
-  file_type TEXT NOT NULL,
-  file_size BIGINT NOT NULL,
-  uploaded_by UUID NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-);
-
--- Verify table was created and add foreign key constraints
+-- Create table if it doesn't exist, or recreate if schema is wrong
 DO $$
 BEGIN
-  -- Check if task_id column exists
+  -- Check if table exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'attachments' AND table_schema = 'public'
+  ) THEN
+    -- Check if required columns exist
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'attachments' AND column_name = 'task_id'
+    ) THEN
+      -- Table exists but missing required columns - drop and recreate
+      DROP TABLE IF EXISTS attachments CASCADE;
+      CREATE TABLE attachments (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        task_id UUID NOT NULL,
+        file_name TEXT NOT NULL,
+        file_url TEXT NOT NULL,
+        file_type TEXT NOT NULL,
+        file_size BIGINT NOT NULL,
+        uploaded_by UUID NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+    END IF;
+  ELSE
+    -- Create the table
+    CREATE TABLE attachments (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      task_id UUID NOT NULL,
+      file_name TEXT NOT NULL,
+      file_url TEXT NOT NULL,
+      file_type TEXT NOT NULL,
+      file_size BIGINT NOT NULL,
+      uploaded_by UUID NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    );
+  END IF;
+END $$;
+
+-- Add foreign key constraints
+DO $$
+BEGIN
+  -- Verify task_id column exists before adding constraint
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'attachments' AND column_name = 'task_id'
   ) THEN
-    -- Add constraint only if it doesn't exist
     IF NOT EXISTS (
       SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_task_id'
     ) THEN
       ALTER TABLE attachments ADD CONSTRAINT fk_attachments_task_id 
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column task_id does not exist in attachments table. Table creation may have failed.';
   END IF;
 
-  -- Check if uploaded_by column exists
+  -- Verify uploaded_by column exists before adding constraint
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'attachments' AND column_name = 'uploaded_by'
   ) THEN
-    -- Add constraint only if it doesn't exist
     IF NOT EXISTS (
       SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_uploaded_by'
     ) THEN
       ALTER TABLE attachments ADD CONSTRAINT fk_attachments_uploaded_by 
         FOREIGN KEY (uploaded_by) REFERENCES auth.users(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column uploaded_by does not exist in attachments table. Table creation may have failed.';
   END IF;
 END $$;
 
@@ -331,19 +394,42 @@ SELECT 'STEP 5 COMPLETE: Attachments table created' AS status;
 -- STEP 6: CREATE TASK_REMINDERS TABLE
 -- =====================================================
 
-CREATE TABLE IF NOT EXISTS task_reminders (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_id UUID NOT NULL,
-  user_id UUID NOT NULL,
-  reminder_at TIMESTAMP WITH TIME ZONE NOT NULL,
-  is_sent BOOLEAN DEFAULT FALSE NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
-);
-
--- Verify table was created and add foreign key constraints
+-- Create table if it doesn't exist, or recreate if schema is wrong
 DO $$
 BEGIN
-  -- Check if task_id column exists
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables 
+    WHERE table_name = 'task_reminders' AND table_schema = 'public'
+  ) THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_name = 'task_reminders' AND column_name = 'task_id'
+    ) THEN
+      DROP TABLE IF EXISTS task_reminders CASCADE;
+      CREATE TABLE task_reminders (
+        id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+        task_id UUID NOT NULL,
+        user_id UUID NOT NULL,
+        reminder_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        is_sent BOOLEAN DEFAULT FALSE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+      );
+    END IF;
+  ELSE
+    CREATE TABLE task_reminders (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      task_id UUID NOT NULL,
+      user_id UUID NOT NULL,
+      reminder_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      is_sent BOOLEAN DEFAULT FALSE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
+    );
+  END IF;
+END $$;
+
+-- Add foreign key constraints
+DO $$
+BEGIN
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'task_reminders' AND column_name = 'task_id'
@@ -352,11 +438,8 @@ BEGIN
       ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_task_id 
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column task_id does not exist in task_reminders table. Table creation may have failed.';
   END IF;
 
-  -- Check if user_id column exists
   IF EXISTS (
     SELECT 1 FROM information_schema.columns 
     WHERE table_name = 'task_reminders' AND column_name = 'user_id'
@@ -365,8 +448,6 @@ BEGIN
       ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_user_id 
         FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
     END IF;
-  ELSE
-    RAISE EXCEPTION 'Column user_id does not exist in task_reminders table. Table creation may have failed.';
   END IF;
 END $$;
 
