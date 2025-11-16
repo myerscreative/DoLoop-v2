@@ -57,7 +57,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       setDescription(task.description || '');
       setNotes(task.notes || '');
       setPriority(task.priority || 'none');
-      setIsRecurring(task.is_recurring ?? true);
+      setIsRecurring(!task.is_one_time);
       setIsOneTime(task.is_one_time ?? false);
       setDueDate(task.due_date ? new Date(task.due_date) : undefined);
       setReminderDate(task.reminder_at ? new Date(task.reminder_at) : undefined);
@@ -92,7 +92,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         description: description.trim(),
         notes: notes.trim() || undefined,
         priority,
-        is_recurring: isRecurring,
         is_one_time: isOneTime,
         due_date: dueDate?.toISOString(),
         reminder_at: reminderDate?.toISOString(),
@@ -234,7 +233,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                   <DateTimePicker
                     value={dueDate || new Date()}
                     mode="date"
-                    onChange={(event, date) => {
+                    onChange={(event: any, date?: Date) => {
                       setShowDueDatePicker(false);
                       if (date) setDueDate(date);
                     }}
@@ -285,7 +284,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                   <DateTimePicker
                     value={reminderDate || new Date()}
                     mode="datetime"
-                    onChange={(event, date) => {
+                    onChange={(event: any, date?: Date) => {
                       setShowReminderPicker(false);
                       if (date) setReminderDate(date);
                     }}

@@ -134,8 +134,8 @@ export const LoopDetailScreen: React.FC = () => {
         })
       );
 
-      const completedCount = tasksWithTags?.filter(task => task.status === 'done' && task.is_recurring).length || 0;
-      const totalCount = tasksWithTags?.filter(task => task.is_recurring).length || 0;
+      const completedCount = tasksWithTags?.filter(task => task.completed && !task.is_one_time).length || 0;
+      const totalCount = tasksWithTags?.filter(task => !task.is_one_time).length || 0;
 
       const loopWithTasks: LoopWithTasks = {
         ...loop,
@@ -221,9 +221,8 @@ export const LoopDetailScreen: React.FC = () => {
         const { error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
-          is_recurring: taskData.is_recurring ?? true,
           is_one_time: taskData.is_one_time ?? false,
-          status: 'pending',
+          completed: false,
           assigned_user_id: user?.id,
           priority: taskData.priority || 'none',
           due_date: taskData.due_date,

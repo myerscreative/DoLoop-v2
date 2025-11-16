@@ -70,8 +70,8 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
                 styles.description,
                 {
                   color: colors.text,
-                  textDecorationLine: task.status === 'done' ? 'line-through' : 'none',
-                  opacity: task.status === 'done' ? 0.6 : 1,
+                  textDecorationLine: taskStatus === 'done' ? 'line-through' : 'none',
+                  opacity: taskStatus === 'done' ? 0.6 : 1,
                 },
               ]}
               numberOfLines={2}
