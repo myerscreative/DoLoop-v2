@@ -10,6 +10,11 @@ interface ThemeContextType {
     text: string;
     textSecondary: string;
     primary: string;
+    success: string;
+    secondary: string;
+    accent1: string;
+    accent2: string;
+    accentYellow: string;
     border: string;
     error: string;
   };
@@ -18,11 +23,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const lightColors = {
-  background: '#FFFFFF',
-  surface: '#F8F9FA',
+  background: '#FFFEF7', // Warm off-white
+  surface: '#FFFFFF',
   text: '#1A1A1A',
   textSecondary: '#6B7280',
-  primary: '#3B82F6',
+  primary: '#FFB800', // Brand primary (golden yellow)
+  success: '#00E5A2', // Success green
+  secondary: '#FF1E88', // Hot pink
+  accent1: '#2EC4B6', // Turquoise/cyan
+  accent2: '#9B51E0', // Purple
+  accentYellow: '#FFB800', // Brand yellow
   border: '#E5E7EB',
   error: '#EF4444',
 };
@@ -32,7 +42,12 @@ const darkColors = {
   surface: '#2A2A2A',
   text: '#FFFFFF',
   textSecondary: '#9CA3AF',
-  primary: '#60A5FA',
+  primary: '#FFB800', // Brand primary (golden yellow)
+  success: '#00E5A2', // Success green
+  secondary: '#FF1E88', // Hot pink
+  accent1: '#2EC4B6', // Turquoise/cyan
+  accent2: '#9B51E0', // Purple
+  accentYellow: '#FFB800', // Brand yellow
   border: '#374151',
   error: '#F87171',
 };
@@ -43,13 +58,13 @@ const getSystemColorScheme = (): ColorSchemeName => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [colorScheme, setColorScheme] = useState<ColorSchemeName>(
-    Appearance.getColorScheme()
-  );
+  // Force light mode to show off the vibrant new theme
+  const [colorScheme, setColorScheme] = useState<ColorSchemeName>('light');
 
   useEffect(() => {
     const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      setColorScheme(colorScheme);
+      // Keep light mode even if system changes
+      setColorScheme('light');
     });
 
     return () => subscription.remove();

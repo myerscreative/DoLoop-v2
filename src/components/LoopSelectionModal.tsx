@@ -127,11 +127,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 20,
   },
   modalContent: {
     borderRadius: 16,
     maxHeight: '80%',
+    width: '100%',
+    maxWidth: 600,
     overflow: 'hidden',
   },
   header: {

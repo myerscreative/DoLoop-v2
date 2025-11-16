@@ -5,7 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
@@ -15,13 +19,17 @@
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.myerscreative.doloop",
       "buildNumber": "1",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
         "NSUserTrackingUsageDescription": "This app does not track you."
       }
     },
@@ -42,7 +50,8 @@
             "useFrameworks": "static"
           }
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "supabaseUrl": "https://faaidvdogakvrdwloxjf.supabase.co",

@@ -139,6 +139,7 @@ export const FAB: React.FC<FABProps> = ({
               backgroundColor: 'rgba(0,0,0,0.5)',
               justifyContent: 'center',
               padding: 20,
+              alignItems: 'center',
             }}
             activeOpacity={1}
             onPress={() => setModalVisible(false)}
@@ -150,6 +151,8 @@ export const FAB: React.FC<FABProps> = ({
                 backgroundColor: colors.surface,
                 borderRadius: 12,
                 padding: 20,
+                width: '100%',
+                maxWidth: 600,
               }}
             >
               <Text

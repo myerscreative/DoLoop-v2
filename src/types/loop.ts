@@ -166,11 +166,11 @@ export const FOLDER_ICONS: Record<LoopType, string> = {
   shared: '👥',
 };
 
-// Folder colors
+// Folder colors - Brand Kit
 export const FOLDER_COLORS: Record<LoopType, string> = {
-  personal: '#FE356C',
-  work: '#0CB6CC',
-  daily: '#FEC041',
-  shared: '#7952B4',
+  personal: '#FF1E88', // Hot pink
+  work: '#2EC4B6',     // Turquoise
+  daily: '#FFB800',    // Brand primary (golden yellow)
+  shared: '#9B51E0',   // Purple
 };
 

@@ -15,6 +15,8 @@ import { RootStackParamList } from '../../App';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { BeeIcon } from '../components/native/BeeIcon';
+import { DoLoopLogo } from '../components/native/DoLoopLogo';
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -74,21 +76,16 @@ export const LoginScreen: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1, justifyContent: 'center', padding: 20 }}
+        style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}
       >
+        <View style={{ width: '100%', maxWidth: 600 }}>
         <View style={{ alignItems: 'center', marginBottom: 40 }}>
-          <Text style={{
-            fontSize: 32,
-            fontWeight: 'bold',
-            color: colors.text,
-            marginBottom: 8,
-          }}>
-            Doloop
-          </Text>
+          <DoLoopLogo size={112} color={colors.primary} showText={true} />
           <Text style={{
             fontSize: 16,
             color: colors.textSecondary,
             textAlign: 'center',
+            marginTop: 16,
           }}>
             Your daily loops, simplified
           </Text>
@@ -247,6 +244,7 @@ export const LoginScreen: React.FC = () => {
               🚀 Auto-Fill Login
             </Text>
           </TouchableOpacity>
+        </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

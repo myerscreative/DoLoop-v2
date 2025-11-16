@@ -236,16 +236,22 @@ export const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Header */}
-      <Header currentDate={currentDate} streak={totalStreak} colors={colors} />
+      <View style={{ 
+        flex: 1, 
+        alignSelf: 'center', 
+        width: '100%', 
+        maxWidth: 600 
+      }}>
+        {/* Header */}
+        <Header currentDate={currentDate} streak={totalStreak} colors={colors} />
 
-      {/* Folders */}
-      <ScrollView
-        style={{ flex: 1 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+        {/* Folders */}
+        <ScrollView
+          style={{ flex: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
         <View style={{ padding: 20 }}>
           <Text style={{
             fontSize: 18,
@@ -372,43 +378,44 @@ export const HomeScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Sign Out Button (temporary) */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          top: 60,
-          right: 20,
-          padding: 8,
-        }}
-        onPress={handleSignOut}
-      >
-        <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
-      </TouchableOpacity>
+        {/* Sign Out Button (temporary) */}
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            top: 60,
+            right: 20,
+            padding: 8,
+          }}
+          onPress={handleSignOut}
+        >
+          <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
+        </TouchableOpacity>
 
-      {/* FAB - Floating Action Button */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-        }}
-        onPress={() => setModalVisible(true)}
-      >
-        <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
-      </TouchableOpacity>
+        {/* FAB - Floating Action Button */}
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            bottom: 24,
+            right: 24,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+          }}
+          onPress={() => setModalVisible(true)}
+        >
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Create Loop Modal */}
       <Modal
@@ -427,6 +434,7 @@ export const HomeScreen: React.FC = () => {
               backgroundColor: 'rgba(0,0,0,0.5)',
               justifyContent: 'center',
               padding: 20,
+              alignItems: 'center',
             }}
             activeOpacity={1}
             onPress={() => setModalVisible(false)}
@@ -438,6 +446,8 @@ export const HomeScreen: React.FC = () => {
                 backgroundColor: colors.surface,
                 borderRadius: 12,
                 padding: 20,
+                width: '100%',
+                maxWidth: 600,
               }}
             >
               <Text

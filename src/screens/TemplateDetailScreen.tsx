@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Linking,
   Alert,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -38,6 +39,7 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
   const [template, setTemplate] = useState<LoopTemplateWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchTemplateDetails();
@@ -82,13 +84,19 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
   };
 
   const handleAddToMyLoops = async () => {
+    console.log('[TemplateDetail] Add to Loops clicked');
+    console.log('[TemplateDetail] Template:', template?.title);
+    console.log('[TemplateDetail] User:', user?.id);
+
     if (!template || !user) {
+      console.log('[TemplateDetail] Missing template or user');
       Alert.alert('Error', 'Please log in to add this template to your loops');
       return;
     }
 
     try {
       setAdding(true);
+      console.log('[TemplateDetail] Creating loop...');
 
       // Create a new loop based on this template
       const { data: newLoop, error: loopError } = await supabase
@@ -105,22 +113,32 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
         .select()
         .single();
 
-      if (loopError) throw loopError;
+      if (loopError) {
+        console.error('[TemplateDetail] Loop creation error:', loopError);
+        throw loopError;
+      }
+
+      console.log('[TemplateDetail] Loop created:', newLoop?.id);
 
       // Copy all tasks from the template to the new loop
       const tasksToInsert = template.tasks.map((task: TemplateTask) => ({
         loop_id: newLoop.id,
         description: task.description,
-        is_recurring: task.is_recurring,
-        is_one_time: task.is_one_time,
-        status: 'pending' as const,
+        is_one_time: task.is_one_time || false,
+        completed: false,
       }));
 
+      console.log('[TemplateDetail] Inserting tasks:', tasksToInsert.length);
       const { error: tasksError } = await supabase
         .from('tasks')
         .insert(tasksToInsert);
 
-      if (tasksError) throw tasksError;
+      if (tasksError) {
+        console.error('[TemplateDetail] Tasks insertion error:', tasksError);
+        throw tasksError;
+      }
+
+      console.log('[TemplateDetail] Tasks inserted successfully');
 
       // Track that this user added this template
       const { error: usageError } = await supabase
@@ -138,24 +156,47 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
         // Don't fail the whole operation if usage tracking fails
       }
 
-      Alert.alert(
-        'Success!',
-        `"${template.title}" has been added to your loops!`,
-        [
-          {
-            text: 'View Loop',
-            onPress: () => navigation.navigate('LoopDetail', { loopId: newLoop.id }),
-          },
-          {
-            text: 'Browse More',
-            onPress: () => navigation.goBack(),
-            style: 'cancel',
-          },
-        ]
-      );
+      console.log('[TemplateDetail] Success! Showing confirmation...');
+      
+      // Show visual success indicator
+      setShowSuccess(true);
+      
+      // Show confirmation - use Alert for native, or navigate directly for web
+      if (Platform.OS === 'web') {
+        // On web, Alert.alert doesn't work well, so show success message and navigate
+        setTimeout(() => {
+          setShowSuccess(false);
+          navigation.navigate('LoopDetail', { loopId: newLoop.id });
+        }, 2000);
+      } else {
+        // On native, use Alert with options
+        Alert.alert(
+          'Success!',
+          `"${template.title}" has been added to your loops!`,
+          [
+            {
+              text: 'View Loop',
+              onPress: () => {
+                console.log('[TemplateDetail] Navigating to loop:', newLoop.id);
+                setShowSuccess(false);
+                navigation.navigate('LoopDetail', { loopId: newLoop.id });
+              },
+            },
+            {
+              text: 'Browse More',
+              onPress: () => {
+                console.log('[TemplateDetail] Going back');
+                setShowSuccess(false);
+                navigation.goBack();
+              },
+              style: 'cancel',
+            },
+          ]
+        );
+      }
     } catch (error) {
-      console.error('Error adding template to loops:', error);
-      Alert.alert('Error', 'Failed to add template to your loops. Please try again.');
+      console.error('[TemplateDetail] Error adding template to loops:', error);
+      Alert.alert('Error', `Failed to add template to your loops: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setAdding(false);
     }
@@ -230,14 +271,31 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" />
+      
+      {/* Success Overlay */}
+      {showSuccess && (
+        <View style={styles.successOverlay}>
+          <View style={styles.successCard}>
+            <Text style={styles.successIcon}>✓</Text>
+            <Text style={styles.successTitle}>Added to Your Loops!</Text>
+            <Text style={styles.successMessage}>
+              "{template?.title}" has been added successfully
+            </Text>
+            {Platform.OS === 'web' && (
+              <Text style={styles.successSubtext}>Redirecting to loop...</Text>
+            )}
+          </View>
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Section */}
-        <View style={styles.header}>
+        <View style={styles.content}>
+          {/* Header Section */}
+          <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
@@ -343,48 +401,54 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
 
         {/* Spacer for fixed buttons */}
         <View style={{ height: 100 }} />
+        </View>
       </ScrollView>
 
       {/* Fixed Bottom Buttons */}
       <View style={styles.buttonContainer}>
-        <LinearGradient
-          colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)', '#ffffff', '#ffffff']}
-          style={styles.buttonGradient}
-        >
-          <View style={styles.buttonRow}>
-            {template.affiliate_link && (
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleLearnMore}
-              >
-                <Text style={styles.secondaryButtonText}>📖 Learn More</Text>
-              </TouchableOpacity>
-            )}
+        <View style={styles.buttonInner}>
+          <LinearGradient
+            colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.9)', '#ffffff', '#ffffff']}
+            style={styles.buttonGradient}
+          >
+            <View style={styles.buttonRow}>
+              {template.affiliate_link && (
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={handleLearnMore}
+                >
+                  <Text style={styles.secondaryButtonText}>📖 Learn More</Text>
+                </TouchableOpacity>
+              )}
 
-            <TouchableOpacity
-              style={[
-                styles.primaryButtonWrapper,
-                !template.affiliate_link && styles.primaryButtonFull
-              ]}
-              onPress={handleAddToMyLoops}
-              disabled={adding}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={['#FFD700', '#FFA500']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.primaryButton}
+              <TouchableOpacity
+                style={[
+                  styles.primaryButtonWrapper,
+                  !template.affiliate_link && styles.primaryButtonFull
+                ]}
+                onPress={() => {
+                  console.log('[TemplateDetail] Button pressed');
+                  handleAddToMyLoops();
+                }}
+                disabled={adding}
+                activeOpacity={0.8}
               >
-                {adding ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>+ Add to My Loops</Text>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
+                <LinearGradient
+                  colors={['#FFD700', '#FFA500']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.primaryButton}
+                >
+                  {adding ? (
+                    <ActivityIndicator color="#000" />
+                  ) : (
+                    <Text style={styles.primaryButtonText}>+ Add to My Loops</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -400,6 +464,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
+    alignItems: 'center',
+  },
+  content: {
+    width: '100%',
+    maxWidth: 600,
   },
   loadingContainer: {
     flex: 1,
@@ -637,6 +706,12 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 10,
+  },
+  buttonInner: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
   },
   buttonGradient: {
     paddingHorizontal: 20,
@@ -646,6 +721,7 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: 'row',
     gap: 12,
+    width: '100%',
   },
   secondaryButton: {
     flex: 1,
@@ -685,5 +761,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#000',
+  },
+
+  // Success Overlay
+  successOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  successCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  successIcon: {
+    fontSize: 64,
+    color: '#00E5A2',
+    marginBottom: 16,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  successMessage: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 22,
+  },
+  successSubtext: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

@@ -19,6 +19,8 @@ import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks } from '../types/loop';
 import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 import { FAB } from '../components/native/FAB';
+import { AddTaskIcon } from '../components/native/AddTaskIcon';
+import { BeeIcon } from '../components/native/BeeIcon';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -405,41 +407,47 @@ export const LoopDetailScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      {/* Back Button */}
-      <View style={{
-        paddingHorizontal: 20,
-        paddingVertical: 12,
+      <View style={{ 
+        flex: 1, 
+        alignSelf: 'center', 
+        width: '100%', 
+        maxWidth: 600 
       }}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 8,
-            marginLeft: -8,
-          }}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Text style={{
-            fontSize: 28,
-            color: colors.primary,
-            lineHeight: 28,
-          }}>‹</Text>
-          <Text style={{
-            fontSize: 17,
-            color: colors.primary,
-            marginLeft: 4,
-            fontWeight: '500',
-          }}>Back</Text>
-        </TouchableOpacity>
-      </View>
+        {/* Back Button */}
+        <View style={{
+          paddingHorizontal: 20,
+          paddingVertical: 12,
+        }}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              padding: 8,
+              marginLeft: -8,
+            }}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={{
+              fontSize: 28,
+              color: colors.primary,
+              lineHeight: 28,
+            }}>‹</Text>
+            <Text style={{
+              fontSize: 17,
+              color: colors.primary,
+              marginLeft: 4,
+              fontWeight: '500',
+            }}>Back</Text>
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView
-        style={{ flex: 1 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+        <ScrollView
+          style={{ flex: 1 }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
         {/* Header with Progress Ring */}
         <View style={{
           alignItems: 'center',
@@ -486,10 +494,12 @@ export const LoopDetailScreen: React.FC = () => {
             paddingVertical: 80,
             minHeight: 400,
           }}>
+            <BeeIcon size={120} />
             <Text style={{
               fontSize: 28,
               fontWeight: 'bold',
               color: colors.text,
+              marginTop: 24,
               marginBottom: 12,
               textAlign: 'center',
               letterSpacing: -0.5,
@@ -734,48 +744,49 @@ export const LoopDetailScreen: React.FC = () => {
             ))}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
 
-      {/* Reloop Button */}
-      <View style={{
-        position: 'absolute',
-        bottom: 100,
-        left: 20,
-        right: 20,
-      }}>
-        <TouchableOpacity
-          style={{
-            backgroundColor: showResetMenu ? colors.error : (progress >= 100 ? loopData.color : colors.border),
-            paddingVertical: 16,
-            paddingHorizontal: 24,
-            borderRadius: 25,
-            alignItems: 'center',
-            opacity: (progress >= 100 || showResetMenu) ? 1 : 0.5,
-          }}
-          onPress={handleReloop}
-          onLongPress={longPressReloop}
-          delayLongPress={500}
-          disabled={progress < 100 && !showResetMenu}
-        >
-          <Text style={{
-            color: 'white',
-            fontSize: 16,
-            fontWeight: 'bold',
-          }}>
-            {showResetMenu ? 'Reset Now' : 'Reloop'}
-          </Text>
-        </TouchableOpacity>
+        {/* Reloop Button */}
+        <View style={{
+          position: 'absolute',
+          bottom: 100,
+          left: 20,
+          right: 20,
+        }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: showResetMenu ? colors.error : (progress >= 100 ? loopData.color : colors.border),
+              paddingVertical: 16,
+              paddingHorizontal: 24,
+              borderRadius: 25,
+              alignItems: 'center',
+              opacity: (progress >= 100 || showResetMenu) ? 1 : 0.5,
+            }}
+            onPress={handleReloop}
+            onLongPress={longPressReloop}
+            delayLongPress={500}
+            disabled={progress < 100 && !showResetMenu}
+          >
+            <Text style={{
+              color: 'white',
+              fontSize: 16,
+              fontWeight: 'bold',
+            }}>
+              {showResetMenu ? 'Reset Now' : 'Reloop'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Task Modal (no button, just the modal) */}
+        <FAB 
+          onAddTask={handleAddTask}
+          onEditTask={handleEditTask}
+          modalVisible={showAddTaskModal}
+          setModalVisible={setShowAddTaskModal}
+          hideButton={true}
+          editingTask={editingTask}
+        />
       </View>
-
-      {/* Task Modal (no button, just the modal) */}
-      <FAB 
-        onAddTask={handleAddTask}
-        onEditTask={handleEditTask}
-        modalVisible={showAddTaskModal}
-        setModalVisible={setShowAddTaskModal}
-        hideButton={true}
-        editingTask={editingTask}
-      />
     </SafeAreaView>
   );
 };

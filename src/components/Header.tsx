@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { BeeIcon } from './native/BeeIcon';
 
 interface HeaderProps {
   currentDate: string;
@@ -8,6 +9,7 @@ interface HeaderProps {
     text: string;
     textSecondary: string;
     border: string;
+    accentYellow: string;
   };
 }
 
@@ -45,7 +47,8 @@ export const Header: React.FC<HeaderProps> = ({ currentDate, streak = 0, colors 
         {currentDate}
       </Text>
       <View style={styles.greetingRow}>
-        <View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <BeeIcon size={32} />
           <Text
             style={[
               styles.greeting,
@@ -58,7 +61,7 @@ export const Header: React.FC<HeaderProps> = ({ currentDate, streak = 0, colors 
           </Text>
         </View>
         {streak > 0 && (
-          <View style={styles.streakBadge}>
+          <View style={[styles.streakBadge, { backgroundColor: colors.accentYellow }]}>
             <Text style={styles.streakText}>
               🔥 {streak}
             </Text>
@@ -89,7 +92,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   streakBadge: {
-    backgroundColor: '#FFE066',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -102,4 +104,5 @@ const styles = StyleSheet.create({
     color: '#000',
   },
 });
+
 
