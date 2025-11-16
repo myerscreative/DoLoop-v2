@@ -5,7 +5,15 @@
 
 -- 1. Add loop_type column to loops table
 ALTER TABLE loops ADD COLUMN IF NOT EXISTS loop_type TEXT DEFAULT 'personal';
-ALTER TABLE loops ADD CONSTRAINT IF NOT EXISTS check_loop_type CHECK (loop_type IN ('personal', 'work', 'daily', 'shared'));
+
+-- Add constraint only if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_loop_type') THEN
+    ALTER TABLE loops ADD CONSTRAINT check_loop_type CHECK (loop_type IN ('personal', 'work', 'daily', 'shared'));
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_loops_loop_type ON loops(loop_type);
 
 -- 1b. Add next_reset_at column to loops table for scheduled resets
@@ -90,7 +98,7 @@ CREATE POLICY "Users can modify own streak" ON user_streaks
 
 -- 9. Initialize streaks for existing users
 INSERT INTO user_streaks (user_id, current_streak, longest_streak, last_completed_date, updated_at)
-SELECT DISTINCT id, 0, 0, NULL, NOW()
+SELECT DISTINCT id, 0, 0, NULL::TIMESTAMP WITH TIME ZONE, NOW()
 FROM auth.users
 ON CONFLICT (user_id) DO NOTHING;
 
@@ -100,8 +108,15 @@ ON CONFLICT (user_id) DO NOTHING;
 
 -- Add priority column
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS priority TEXT DEFAULT 'none';
-ALTER TABLE tasks ADD CONSTRAINT IF NOT EXISTS check_task_priority
-  CHECK (priority IN ('none', 'low', 'medium', 'high', 'urgent'));
+
+-- Add constraint only if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'check_task_priority') THEN
+    ALTER TABLE tasks ADD CONSTRAINT check_task_priority
+      CHECK (priority IN ('none', 'low', 'medium', 'high', 'urgent'));
+  END IF;
+END $$;
 
 -- Add extended task fields
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date TIMESTAMP WITH TIME ZONE;
@@ -130,11 +145,22 @@ CREATE INDEX IF NOT EXISTS idx_tags_user_id ON tags(user_id);
 
 -- Create task-tag junction table
 CREATE TABLE IF NOT EXISTS task_tags (
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL,
+  tag_id UUID NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL,
   PRIMARY KEY (task_id, tag_id)
 );
+
+-- Add foreign key constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_tags_task_id') THEN
+    ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_tags_tag_id') THEN
+    ALTER TABLE task_tags ADD CONSTRAINT fk_task_tags_tag_id FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
@@ -142,21 +168,32 @@ CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
 -- Create attachments table
 CREATE TABLE IF NOT EXISTS attachments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL,
   file_name TEXT NOT NULL,
   file_url TEXT NOT NULL,
   file_type TEXT NOT NULL,
   file_size BIGINT NOT NULL,
-  uploaded_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  uploaded_by UUID NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
+
+-- Add foreign key constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_task_id') THEN
+    ALTER TABLE attachments ADD CONSTRAINT fk_attachments_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_attachments_uploaded_by') THEN
+    ALTER TABLE attachments ADD CONSTRAINT fk_attachments_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES auth.users(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_attachments_task_id ON attachments(task_id);
 
 -- Create subtasks table
 CREATE TABLE IF NOT EXISTS subtasks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  parent_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  parent_task_id UUID NOT NULL,
   description TEXT NOT NULL,
   status TEXT DEFAULT 'pending' NOT NULL,
   sort_order INTEGER DEFAULT 0 NOT NULL,
@@ -165,17 +202,36 @@ CREATE TABLE IF NOT EXISTS subtasks (
   CONSTRAINT check_subtask_status CHECK (status IN ('pending', 'done'))
 );
 
+-- Add foreign key constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_subtasks_parent_task_id') THEN
+    ALTER TABLE subtasks ADD CONSTRAINT fk_subtasks_parent_task_id FOREIGN KEY (parent_task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+  END IF;
+END $$;
+
 CREATE INDEX IF NOT EXISTS idx_subtasks_parent_task_id ON subtasks(parent_task_id);
 
 -- Create task reminders table
 CREATE TABLE IF NOT EXISTS task_reminders (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
-  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  task_id UUID NOT NULL,
+  user_id UUID NOT NULL,
   reminder_at TIMESTAMP WITH TIME ZONE NOT NULL,
   is_sent BOOLEAN DEFAULT FALSE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
+
+-- Add foreign key constraints
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_reminders_task_id') THEN
+    ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_task_id FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_task_reminders_user_id') THEN
+    ALTER TABLE task_reminders ADD CONSTRAINT fk_task_reminders_user_id FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_task_reminders_task_id ON task_reminders(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_reminders_reminder_at ON task_reminders(reminder_at);
