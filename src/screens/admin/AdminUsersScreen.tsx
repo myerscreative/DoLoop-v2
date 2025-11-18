@@ -138,9 +138,16 @@ export function AdminUsersScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={colors.statusBar} />
-      <View style={styles.container}>
+      <View style={{
+        flex: 1,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
+        backgroundColor: colors.background,
+      }}>
+        <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -190,6 +197,7 @@ export function AdminUsersScreen({ navigation }: Props) {
             }
           />
         )}
+      </View>
       </View>
     </SafeAreaView>
   );

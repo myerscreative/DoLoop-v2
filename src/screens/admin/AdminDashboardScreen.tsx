@@ -98,9 +98,16 @@ export function AdminDashboardScreen({ navigation }: Props) {
   );
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={colors.statusBar} />
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={{
+        flex: 1,
+        maxWidth: 800,
+        width: '100%',
+        alignSelf: 'center',
+        backgroundColor: colors.background,
+      }}>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -216,6 +223,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
           ))}
         </View>
       </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
