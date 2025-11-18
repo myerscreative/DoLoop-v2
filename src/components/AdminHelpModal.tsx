@@ -44,10 +44,10 @@ export const AdminHelpModal: React.FC<AdminHelpModalProps> = ({ visible, onClose
       transparent={true}
     >
       <View style={styles.overlay}>
-        <SafeAreaView style={styles.safeArea}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+        <View style={styles.safeArea}>
+          <View style={[styles.modalContainer, { backgroundColor: colors.background || '#fff' }]}>
             {/* Header */}
-            <View style={styles.header}>
+            <View style={[styles.header, { borderBottomColor: colors.border || '#e0e0e0', borderBottomWidth: 1 }]}>
               <View style={styles.headerIcon}>
                 <Ionicons name="help-circle" size={32} color={colors.primary} />
               </View>
@@ -97,7 +97,7 @@ export const AdminHelpModal: React.FC<AdminHelpModalProps> = ({ visible, onClose
               <Text style={styles.gotItButtonText}>Got it!</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       </View>
     </Modal>
   );
@@ -111,11 +111,13 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     maxHeight: '85%',
+    width: '100%',
   },
   modalContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingBottom: 20,
+    minHeight: 300,
     ...Platform.select({
       ios: {
         shadowColor: '#000',
