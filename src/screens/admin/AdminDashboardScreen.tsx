@@ -97,6 +97,34 @@ export function AdminDashboardScreen({ navigation }: Props) {
       color: '#FF1E88',
       description: 'Track affiliate performance',
     },
+    {
+      title: 'Analytics',
+      icon: 'bar-chart-outline' as const,
+      screen: 'AdminAnalytics' as const,
+      color: '#3b82f6',
+      description: 'View analytics and insights',
+    },
+    {
+      title: 'Audit Logs',
+      icon: 'document-text-outline' as const,
+      screen: 'AdminAuditLogs' as const,
+      color: '#8b5cf6',
+      description: 'Track admin actions',
+    },
+    {
+      title: 'Roles',
+      icon: 'shield-outline' as const,
+      screen: 'AdminRoles' as const,
+      color: '#ef4444',
+      description: 'Manage admin permissions',
+    },
+    {
+      title: 'Settings',
+      icon: 'settings-outline' as const,
+      screen: 'AdminSettings' as const,
+      color: '#64748b',
+      description: 'Configure system settings',
+    },
   ];
 
   const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: keyof typeof Ionicons.glyphMap; color: string }) => (
