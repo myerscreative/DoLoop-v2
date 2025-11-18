@@ -17,7 +17,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAdmin } from '../../hooks/useAdmin';
-import { getTemplatePerformance, TemplatePerformance } from '../../lib/admin';
+import {
+  getTemplatePerformance,
+  TemplatePerformance,
+  getUnconvertedClicks,
+  markAffiliateConversion,
+  AffiliateClick,
+} from '../../lib/admin';
 import { AdminHelpModal } from '../../components/AdminHelpModal';
 import { ADMIN_HELP_CONTENT } from '../../constants/adminHelp';
 
@@ -33,8 +39,12 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const [templates, setTemplates] = useState<TemplatePerformance[]>([]);
+  const [unconvertedClicks, setUnconvertedClicks] = useState<AffiliateClick[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortKey>('clicks');
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [selectedClick, setSelectedClick] = useState<AffiliateClick | null>(null);
+  const [conversionAmount, setConversionAmount] = useState('');
   const [showHelpModal, setShowHelpModal] = useState(false);
 
   useEffect(() => {
@@ -49,8 +59,12 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
 
   const loadData = async () => {
     setLoading(true);
-    const data = await getTemplatePerformance();
-    setTemplates(data);
+    const [templatesData, clicksData] = await Promise.all([
+      getTemplatePerformance(),
+      getUnconvertedClicks(),
+    ]);
+    setTemplates(templatesData);
+    setUnconvertedClicks(clicksData);
     setLoading(false);
   };
 
@@ -77,6 +91,38 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
   const totalConversions = templates.reduce((sum, t) => sum + t.affiliate_conversions, 0);
   const totalRevenue = templates.reduce((sum, t) => sum + t.affiliate_revenue, 0);
   const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0;
+
+  const handleOpenConversionModal = (click: AffiliateClick) => {
+    setSelectedClick(click);
+    setConversionAmount('');
+    setShowConversionModal(true);
+  };
+
+  const handleCloseConversionModal = () => {
+    setShowConversionModal(false);
+    setSelectedClick(null);
+    setConversionAmount('');
+  };
+
+  const handleMarkConversion = async () => {
+    if (!selectedClick) return;
+
+    const amount = conversionAmount ? parseFloat(conversionAmount) : undefined;
+    if (amount !== undefined && (isNaN(amount) || amount < 0)) {
+      Alert.alert('Error', 'Please enter a valid conversion amount');
+      return;
+    }
+
+    try {
+      await markAffiliateConversion(selectedClick.id, amount);
+      Alert.alert('Success', 'Conversion marked successfully');
+      handleCloseConversionModal();
+      loadData(); // Refresh data
+    } catch (error) {
+      console.error('Error marking conversion:', error);
+      Alert.alert('Error', 'Failed to mark conversion');
+    }
+  };
 
   if (adminLoading || !isAdmin) {
     return (
@@ -279,6 +325,55 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {/* Unconverted Clicks Section */}
+        {unconvertedClicks.length > 0 && (
+          <View style={styles.unconvertedSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Pending Conversions ({unconvertedClicks.length})
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>
+              Mark affiliate clicks that resulted in conversions
+            </Text>
+            <FlatList
+              data={unconvertedClicks.slice(0, 10)} // Show only first 10
+              keyExtractor={item => item.id}
+              renderItem={({ item }) => (
+                <View style={[styles.clickCard, { backgroundColor: colors.card }]}>
+                  <View style={styles.clickInfo}>
+                    <Text style={[styles.clickTemplate, { color: colors.text }]}>
+                      {item.template_title}
+                    </Text>
+                    <Text style={[styles.clickUser, { color: colors.textSecondary }]}>
+                      {item.user_email} • {new Date(item.clicked_at).toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.convertButton, { backgroundColor: colors.primary }]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      handleOpenConversionModal(item);
+                    }}
+                  >
+                    <Text style={styles.convertButtonText}>Mark Converted</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              ListEmptyComponent={
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  No unconverted clicks
+                </Text>
+              }
+            />
+            {unconvertedClicks.length > 10 && (
+              <Text style={[styles.moreText, { color: colors.textSecondary }]}>
+                And {unconvertedClicks.length - 10} more...
+              </Text>
+            )}
+          </View>
+        )}
+
         {/* Templates List */}
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -306,6 +401,61 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
           onClose={() => setShowHelpModal(false)}
           content={ADMIN_HELP_CONTENT.affiliates}
         />
+
+        {/* Conversion Modal */}
+        <Modal
+          visible={showConversionModal}
+          animationType="slide"
+          onRequestClose={handleCloseConversionModal}
+          transparent={false}
+        >
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={handleCloseConversionModal}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Mark Conversion
+              </Text>
+              <TouchableOpacity onPress={handleMarkConversion}>
+                <Text style={[styles.saveButton, { color: colors.primary }]}>Mark</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
+              {selectedClick && (
+                <View style={styles.conversionInfo}>
+                  <Text style={[styles.infoLabel, { color: colors.text }]}>Template:</Text>
+                  <Text style={[styles.infoValue, { color: colors.textSecondary }]}>
+                    {selectedClick.template_title}
+                  </Text>
+                  <Text style={[styles.infoLabel, { color: colors.text }]}>User:</Text>
+                  <Text style={[styles.infoValue, { color: colors.textSecondary }]}>
+                    {selectedClick.user_email}
+                  </Text>
+                  <Text style={[styles.infoLabel, { color: colors.text }]}>Clicked:</Text>
+                  <Text style={[styles.infoValue, { color: colors.textSecondary }]}>
+                    {new Date(selectedClick.clicked_at).toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={[styles.label, { color: colors.text }]}>Conversion Amount (optional)</Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                value={conversionAmount}
+                onChangeText={setConversionAmount}
+                placeholder="e.g., 29.99"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numeric"
+              />
+
+              <Text style={[styles.conversionNote, { color: colors.textSecondary }]}>
+                Leave amount empty if no specific revenue was generated from this conversion.
+              </Text>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </View>
       </View>
     </SafeAreaView>
@@ -464,5 +614,127 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontFamily: 'Inter_400Regular',
+  },
+  unconvertedSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+    marginBottom: 16,
+  },
+  clickCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 4px rgba(0,0,0,0.1)',
+      },
+    }),
+  },
+  clickInfo: {
+    flex: 1,
+  },
+  clickTemplate: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+  },
+  clickUser: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+  },
+  convertButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  convertButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  moreText: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  modalContainer: {
+    flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Inter_700Bold',
+    flex: 1,
+    textAlign: 'center',
+  },
+  saveButton: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+  },
+  modalContent: {
+    flex: 1,
+  },
+  modalScrollContent: {
+    padding: 20,
+  },
+  conversionInfo: {
+    marginBottom: 24,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+    marginTop: 12,
+  },
+  infoValue: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  label: {
+    fontSize: 14,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  conversionNote: {
+    fontSize: 12,
+    fontFamily: 'Inter_400Regular',
+    marginTop: 8,
+    lineHeight: 16,
   },
 });

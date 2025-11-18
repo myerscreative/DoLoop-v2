@@ -84,6 +84,13 @@ export function AdminDashboardScreen({ navigation }: Props) {
       description: 'View and manage users',
     },
     {
+      title: 'Reviews',
+      icon: 'star-outline' as const,
+      screen: 'AdminReviews' as const,
+      color: '#FFD700',
+      description: 'Manage template reviews',
+    },
+    {
       title: 'Affiliates',
       icon: 'link-outline' as const,
       screen: 'AdminAffiliates' as const,

@@ -455,6 +455,81 @@ export async function getTemplateTasks(templateId: string): Promise<TemplateTask
 }
 
 /**
+ * AFFILIATE CONVERSION TRACKING
+ */
+
+export interface AffiliateClick {
+  id: string;
+  template_id: string;
+  user_id: string | null;
+  clicked_at: string;
+  user_agent: string | null;
+  ip_address: string | null;
+  referrer: string | null;
+  converted: boolean;
+  conversion_date: string | null;
+  conversion_amount: number | null;
+  template_title?: string;
+  user_email?: string;
+}
+
+export async function getUnconvertedClicks(): Promise<AffiliateClick[]> {
+  try {
+    const { data, error } = await supabase
+      .from('affiliate_clicks')
+      .select(`
+        *,
+        loop_templates!inner(title),
+        auth.users(email)
+      `)
+      .eq('converted', false)
+      .order('clicked_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching unconverted clicks:', error);
+      return [];
+    }
+
+    return data?.map(click => ({
+      ...click,
+      template_title: click.loop_templates?.title,
+      user_email: click.users?.email || 'Anonymous',
+    })) || [];
+  } catch (error) {
+    console.error('Error in getUnconvertedClicks:', error);
+    return [];
+  }
+}
+
+export async function getAllAffiliateClicks(): Promise<AffiliateClick[]> {
+  try {
+    const { data, error } = await supabase
+      .from('affiliate_clicks')
+      .select(`
+        *,
+        loop_templates!inner(title),
+        auth.users(email)
+      `)
+      .order('clicked_at', { ascending: false })
+      .limit(1000); // Limit for performance
+
+    if (error) {
+      console.error('Error fetching affiliate clicks:', error);
+      return [];
+    }
+
+    return data?.map(click => ({
+      ...click,
+      template_title: click.loop_templates?.title,
+      user_email: click.users?.email || 'Anonymous',
+    })) || [];
+  } catch (error) {
+    console.error('Error in getAllAffiliateClicks:', error);
+    return [];
+  }
+}
+
+/**
  * Mark an affiliate conversion (admin only)
  */
 export async function markAffiliateConversion(
@@ -498,6 +573,118 @@ export async function toggleUserAdminStatus(userId: string, isAdmin: boolean): P
   } catch (error) {
     console.error('Error in toggleUserAdminStatus:', error);
     throw error;
+  }
+}
+
+/**
+ * TEMPLATE REVIEWS MANAGEMENT
+ */
+
+export interface TemplateReview {
+  id: string;
+  template_id: string;
+  user_id: string;
+  rating: number;
+  review_text?: string;
+  created_at: string;
+  updated_at: string;
+  user_email?: string;
+  template_title?: string;
+}
+
+export async function getAllTemplateReviews(): Promise<TemplateReview[]> {
+  try {
+    const { data, error } = await supabase
+      .from('template_reviews')
+      .select(`
+        *,
+        loop_templates!inner(title),
+        auth.users!inner(email)
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching template reviews:', error);
+      return [];
+    }
+
+    return data?.map(review => ({
+      ...review,
+      user_email: review.users?.email,
+      template_title: review.loop_templates?.title,
+    })) || [];
+  } catch (error) {
+    console.error('Error in getAllTemplateReviews:', error);
+    return [];
+  }
+}
+
+export async function updateTemplateReview(
+  id: string,
+  updates: Partial<Pick<TemplateReview, 'rating' | 'review_text'>>
+): Promise<TemplateReview | null> {
+  try {
+    const { data, error } = await supabase
+      .from('template_reviews')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating template review:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in updateTemplateReview:', error);
+    throw error;
+  }
+}
+
+export async function deleteTemplateReview(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('template_reviews')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting template review:', error);
+      throw error;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error in deleteTemplateReview:', error);
+    throw error;
+  }
+}
+
+export async function getReviewsForTemplate(templateId: string): Promise<TemplateReview[]> {
+  try {
+    const { data, error } = await supabase
+      .from('template_reviews')
+      .select(`
+        *,
+        auth.users!inner(email)
+      `)
+      .eq('template_id', templateId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching reviews for template:', error);
+      return [];
+    }
+
+    return data?.map(review => ({
+      ...review,
+      user_email: review.users?.email,
+    })) || [];
+  } catch (error) {
+    console.error('Error in getReviewsForTemplate:', error);
+    return [];
   }
 }
 
