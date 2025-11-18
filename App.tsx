@@ -25,6 +25,10 @@ import { AdminCreatorsScreen } from './src/screens/admin/AdminCreatorsScreen';
 import { AdminUsersScreen } from './src/screens/admin/AdminUsersScreen';
 import { AdminAffiliatesScreen } from './src/screens/admin/AdminAffiliatesScreen';
 import { AdminReviewsScreen } from './src/screens/admin/AdminReviewsScreen';
+import { AdminAnalyticsScreen } from './src/screens/admin/AdminAnalyticsScreen';
+import { AdminAuditLogsScreen } from './src/screens/admin/AdminAuditLogsScreen';
+import { AdminRolesScreen } from './src/screens/admin/AdminRolesScreen';
+import { AdminSettingsScreen } from './src/screens/admin/AdminSettingsScreen';
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -40,6 +44,10 @@ export type RootStackParamList = {
   AdminUsers: undefined;
   AdminAffiliates: undefined;
   AdminReviews: undefined;
+  AdminAnalytics: undefined;
+  AdminAuditLogs: undefined;
+  AdminRoles: undefined;
+  AdminSettings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -136,6 +144,10 @@ export default function App() {
               <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
               <Stack.Screen name="AdminAffiliates" component={AdminAffiliatesScreen} />
               <Stack.Screen name="AdminReviews" component={AdminReviewsScreen} />
+              <Stack.Screen name="AdminAnalytics" component={AdminAnalyticsScreen} />
+              <Stack.Screen name="AdminAuditLogs" component={AdminAuditLogsScreen} />
+              <Stack.Screen name="AdminRoles" component={AdminRolesScreen} />
+              <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
           <StatusBar style="auto" />
