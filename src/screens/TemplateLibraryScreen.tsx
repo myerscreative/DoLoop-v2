@@ -67,11 +67,12 @@ const SkeletonCard = () => {
     <View style={styles.templateCard}>
       <Animated.View style={[styles.skeletonBar, { opacity }]} />
       <View style={styles.cardContent}>
-        <Animated.View style={[styles.skeletonTitle, { opacity }]} />
-        <Animated.View style={[styles.skeletonText, { opacity, width: '60%', marginTop: 8 }]} />
-        <Animated.View style={[styles.skeletonText, { opacity, width: '40%', marginTop: 4 }]} />
-        <Animated.View style={[styles.skeletonText, { opacity, marginTop: 12 }]} />
-        <Animated.View style={[styles.skeletonText, { opacity, width: '80%' }]} />
+        <Animated.View style={[styles.skeletonImage, { opacity }]} />
+        <View style={{ flex: 1 }}>
+          <Animated.View style={[styles.skeletonTitle, { opacity }]} />
+          <Animated.View style={[styles.skeletonText, { opacity, width: '60%', marginTop: 8 }]} />
+          <Animated.View style={[styles.skeletonText, { opacity, width: '80%', marginTop: 4 }]} />
+        </View>
       </View>
     </View>
   );
@@ -306,11 +307,35 @@ export function TemplateLibraryScreen({ navigation }: Props) {
             </Animated.View>
           </View>
 
-          <Text style={styles.loopTitle}>{item.title}</Text>
-          <Text style={styles.loopSubtitleSmall}>
-            From: {item.book_course_title}
-          </Text>
-          <Text style={styles.loopDescription}>{item.description}</Text>
+          <View style={styles.cardMainContent}>
+            {/* Creator Photo */}
+            <View style={styles.imageContainer}>
+              {item.creator?.photo_url ? (
+                <Image
+                  source={{ uri: item.creator.photo_url }}
+                  style={styles.creatorImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  <Text style={styles.imagePlaceholderText}>
+                    {item.creator?.name?.charAt(0) || '📚'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Card Content */}
+            <View style={styles.cardTextContent}>
+              <Text style={styles.loopTitle}>{item.title}</Text>
+              <Text style={styles.loopSubtitleSmall}>
+                From: {item.book_course_title}
+              </Text>
+              <Text style={styles.loopDescription} numberOfLines={2}>
+                {item.description}
+              </Text>
+            </View>
+          </View>
 
           <View style={styles.loopFooter}>
             <View style={styles.loopStats}>
@@ -735,23 +760,54 @@ const styles = StyleSheet.create({
   favoriteButtonActive: {
     backgroundColor: '#ffe5e5',
   },
+  cardMainContent: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 16,
+  },
+  imageContainer: {
+    width: 80,
+    height: 80,
+    flexShrink: 0,
+  },
+  creatorImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f5',
+  },
+  imagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePlaceholderText: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#999',
+  },
+  cardTextContent: {
+    flex: 1,
+  },
   loopTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#1a1a1a',
-    marginBottom: 6,
+    marginBottom: 4,
     lineHeight: 23,
   },
   loopSubtitleSmall: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#0066cc',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   loopDescription: {
     fontSize: 14,
     color: '#666',
-    lineHeight: 21,
-    marginBottom: 16,
+    lineHeight: 20,
   },
   loopFooter: {
     flexDirection: 'row',
@@ -807,10 +863,18 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flexDirection: 'row',
+    gap: 16,
   },
   skeletonBar: {
     height: 4,
     backgroundColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  skeletonImage: {
+    width: 80,
+    height: 80,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 12,
   },
   skeletonTitle: {
     height: 24,
