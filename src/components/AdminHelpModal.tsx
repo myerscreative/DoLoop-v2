@@ -45,9 +45,9 @@ export const AdminHelpModal: React.FC<AdminHelpModalProps> = ({ visible, onClose
       statusBarTranslucent={true}
     >
       <View style={styles.overlay}>
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.backdrop}
+          activeOpacity={1}
           onPress={handleClose}
         />
         <View style={styles.modalWrapper}>
