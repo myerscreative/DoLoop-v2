@@ -52,7 +52,7 @@ export const AdminHelpModal: React.FC<AdminHelpModalProps> = ({ visible, onClose
         />
         <View style={styles.modalWrapper}>
           <SafeAreaView edges={['bottom']} style={styles.safeArea}>
-            <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+            <View style={[styles.modalContainer, { backgroundColor: colors.surface }]}>
               {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerIcon}>

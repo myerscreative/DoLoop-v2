@@ -47,12 +47,12 @@ const SkeletonCard = () => {
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(pulseAnim, {
           toValue: 0,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ])
     ).start();
@@ -65,7 +65,6 @@ const SkeletonCard = () => {
 
   return (
     <View style={styles.templateCard}>
-      <Animated.View style={[styles.skeletonBar, { opacity }]} />
       <View style={styles.cardContent}>
         <Animated.View style={[styles.skeletonImage, { opacity }]} />
         <View style={{ flex: 1 }}>
@@ -97,10 +96,14 @@ export function TemplateLibraryScreen({ navigation }: Props) {
   }, [searchQuery, selectedCategory, templates, activeTab]);
 
   const fetchTemplates = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('[TemplateLibrary] No user, skipping fetch');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('[TemplateLibrary] Fetching templates...');
 
       const { data: templateData, error: templateError } = await supabase
         .from('loop_templates')
@@ -112,7 +115,12 @@ export function TemplateLibraryScreen({ navigation }: Props) {
         .order('is_featured', { ascending: false })
         .order('popularity_score', { ascending: false });
 
-      if (templateError) throw templateError;
+      if (templateError) {
+        console.error('[TemplateLibrary] Template query error:', templateError);
+        throw templateError;
+      }
+
+      console.log(`[TemplateLibrary] Raw template data:`, templateData?.length || 0, 'templates');
 
       const { data: favoritesData } = await supabase
         .from('template_favorites')
@@ -135,22 +143,31 @@ export function TemplateLibraryScreen({ navigation }: Props) {
 
       const userRatings = new Map(ratingsData?.map(r => [r.template_id, r.rating]) || []);
 
-      const templatesWithDetails: LoopTemplateWithDetails[] = (templateData || []).map((template: any) => ({
-        ...template,
-        creator: Array.isArray(template.creator) ? template.creator[0] : template.creator,
-        tasks: template.tasks || [],
-        taskCount: template.tasks?.length || 0,
-        isFavorite: favoriteIds.has(template.id),
-        isAdded: addedIds.has(template.id),
-        userRating: userRatings.get(template.id),
-        average_rating: template.average_rating || 0,
-        review_count: template.review_count || 0,
-      }));
+      const templatesWithDetails: LoopTemplateWithDetails[] = (templateData || [])
+        .map((template: any) => {
+          const creator = Array.isArray(template.creator) ? template.creator[0] : template.creator;
+          return {
+            ...template,
+            creator: creator || { id: '', name: 'Unknown Creator', bio: '', created_at: '', updated_at: '' },
+            tasks: template.tasks || [],
+            taskCount: template.tasks?.length || 0,
+            isFavorite: favoriteIds.has(template.id),
+            isAdded: addedIds.has(template.id),
+            userRating: userRatings.get(template.id),
+            average_rating: template.average_rating || 0,
+            review_count: template.review_count || 0,
+          };
+        })
+        .filter((template: LoopTemplateWithDetails) => template.creator !== null && template.creator !== undefined);
 
+      console.log(`[TemplateLibrary] Loaded ${templatesWithDetails.length} templates`);
       setTemplates(templatesWithDetails);
       setFilteredTemplates(templatesWithDetails);
     } catch (error) {
       console.error('Error fetching templates:', error);
+      Alert.alert('Error', 'Failed to load templates. Please try again.');
+      setTemplates([]);
+      setFilteredTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -158,15 +175,19 @@ export function TemplateLibraryScreen({ navigation }: Props) {
 
   const filterTemplates = () => {
     let filtered = [...templates];
+    console.log(`[TemplateLibrary] Filtering ${templates.length} templates, activeTab: ${activeTab}, category: ${selectedCategory}, search: "${searchQuery}"`);
 
     if (activeTab === 'mylibrary') {
       filtered = filtered.filter(t => t.isAdded);
+      console.log(`[TemplateLibrary] After mylibrary filter: ${filtered.length} templates`);
     } else if (activeTab === 'favorites') {
       filtered = filtered.filter(t => t.isFavorite);
+      console.log(`[TemplateLibrary] After favorites filter: ${filtered.length} templates`);
     }
 
     if (selectedCategory) {
       filtered = filtered.filter(t => t.category === selectedCategory);
+      console.log(`[TemplateLibrary] After category filter (${selectedCategory}): ${filtered.length} templates`);
     }
 
     if (searchQuery.trim()) {
@@ -175,11 +196,13 @@ export function TemplateLibraryScreen({ navigation }: Props) {
         t =>
           t.title.toLowerCase().includes(query) ||
           t.description.toLowerCase().includes(query) ||
-          t.creator.name.toLowerCase().includes(query) ||
+          (t.creator?.name?.toLowerCase().includes(query) || false) ||
           t.book_course_title.toLowerCase().includes(query)
       );
+      console.log(`[TemplateLibrary] After search filter: ${filtered.length} templates`);
     }
 
+    console.log(`[TemplateLibrary] Final filtered count: ${filtered.length} templates`);
     setFilteredTemplates(filtered);
   };
 
@@ -233,14 +256,14 @@ export function TemplateLibraryScreen({ navigation }: Props) {
     const handlePressIn = () => {
       Animated.spring(scaleAnim, {
         toValue: 0.98,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start();
     };
 
     const handlePressOut = () => {
       Animated.spring(scaleAnim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       }).start();
     };
 
@@ -249,12 +272,12 @@ export function TemplateLibraryScreen({ navigation }: Props) {
         Animated.timing(favoriteScale, {
           toValue: 1.3,
           duration: 150,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
         Animated.timing(favoriteScale, {
           toValue: 1,
           duration: 150,
-          useNativeDriver: true,
+          useNativeDriver: Platform.OS !== 'web',
         }),
       ]).start();
     };
@@ -401,7 +424,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
       <StatusBar barStyle="dark-content" />
       <View style={{
         flex: 1,
-        maxWidth: 600,
+        maxWidth: 800,
         width: '100%',
         alignSelf: 'center',
         backgroundColor: '#f5f5f5',
@@ -577,6 +600,7 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#e5e5e5',
+    width: '100%',
   },
   headerTop: {
     flexDirection: 'row',
@@ -679,8 +703,10 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   filtersContent: {
-    paddingHorizontal: 20,
+    paddingLeft: 20,
+    paddingRight: 20,
     gap: 8,
+    flexDirection: 'row',
   },
   filterChip: {
     paddingVertical: 10,
@@ -864,11 +890,6 @@ const styles = StyleSheet.create({
   cardContent: {
     flexDirection: 'row',
     gap: 16,
-  },
-  skeletonBar: {
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    marginBottom: 12,
   },
   skeletonImage: {
     width: 80,

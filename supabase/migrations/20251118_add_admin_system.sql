@@ -208,7 +208,10 @@ SELECT
   (SELECT COUNT(*) FROM loops WHERE owner_id = u.id) as loop_count,
   (SELECT COUNT(*) FROM tasks WHERE loop_id IN (SELECT id FROM loops WHERE owner_id = u.id)) as task_count,
   (SELECT COUNT(*) FROM user_template_usage WHERE user_id = u.id) as templates_used,
-  (SELECT MAX(updated_at) FROM loops WHERE owner_id = u.id) as last_activity
+  GREATEST(
+    COALESCE((SELECT MAX(loops.created_at) FROM loops WHERE owner_id = u.id), '1970-01-01'::timestamp with time zone),
+    COALESCE((SELECT MAX(tasks.updated_at) FROM tasks WHERE loop_id IN (SELECT id FROM loops WHERE owner_id = u.id)), '1970-01-01'::timestamp with time zone)
+  ) as last_activity
 FROM auth.users u
 LEFT JOIN user_profiles up ON u.id = up.id
 ORDER BY u.created_at DESC;

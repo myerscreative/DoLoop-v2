@@ -1,0 +1,24 @@
+-- =====================================================
+-- Create Storage Bucket for Task Attachments
+-- =====================================================
+--
+-- This script documents how to create the required storage bucket
+-- for task attachments to work properly.
+--
+-- IMPORTANT: Storage buckets cannot be created via SQL migrations.
+-- You must create this bucket manually in the Supabase Dashboard.
+--
+-- Steps to create the bucket:
+-- 1. Go to your Supabase project dashboard
+-- 2. Navigate to Storage
+-- 3. Click "Create bucket"
+-- 4. Enter bucket details:
+--    - Name: task-attachments
+--    - Public bucket: Unchecked (false)
+--    - File size limit: 10 MB
+--    - Allowed MIME types: * (allow all types)
+--
+-- After creating the bucket, verify it exists by checking:
+-- SELECT * FROM storage.buckets WHERE name = 'task-attachments';
+--
+-- The bucket should now be accessible for file uploads.

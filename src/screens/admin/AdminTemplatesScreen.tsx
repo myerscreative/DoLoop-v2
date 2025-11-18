@@ -38,7 +38,7 @@ import {
   getGroupsForTemplate,
   TemplateGroup,
 } from '../../lib/admin';
-import { LoopTemplate, TemplateCreator, TemplateTask } from '../../types/loop';
+import { LoopTemplate, TemplateCreator, TemplateTask, LoopType } from '../../types/loop';
 import { AdminHelpModal } from '../../components/AdminHelpModal';
 import { ADMIN_HELP_CONTENT } from '../../constants/adminHelp';
 
@@ -55,13 +55,13 @@ interface TemplateFormData {
   book_course_title: string;
   affiliate_link: string;
   color: string;
-  category: string;
+  category: LoopType;
   is_featured: boolean;
   tasks: Array<{ description: string; display_order: number }>;
 }
 
 export function AdminTemplatesScreen({ navigation }: Props) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const { isAdmin, loading: adminLoading } = useAdmin();
   const [templates, setTemplates] = useState<LoopTemplate[]>([]);
   const [creators, setCreators] = useState<TemplateCreator[]>([]);
@@ -73,6 +73,8 @@ export function AdminTemplatesScreen({ navigation }: Props) {
   const [showModal, setShowModal] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showTemplateGroupsModal, setShowTemplateGroupsModal] = useState(false);
+  const [selectedTemplateForGroups, setSelectedTemplateForGroups] = useState<LoopTemplate | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<LoopTemplate | null>(null);
   const [editingGroup, setEditingGroup] = useState<TemplateGroup | null>(null);
   const [groupName, setGroupName] = useState('');
@@ -360,7 +362,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
         });
         Alert.alert('Success', 'Group updated successfully');
       } else {
-        await createTemplateGroup({
+        const result = await createTemplateGroup({
           name: groupName,
           description: groupDescription || null,
           display_order: groups.length,
@@ -371,7 +373,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
       loadGroups();
     } catch (error) {
       console.error('Error saving group:', error);
-      Alert.alert('Error', 'Failed to save group');
+      Alert.alert('Error', `Failed to save group: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -417,6 +419,43 @@ export function AdminTemplatesScreen({ navigation }: Props) {
     }
   };
 
+  // Template Group Assignment Functions
+  const handleOpenTemplateGroupsModal = (template: LoopTemplate) => {
+    setSelectedTemplateForGroups(template);
+    setShowTemplateGroupsModal(true);
+  };
+
+  const handleCloseTemplateGroupsModal = () => {
+    setShowTemplateGroupsModal(false);
+    setSelectedTemplateForGroups(null);
+  };
+
+  const handleToggleTemplateGroup = async (templateId: string, groupId: string) => {
+    try {
+      const currentGroups = templateGroups[templateId] || [];
+      const isAssigned = currentGroups.includes(groupId);
+
+      if (isAssigned) {
+        // Unassign
+        await unassignTemplateFromGroup(templateId, groupId);
+        setTemplateGroups(prev => ({
+          ...prev,
+          [templateId]: prev[templateId]?.filter(id => id !== groupId) || []
+        }));
+      } else {
+        // Assign
+        await assignTemplateToGroup(templateId, groupId);
+        setTemplateGroups(prev => ({
+          ...prev,
+          [templateId]: [...(prev[templateId] || []), groupId]
+        }));
+      }
+    } catch (error) {
+      console.error('Error toggling template group assignment:', error);
+      Alert.alert('Error', 'Failed to update group assignment');
+    }
+  };
+
   if (adminLoading || !isAdmin) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -445,7 +484,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.templateCard, { backgroundColor: colors.card }]}
+          style={[styles.templateCard, { backgroundColor: colors.surface }]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
@@ -460,12 +499,32 @@ export function AdminTemplatesScreen({ navigation }: Props) {
             <View style={styles.templateHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.templateTitle, { color: colors.text }]}>{item.title}</Text>
-                <Text style={[styles.templateMeta, { color: colors.textSecondary }]}>
+                <Text style={[styles.templateMeta, { color: colors.text }]}>
                   {item.category} • {item.is_featured ? '⭐ Featured' : 'Not Featured'}
                 </Text>
-                <Text style={[styles.templateDescription, { color: colors.textSecondary }]} numberOfLines={2}>
+                <Text style={[styles.templateDescription, { color: colors.text }]} numberOfLines={2}>
                   {item.description}
                 </Text>
+                {/* Show assigned groups */}
+                {templateGroups[item.id] && templateGroups[item.id].length > 0 && (
+                  <View style={styles.templateGroupsContainer}>
+                    <Text style={[styles.templateGroupsLabel, { color: colors.text }]}>
+                      Groups:
+                    </Text>
+                    <View style={styles.templateGroupsChips}>
+                      {templateGroups[item.id].map(groupId => {
+                        const group = groups.find(g => g.id === groupId);
+                        return group ? (
+                          <View key={groupId} style={[styles.templateGroupChip, { backgroundColor: colors.primary + '20' }]}>
+                            <Text style={[styles.templateGroupChipText, { color: colors.primary }]}>
+                              {group.name}
+                            </Text>
+                          </View>
+                        ) : null;
+                      })}
+                    </View>
+                  </View>
+                )}
               </View>
               <View style={styles.templateActions}>
                 <TouchableOpacity
@@ -479,6 +538,18 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                   style={styles.actionButton}
                 >
                   <Ionicons name="create-outline" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    handleOpenTemplateGroupsModal(item);
+                  }}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="folder-outline" size={20} color={colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={(e) => {
@@ -504,7 +575,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,
@@ -572,6 +643,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                 styles.groupChip,
                 !selectedGroup && { backgroundColor: colors.primary },
                 !selectedGroup && styles.groupChipActive,
+                selectedGroup && { backgroundColor: colors.surface, borderColor: colors.border },
               ]}
               onPress={() => {
                 if (Platform.OS !== 'web') {
@@ -580,7 +652,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                 setSelectedGroup(null);
               }}
             >
-              <Text style={[styles.groupChipText, !selectedGroup && { color: '#fff' }]}>All</Text>
+              <Text style={[styles.groupChipText, !selectedGroup ? { color: '#fff' } : { color: colors.text }]}>All</Text>
             </TouchableOpacity>
             {groups.map(group => (
               <TouchableOpacity
@@ -589,6 +661,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                   styles.groupChip,
                   selectedGroup === group.id && { backgroundColor: colors.primary },
                   selectedGroup === group.id && styles.groupChipActive,
+                  selectedGroup !== group.id && { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 onPress={() => {
                   if (Platform.OS !== 'web') {
@@ -597,7 +670,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                   setSelectedGroup(group.id);
                 }}
               >
-                <Text style={[styles.groupChipText, selectedGroup === group.id && { color: '#fff' }]}>
+                <Text style={[styles.groupChipText, selectedGroup === group.id ? { color: '#fff' } : { color: colors.text }]}>
                   {group.name}
                 </Text>
               </TouchableOpacity>
@@ -661,7 +734,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
             <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
               {/* Creator Selection */}
               <Text style={[styles.label, { color: colors.text }]}>Creator *</Text>
-              <View style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <TextInput
                   value={creators.find(c => c.id === formData.creator_id)?.name || 'Select Creator'}
                   editable={false}
@@ -672,7 +745,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {/* Title */}
               <Text style={[styles.label, { color: colors.text }]}>Title *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.title}
                 onChangeText={text => setFormData({ ...formData, title: text })}
                 placeholder="Enter template title"
@@ -682,7 +755,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {/* Description */}
               <Text style={[styles.label, { color: colors.text }]}>Description *</Text>
               <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.description}
                 onChangeText={text => setFormData({ ...formData, description: text })}
                 placeholder="Enter template description"
@@ -694,7 +767,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {/* Book/Course Title */}
               <Text style={[styles.label, { color: colors.text }]}>Book/Course Title *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.book_course_title}
                 onChangeText={text => setFormData({ ...formData, book_course_title: text })}
                 placeholder="e.g., Atomic Habits"
@@ -704,7 +777,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {/* Affiliate Link */}
               <Text style={[styles.label, { color: colors.text }]}>Affiliate Link</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.affiliate_link}
                 onChangeText={text => setFormData({ ...formData, affiliate_link: text })}
                 placeholder="https://amazon.com/..."
@@ -715,7 +788,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {/* Color */}
               <Text style={[styles.label, { color: colors.text }]}>Color</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.color}
                 onChangeText={text => setFormData({ ...formData, color: text })}
                 placeholder="#667eea"
@@ -730,9 +803,9 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                     key={cat}
                     style={[
                       styles.categoryButton,
-                      { backgroundColor: formData.category === cat ? colors.primary : colors.card },
+                      { backgroundColor: formData.category === cat ? colors.primary : colors.surface },
                     ]}
-                    onPress={() => setFormData({ ...formData, category: cat })}
+                    onPress={() => setFormData({ ...formData, category: cat as LoopType })}
                   >
                     <Text style={[styles.categoryButtonText, { color: formData.category === cat ? '#fff' : colors.text }]}>
                       {cat}
@@ -759,7 +832,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
               {formData.tasks.map((task, index) => (
                 <View key={index} style={styles.taskRow}>
                   <TextInput
-                    style={[styles.taskInput, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                    style={[styles.taskInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                     value={task.description}
                     onChangeText={text => updateTask(index, text)}
                     placeholder={`Task ${index + 1}`}
@@ -806,7 +879,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                 </Text>
 
                 <TextInput
-                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                  style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                   value={groupName}
                   onChangeText={setGroupName}
                   placeholder="Group name (e.g., Productivity)"
@@ -814,7 +887,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                 />
 
                 <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                   value={groupDescription}
                   onChangeText={setGroupDescription}
                   placeholder="Description (optional)"
@@ -854,7 +927,7 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                   Existing Groups
                 </Text>
                 {groups.map(group => (
-                  <View key={group.id} style={[styles.groupListItem, { backgroundColor: colors.card }]}>
+                  <View key={group.id} style={[styles.groupListItem, { backgroundColor: colors.surface }]}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.groupListName, { color: colors.text }]}>{group.name}</Text>
                       {group.description && (
@@ -885,6 +958,71 @@ export function AdminTemplatesScreen({ navigation }: Props) {
                   </Text>
                 )}
               </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
+        {/* Template Groups Assignment Modal */}
+        <Modal
+          visible={showTemplateGroupsModal}
+          animationType="slide"
+          onRequestClose={handleCloseTemplateGroupsModal}
+          transparent={false}
+        >
+          <SafeAreaView style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={handleCloseTemplateGroupsModal}>
+                <Ionicons name="close" size={28} color={colors.text} />
+              </TouchableOpacity>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Assign Groups - {selectedTemplateForGroups?.title}
+              </Text>
+              <View style={{ width: 28 }} />
+            </View>
+
+            <ScrollView style={styles.modalContent} contentContainerStyle={styles.modalScrollContent}>
+              <Text style={[styles.label, { color: colors.text, marginBottom: 16 }]}>
+                Select groups for this template:
+              </Text>
+
+              {groups.map(group => {
+                const isAssigned = selectedTemplateForGroups ?
+                  (templateGroups[selectedTemplateForGroups.id] || []).includes(group.id) : false;
+
+                return (
+                  <TouchableOpacity
+                    key={group.id}
+                    style={[
+                      styles.groupAssignmentRow,
+                      { backgroundColor: colors.surface, borderColor: colors.border }
+                    ]}
+                    onPress={() => selectedTemplateForGroups &&
+                      handleToggleTemplateGroup(selectedTemplateForGroups.id, group.id)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.groupAssignmentName, { color: colors.text }]}>{group.name}</Text>
+                      {group.description && (
+                        <Text style={[styles.groupAssignmentDescription, { color: colors.textSecondary }]}>
+                          {group.description}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons
+                      name={isAssigned ? 'checkbox' : 'square-outline'}
+                      size={24}
+                      color={colors.primary}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+
+              {groups.length === 0 && (
+                <View style={styles.emptyGroupsContainer}>
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                    No groups available. Create groups first using "Manage Groups" button.
+                  </Text>
+                </View>
+              )}
             </ScrollView>
           </SafeAreaView>
         </Modal>
@@ -962,18 +1100,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   templateTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'Inter_600SemiBold',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   templateMeta: {
-    fontSize: 12,
-    fontFamily: 'Inter_400Regular',
+    fontSize: 13,
+    fontFamily: 'Inter_500Medium',
     marginBottom: 8,
   },
   templateDescription: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter_400Regular',
+    lineHeight: 20,
   },
   templateActions: {
     flexDirection: 'row',
@@ -1130,7 +1269,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   groupChipText: {
-    fontSize: 14,
+    fontSize: 15,
     fontFamily: 'Inter_600SemiBold',
   },
   groupFormSection: {
@@ -1182,5 +1321,48 @@ const styles = StyleSheet.create({
   },
   groupActionButton: {
     padding: 8,
+  },
+  groupAssignmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  groupAssignmentName: {
+    fontSize: 16,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 4,
+  },
+  groupAssignmentDescription: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
+  },
+  emptyGroupsContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  templateGroupsContainer: {
+    marginTop: 8,
+  },
+  templateGroupsLabel: {
+    fontSize: 13,
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 6,
+  },
+  templateGroupsChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  templateGroupChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  templateGroupChipText: {
+    fontSize: 11,
+    fontFamily: 'Inter_600SemiBold',
   },
 });
