@@ -404,7 +404,12 @@ export function TemplateLibraryScreen({ navigation }: Props) {
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabs}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsContainer}
+          style={styles.tabsScroll}
+        >
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab.id}
@@ -430,7 +435,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
               )}
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
       </View>
 
       {/* Search */}
@@ -574,19 +579,23 @@ const styles = StyleSheet.create({
   },
 
   // Tabs
-  tabs: {
-    flexDirection: 'row',
-    gap: 32,
+  tabsScroll: {
     marginTop: 16,
     borderBottomWidth: 2,
     borderBottomColor: '#f0f0f0',
   },
+  tabsContainer: {
+    flexDirection: 'row',
+    gap: 20,
+    paddingRight: 20,
+  },
   tab: {
     alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 4,
+    paddingHorizontal: 8,
     paddingBottom: 12,
     position: 'relative',
+    minWidth: 80,
   },
   tabIcon: {
     fontSize: 22,
