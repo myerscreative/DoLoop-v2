@@ -17,11 +17,16 @@ import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag } from '../../types
 import { PriorityBadge } from './PriorityBadge';
 import { TaskTag } from './TaskTag';
 
-// Only import DateTimePicker on native platforms
-let DateTimePicker: any = null;
-if (Platform.OS !== 'web') {
-  DateTimePicker = require('@react-native-community/datetimepicker').default;
-}
+// DateTimePicker wrapper - renders nothing on web
+// On native platforms, it renders the actual picker
+const NativeDatePicker: React.FC<{
+  value: Date;
+  mode: 'date' | 'time' | 'datetime';
+  display?: string;
+  onChange: (event: any, date?: Date) => void;
+}> = Platform.OS === 'web'
+  ? () => null  // Return nothing on web
+  : require('@react-native-community/datetimepicker').default;
 
 // Helper to format date for HTML input
 const formatDateForInput = (date: Date | undefined): string => {
@@ -232,7 +237,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
               {/* Due Date */}
               <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text }]}>Due Date (Platform: {Platform.OS})</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Due Date</Text>
                 {Platform.OS === 'web' ? (
                   <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
@@ -292,8 +297,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>
-                    {showDueDatePicker && DateTimePicker && (
-                      <DateTimePicker
+                    {showDueDatePicker && Platform.OS !== 'web' && (
+                      <NativeDatePicker
                         value={dueDate || new Date()}
                         mode="date"
                         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
@@ -341,7 +346,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
               {/* Reminder */}
               <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text }]}>Reminder (Platform: {Platform.OS})</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Reminder</Text>
                 {Platform.OS === 'web' ? (
                   <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
@@ -405,9 +410,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         </TouchableOpacity>
                       )}
                     </TouchableOpacity>
-                    {showReminderPicker && Platform.OS === 'ios' && DateTimePicker && (
+                    {showReminderPicker && Platform.OS === 'ios' && (
                       <>
-                        <DateTimePicker
+                        <NativeDatePicker
                           value={tempReminderDate || new Date()}
                           mode="datetime"
                           display="spinner"
@@ -438,8 +443,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         </View>
                       </>
                     )}
-                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'date' && DateTimePicker && (
-                      <DateTimePicker
+                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'date' && (
+                      <NativeDatePicker
                         value={tempReminderDate || new Date()}
                         mode="date"
                         display="default"
@@ -457,8 +462,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         }}
                       />
                     )}
-                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'time' && DateTimePicker && (
-                      <DateTimePicker
+                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'time' && (
+                      <NativeDatePicker
                         value={tempReminderDate || new Date()}
                         mode="time"
                         display="default"
