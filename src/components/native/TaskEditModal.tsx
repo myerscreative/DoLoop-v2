@@ -47,6 +47,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
   const [showReminderPicker, setShowReminderPicker] = useState(false);
+  const [reminderPickerMode, setReminderPickerMode] = useState<'date' | 'time'>('date');
+  const [tempReminderDate, setTempReminderDate] = useState<Date | undefined>();
   const [timeEstimate, setTimeEstimate] = useState('');
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [saving, setSaving] = useState(false);
@@ -76,6 +78,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setIsOneTime(false);
     setDueDate(undefined);
     setReminderDate(undefined);
+    setTempReminderDate(undefined);
+    setReminderPickerMode('date');
     setTimeEstimate('');
     setSelectedTags([]);
   };
@@ -233,11 +237,27 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                   <DateTimePicker
                     value={dueDate || new Date()}
                     mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                     onChange={(event: any, date?: Date) => {
-                      setShowDueDatePicker(false);
-                      if (date) setDueDate(date);
+                      if (Platform.OS === 'android') {
+                        setShowDueDatePicker(false);
+                        if (event.type === 'set' && date) {
+                          setDueDate(date);
+                        }
+                      } else {
+                        // iOS - picker stays open, only update date
+                        if (date) setDueDate(date);
+                      }
                     }}
                   />
+                )}
+                {Platform.OS === 'ios' && showDueDatePicker && (
+                  <TouchableOpacity
+                    style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
+                    onPress={() => setShowDueDatePicker(false)}
+                  >
+                    <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
+                  </TouchableOpacity>
                 )}
               </View>
 
@@ -266,7 +286,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     borderColor: colors.border,
                     backgroundColor: colors.surface
                   }]}
-                  onPress={() => setShowReminderPicker(true)}
+                  onPress={() => {
+                    setReminderPickerMode('date');
+                    setTempReminderDate(reminderDate || new Date());
+                    setShowReminderPicker(true);
+                  }}
                 >
                   <Text style={{ color: reminderDate ? colors.text : colors.textSecondary }}>
                     {reminderDate ? reminderDate.toLocaleString() : 'No reminder'}
@@ -280,13 +304,74 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     </TouchableOpacity>
                   )}
                 </TouchableOpacity>
-                {showReminderPicker && (
+                {showReminderPicker && Platform.OS === 'ios' && (
+                  <>
+                    <DateTimePicker
+                      value={tempReminderDate || new Date()}
+                      mode="datetime"
+                      display="spinner"
+                      onChange={(event: any, date?: Date) => {
+                        if (date) setTempReminderDate(date);
+                      }}
+                    />
+                    <View style={styles.pickerButtonRow}>
+                      <TouchableOpacity
+                        style={[styles.pickerCancelButton, { borderColor: colors.border }]}
+                        onPress={() => {
+                          setShowReminderPicker(false);
+                          setTempReminderDate(undefined);
+                        }}
+                      >
+                        <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
+                        onPress={() => {
+                          setReminderDate(tempReminderDate);
+                          setShowReminderPicker(false);
+                          setTempReminderDate(undefined);
+                        }}
+                      >
+                        <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
+                {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'date' && (
                   <DateTimePicker
-                    value={reminderDate || new Date()}
-                    mode="datetime"
+                    value={tempReminderDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event: any, date?: Date) => {
+                      if (event.type === 'dismissed') {
+                        setShowReminderPicker(false);
+                        setTempReminderDate(undefined);
+                        return;
+                      }
+                      if (event.type === 'set' && date) {
+                        // Store the date and show time picker
+                        setTempReminderDate(date);
+                        setReminderPickerMode('time');
+                      }
+                    }}
+                  />
+                )}
+                {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'time' && (
+                  <DateTimePicker
+                    value={tempReminderDate || new Date()}
+                    mode="time"
+                    display="default"
                     onChange={(event: any, date?: Date) => {
                       setShowReminderPicker(false);
-                      if (date) setReminderDate(date);
+                      if (event.type === 'set' && date && tempReminderDate) {
+                        // Combine the date from step 1 with the time from step 2
+                        const finalDate = new Date(tempReminderDate);
+                        finalDate.setHours(date.getHours());
+                        finalDate.setMinutes(date.getMinutes());
+                        setReminderDate(finalDate);
+                      }
+                      setTempReminderDate(undefined);
+                      setReminderPickerMode('date');
                     }}
                   />
                 )}
@@ -440,6 +525,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
+  },
+  pickerDoneButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  pickerCancelButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+    borderWidth: 1,
+  },
+  pickerButtonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginTop: 8,
   },
   tagsContainer: {
     flexDirection: 'row',
