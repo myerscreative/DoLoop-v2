@@ -19,7 +19,7 @@ import {
   AdminRole,
   AdminRoleAssignment,
 } from '../../lib/admin';
-import { useTheme } from '../../lib/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const ROLE_DESCRIPTIONS: Record<AdminRole, string> = {
   super_admin: 'Full access to everything, including role management',

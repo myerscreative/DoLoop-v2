@@ -475,13 +475,12 @@ export interface AffiliateClick {
 
 export async function getUnconvertedClicks(): Promise<AffiliateClick[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('affiliate_clicks')
       .select(`
         *,
-        loop_templates!inner(title),
-        auth.users(email)
-      `)
+        loop_templates!inner(title)
+      `) as any)
       .eq('converted', false)
       .order('clicked_at', { ascending: false });
 
@@ -490,7 +489,7 @@ export async function getUnconvertedClicks(): Promise<AffiliateClick[]> {
       return [];
     }
 
-    return data?.map(click => ({
+    return data?.map((click: any) => ({
       ...click,
       template_title: click.loop_templates?.title,
       user_email: click.users?.email || 'Anonymous',
@@ -503,13 +502,12 @@ export async function getUnconvertedClicks(): Promise<AffiliateClick[]> {
 
 export async function getAllAffiliateClicks(): Promise<AffiliateClick[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('affiliate_clicks')
       .select(`
         *,
-        loop_templates!inner(title),
-        auth.users(email)
-      `)
+        loop_templates!inner(title)
+      `) as any)
       .order('clicked_at', { ascending: false })
       .limit(1000); // Limit for performance
 
@@ -518,7 +516,7 @@ export async function getAllAffiliateClicks(): Promise<AffiliateClick[]> {
       return [];
     }
 
-    return data?.map(click => ({
+    return data?.map((click: any) => ({
       ...click,
       template_title: click.loop_templates?.title,
       user_email: click.users?.email || 'Anonymous',
@@ -594,13 +592,12 @@ export interface TemplateReview {
 
 export async function getAllTemplateReviews(): Promise<TemplateReview[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('template_reviews')
       .select(`
         *,
-        loop_templates!inner(title),
-        auth.users!inner(email)
-      `)
+        loop_templates!inner(title)
+      `) as any)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -608,7 +605,7 @@ export async function getAllTemplateReviews(): Promise<TemplateReview[]> {
       return [];
     }
 
-    return data?.map(review => ({
+    return data?.map((review: any) => ({
       ...review,
       user_email: review.users?.email,
       template_title: review.loop_templates?.title,
@@ -664,12 +661,9 @@ export async function deleteTemplateReview(id: string): Promise<boolean> {
 
 export async function getReviewsForTemplate(templateId: string): Promise<TemplateReview[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('template_reviews')
-      .select(`
-        *,
-        auth.users!inner(email)
-      `)
+      .select('*') as any)
       .eq('template_id', templateId)
       .order('created_at', { ascending: false });
 
@@ -678,7 +672,7 @@ export async function getReviewsForTemplate(templateId: string): Promise<Templat
       return [];
     }
 
-    return data?.map(review => ({
+    return data?.map((review: any) => ({
       ...review,
       user_email: review.users?.email,
     })) || [];
@@ -868,9 +862,9 @@ export async function getAuditLogs(params?: {
   limit?: number;
 }): Promise<AuditLog[]> {
   try {
-    let query = supabase
+    let query = (supabase
       .from('audit_logs')
-      .select('*, user:auth.users(email)')
+      .select('*, user_id') as any)
       .order('created_at', { ascending: false });
 
     if (params?.userId) {
@@ -895,7 +889,7 @@ export async function getAuditLogs(params?: {
       return [];
     }
 
-    return data?.map(log => ({
+    return data?.map((log: any) => ({
       ...log,
       user_email: log.user?.email || 'System',
     })) || [];
@@ -965,7 +959,7 @@ export async function getUserRoles(userId: string): Promise<AdminRole[]> {
       return [];
     }
 
-    return data?.map(r => r.role) || [];
+    return data?.map((item: any) => item.role) || [];
   } catch (error) {
     console.error('Error in getUserRoles:', error);
     return [];
@@ -974,13 +968,13 @@ export async function getUserRoles(userId: string): Promise<AdminRole[]> {
 
 export async function getAllRoleAssignments(): Promise<AdminRoleAssignment[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('admin_role_assignments')
       .select(`
         *,
-        user:auth.users!admin_role_assignments_user_id_fkey(email),
-        granter:auth.users!admin_role_assignments_granted_by_fkey(email)
-      `)
+        user_id,
+        granted_by
+      `) as any)
       .order('granted_at', { ascending: false });
 
     if (error) {
@@ -988,7 +982,7 @@ export async function getAllRoleAssignments(): Promise<AdminRoleAssignment[]> {
       return [];
     }
 
-    return data?.map(assignment => ({
+    return data?.map((assignment: any) => ({
       ...assignment,
       user_email: assignment.user?.email,
       granted_by_email: assignment.granter?.email,
@@ -1093,12 +1087,9 @@ export interface TemplateVersion {
 
 export async function getTemplateVersions(templateId: string): Promise<TemplateVersion[]> {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('template_versions')
-      .select(`
-        *,
-        creator:auth.users(email)
-      `)
+      .select('*') as any)
       .eq('template_id', templateId)
       .order('version_number', { ascending: false });
 
@@ -1107,7 +1098,7 @@ export async function getTemplateVersions(templateId: string): Promise<TemplateV
       return [];
     }
 
-    return data?.map(version => ({
+    return data?.map((version: any) => ({
       ...version,
       created_by_email: version.creator?.email,
     })) || [];
@@ -1427,7 +1418,7 @@ export async function getABTestResults(experimentId: string): Promise<ABTestResu
     const resultsByVariant = new Map<ABTestVariantType, any>();
 
     data?.forEach(result => {
-      const variantType = result.ab_test_variants.variant_type;
+      const variantType = (result.ab_test_variants as any).variant_type;
       if (!resultsByVariant.has(variantType)) {
         resultsByVariant.set(variantType, {
           variant_type: variantType,
@@ -2103,14 +2094,15 @@ export async function importTemplatesFromCSV(csvContent: string): Promise<{ succ
         // Find or create creator
         let creator = (await getAllTemplateCreators()).find(c => c.name === row.creator_name);
         if (!creator) {
-          creator = await createTemplateCreator({
+          const newCreator = await createTemplateCreator({
             name: row.creator_name,
             bio: '',
-            photo_url: null,
+            photo_url: undefined,
             website: null,
             twitter: null,
             instagram: null,
           });
+          if (newCreator) creator = newCreator;
         }
 
         if (!creator) {
@@ -2146,7 +2138,7 @@ export async function importTemplatesFromCSV(csvContent: string): Promise<{ succ
       }
     }
 
-    await logAuditEvent('import_templates_csv', 'template', null, null, { success: results.success, errors: results.errors.length });
+    await logAuditEvent('import_templates_csv', 'template', undefined, undefined, { success: results.success, errors: results.errors.length });
   } catch (error: any) {
     results.errors.push(`CSV parsing error: ${error.message}`);
   }

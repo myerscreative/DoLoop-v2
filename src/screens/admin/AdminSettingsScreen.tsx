@@ -22,7 +22,7 @@ import {
   WebhookConfiguration,
 } from '../../lib/admin';
 import { supabase } from '../../lib/supabase';
-import { useTheme } from '../../lib/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function AdminSettingsScreen() {
   const theme = useTheme();

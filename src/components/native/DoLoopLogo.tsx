@@ -24,8 +24,8 @@ export const DoLoopLogo: React.FC<DoLoopLogoProps> = ({
         style={{
           width: logoWidth,
           height: logoHeight,
-          resizeMode: 'contain',
         }}
+        resizeMode="contain"
         accessible={true}
         accessibilityLabel="DoLoop Logo"
       />
@@ -41,8 +41,8 @@ export const DoLoopLogo: React.FC<DoLoopLogoProps> = ({
         style={{
           width: logoWidth,
           height: logoHeight,
-          resizeMode: 'contain',
         }}
+        resizeMode="contain"
         accessible={true}
         accessibilityLabel="DoLoop Logo"
       />

@@ -25,10 +25,16 @@ export const TestAttachmentUpload: React.FC<TestAttachmentUploadProps> = ({ task
     console.log('Starting test upload...', { taskId, userId: user.id, fileName: testFile.name });
 
     setUploading(true);
-    uploadAttachment(taskId, testFile, user.id)
+    const fileForUpload = {
+      name: testFile.name,
+      type: testFile.type,
+      size: testFile.size,
+      uri: 'test-uri'
+    };
+    uploadAttachment(taskId, fileForUpload, user.id)
       .then((result) => {
         console.log('Test upload successful:', result);
-        Alert.alert('Success', `Attachment uploaded: ${result?.file_name}`);
+        Alert.alert('Success', `Attachment uploaded: ${result?.name}`);
       })
       .catch((error) => {
         console.error('Test upload failed:', error);

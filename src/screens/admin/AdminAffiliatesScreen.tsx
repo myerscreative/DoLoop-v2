@@ -8,7 +8,11 @@ import {
   ActivityIndicator,
   SafeAreaView,
   StatusBar,
+  TextInput,
+  Alert,
   Platform,
+  Modal,
+  ScrollView,
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -155,7 +159,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.templateCard, { backgroundColor: colors.card }]}
+          style={[styles.templateCard, { backgroundColor: colors.surface }]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
@@ -210,7 +214,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={colors.background === '#1A1A1A' ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,
@@ -255,14 +259,14 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
 
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Ionicons name="link" size={24} color={colors.primary} />
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {totalClicks.toLocaleString()}
             </Text>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Clicks</Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {totalConversions.toLocaleString()}
@@ -271,14 +275,14 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
           </View>
         </View>
         <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Ionicons name="trending-up" size={24} color="#FFA726" />
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {conversionRate.toFixed(1)}%
             </Text>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Conversion Rate</Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Ionicons name="cash" size={24} color="#4CAF50" />
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               ${totalRevenue.toFixed(2)}
@@ -302,7 +306,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
                 style={[
                   styles.sortButton,
                   {
-                    backgroundColor: sortBy === option.key ? colors.primary : colors.card,
+                    backgroundColor: sortBy === option.key ? colors.primary : colors.surface,
                   },
                 ]}
                 onPress={() => {
@@ -338,7 +342,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
               data={unconvertedClicks.slice(0, 10)} // Show only first 10
               keyExtractor={item => item.id}
               renderItem={({ item }) => (
-                <View style={[styles.clickCard, { backgroundColor: colors.card }]}>
+                <View style={[styles.clickCard, { backgroundColor: colors.surface }]}>
                   <View style={styles.clickInfo}>
                     <Text style={[styles.clickTemplate, { color: colors.text }]}>
                       {item.template_title}
@@ -442,7 +446,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
 
               <Text style={[styles.label, { color: colors.text }]}>Conversion Amount (optional)</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={conversionAmount}
                 onChangeText={setConversionAmount}
                 placeholder="e.g., 29.99"

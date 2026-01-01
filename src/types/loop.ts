@@ -15,23 +15,46 @@ export interface User {
 
 export interface Loop {
   id: string;
-  owner_id: string;
-  name: string;
-  color: string;
-  reset_rule: ResetRule;
-  next_reset_at: string; // ISO date string
-  is_favorite: boolean;
-  created_at: string;
-  updated_at: string;
+  owner_id?: string;
+  name?: string;
+  color?: string;
+  description?: string; // AI Synopsis or user description
+  affiliate_link?: string; // Link to order book/training
+  reset_rule?: ResetRule;
+  next_reset_at?: string; // ISO date string
+  due_date?: string; // ISO date string для manual loops
+  is_favorite?: boolean;
+  created_at?: string;
+  updated_at?: string;
+
+  // Legacy aliases for utility functions
+  title?: string; // alias for name
+  items?: Task[]; // alias for tasks
+  completedTasks?: number; // alias for completedCount
+  totalTasks?: number; // alias for totalCount
+  
+  // CamelCase aliases for legacy/mock data
+  ownerId?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  lastCompletedAt?: string | Date;
+  currentStreak?: number;
+  longestStreak?: number;
+  
+  // Other potential fields
+  type?: string;
+  status?: string;
+  last_reset?: string;
+  completionHistory?: any[];
 }
 
 export interface Task {
   id: string;
   loop_id: string;
   description: string;
-  notes?: string;
+  notes?: string; // Additional details/description
   completed: boolean;
-  completed_at?: string;
+  completed_at?: string; // When task was completed
   is_one_time: boolean;
   order_index?: number;
   created_at: string;
@@ -40,11 +63,51 @@ export interface Task {
   // Extended properties
   priority: TaskPriority;
   due_date?: string; // ISO date string
-  notes?: string; // Additional details/description
   tags?: string[]; // Array of tag IDs
   time_estimate_minutes?: number; // Estimated time in minutes
   reminder_at?: string; // ISO date string for reminder
-  completed_at?: string; // When task was completed
+  
+  // Legacy aliases
+  isRecurring?: boolean; // alias for !is_one_time
+  
+  // Relationships (added for type safety in components)
+  subtasks?: Subtask[];
+  tag_details?: Tag[];
+  attachments?: Attachment[];
+  reminder?: TaskReminder;
+}
+
+export interface Subtask {
+  id: string;
+  task_id: string;
+  description: string;
+  status: 'pending' | 'done';
+  created_at?: string;
+}
+
+export interface Attachment {
+  id: string;
+  task_id: string;
+  name: string;
+  url: string;
+  type: string;
+  created_at?: string;
+}
+
+export interface TaskReminder {
+  id: string;
+  task_id: string;
+  remind_at: string;
+  is_sent: boolean;
+  created_at?: string;
+}
+
+export interface Tag {
+  id: string;
+  user_id: string;
+  name: string;
+  color: string;
+  created_at: string;
 }
 
 export interface ArchivedTask {
@@ -75,6 +138,9 @@ export interface TemplateCreator {
   title?: string; // e.g., "Business Coach", "Author", "CEO"
   photo_url?: string;
   website_url?: string;
+  website?: string | null;
+  twitter?: string | null;
+  instagram?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -145,6 +211,29 @@ export interface LoopTemplateWithDetails extends LoopTemplate {
  */
 
 export type LoopType = 'personal' | 'work' | 'daily' | 'shared';
+
+export interface LibraryFolder {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  count: number;
+  order?: number;
+  isDefault?: boolean;
+  filterType?: string;
+}
+
+export interface CompletionRecord {
+  date: string;
+  completed: number;
+  total: number;
+}
+
+export interface MomentumData {
+  date: string;
+  intensity: number;
+  loopsCompleted: number;
+}
 
 export interface TaskWithDetails extends Task {
   // Extended properties are now part of the base Task interface

@@ -138,7 +138,7 @@ const styles = StyleSheet.create({
   modalContainer: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: Platform.OS === 'web' ? '85vh' : '85%',
+    maxHeight: '85%',
     flexDirection: 'column',
     ...Platform.select({
       ios: {

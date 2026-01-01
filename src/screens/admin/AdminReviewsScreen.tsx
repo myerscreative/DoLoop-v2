@@ -124,7 +124,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
     try {
       await updateTemplateReview(editingReview.id, {
         rating: formData.rating,
-        review_text: formData.review_text || null,
+        review_text: formData.review_text || undefined,
       });
       Alert.alert('Success', 'Review updated successfully');
       handleCloseModal();
@@ -220,7 +220,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.reviewCard, { backgroundColor: colors.card }]}
+          style={[styles.reviewCard, { backgroundColor: colors.surface }]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
@@ -284,7 +284,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={colors.background === '#1A1A1A' ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,
@@ -315,7 +315,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
           </View>
 
           {/* Search Field */}
-          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
@@ -376,17 +376,17 @@ export function AdminReviewsScreen({ navigation }: Props) {
 
           {/* Stats */}
           <View style={styles.statsContainer}>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statValue, { color: colors.text }]}>{reviews.length}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Reviews</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statValue, { color: colors.text }]}>
                 {reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : '0.0'}
               </Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Rating</Text>
             </View>
-            <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
               <Text style={[styles.statValue, { color: colors.text }]}>{filteredReviews.length}</Text>
               <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Filtered</Text>
             </View>
@@ -459,7 +459,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
                 {/* Review Text */}
                 <Text style={[styles.label, { color: colors.text }]}>Review Text</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                  style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                   value={formData.review_text}
                   onChangeText={text => setFormData({ ...formData, review_text: text })}
                   placeholder="Review text (optional)"

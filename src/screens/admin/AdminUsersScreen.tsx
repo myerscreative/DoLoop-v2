@@ -123,7 +123,7 @@ export function AdminUsersScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.userCard, { backgroundColor: colors.card }]}
+          style={[styles.userCard, { backgroundColor: colors.surface }]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
@@ -182,7 +182,7 @@ export function AdminUsersScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={colors.background === '#1A1A1A' ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,
@@ -227,17 +227,17 @@ export function AdminUsersScreen({ navigation }: Props) {
 
         {/* Stats Summary */}
         <View style={styles.summaryContainer}>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryValue, { color: colors.text }]}>{users.length}</Text>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Total Users</Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {users.filter(u => u.is_admin).length}
             </Text>
             <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Admins</Text>
           </View>
-          <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.summaryCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {users.filter(u => new Date(u.created_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)).length}
             </Text>

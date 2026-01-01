@@ -193,7 +193,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.creatorCard, { backgroundColor: colors.card }]}
+          style={[styles.creatorCard, { backgroundColor: colors.surface }]}
           onPressIn={handlePressIn}
           onPressOut={handlePressOut}
           activeOpacity={0.95}
@@ -261,7 +261,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={colors.background === '#1A1A1A' ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,
@@ -349,7 +349,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
               {/* Name */}
               <Text style={[styles.label, { color: colors.text }]}>Name *</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.name}
                 onChangeText={text => setFormData({ ...formData, name: text })}
                 placeholder="Enter creator name"
@@ -359,7 +359,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
               {/* Title */}
               <Text style={[styles.label, { color: colors.text }]}>Title</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.title}
                 onChangeText={text => setFormData({ ...formData, title: text })}
                 placeholder="e.g., Author & Speaker"
@@ -369,7 +369,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
               {/* Bio */}
               <Text style={[styles.label, { color: colors.text }]}>Bio *</Text>
               <TextInput
-                style={[styles.input, styles.textArea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, styles.textArea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.bio}
                 onChangeText={text => setFormData({ ...formData, bio: text })}
                 placeholder="Enter creator bio"
@@ -381,7 +381,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
               {/* Photo URL */}
               <Text style={[styles.label, { color: colors.text }]}>Photo URL</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.photo_url}
                 onChangeText={text => setFormData({ ...formData, photo_url: text })}
                 placeholder="https://example.com/photo.jpg"
@@ -392,7 +392,7 @@ export function AdminCreatorsScreen({ navigation }: Props) {
               {/* Website URL */}
               <Text style={[styles.label, { color: colors.text }]}>Website URL</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
+                style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 value={formData.website_url}
                 onChangeText={text => setFormData({ ...formData, website_url: text })}
                 placeholder="https://example.com"

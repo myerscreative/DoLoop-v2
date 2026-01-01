@@ -143,6 +143,8 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
             owner_id: user.id,
             name: template.title,
             color: template.color,
+            description: template.description,
+            affiliate_link: template.affiliate_link,
             reset_rule: template.category === 'daily' ? 'daily' : 'manual',
             is_favorite: false,
           },

@@ -12,7 +12,7 @@ export function calculateProgress(completedTasks: number, totalTasks: number): n
  * Check if a loop is complete
  */
 export function isLoopComplete(loop: Loop): boolean {
-  return loop.completedTasks === loop.totalTasks && loop.totalTasks > 0;
+  return loop.completedTasks === loop.totalTasks && (loop.totalTasks || 0) > 0;
 }
 
 /**

@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { getAdminDashboardStats, getTemplatePerformance, DashboardStats } from '../../lib/admin';
-import { useTheme } from '../../lib/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function AdminAnalyticsScreen() {
   const theme = useTheme();

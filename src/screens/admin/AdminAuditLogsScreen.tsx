@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { getAuditLogs, exportAuditLogsToCSV, downloadCSV, AuditLog } from '../../lib/admin';
-import { useTheme } from '../../lib/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export function AdminAuditLogsScreen() {
   const theme = useTheme();

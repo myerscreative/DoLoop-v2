@@ -977,7 +977,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkmark: {
+  checkmarkRoutine: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
@@ -1000,7 +1000,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     gap: 8,
   },
-  dot: {
+  dotIndicator: {
     width: 8,
     height: 8,
     borderRadius: 4,

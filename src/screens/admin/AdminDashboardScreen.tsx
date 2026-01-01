@@ -128,7 +128,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
   ];
 
   const StatCard = ({ title, value, icon, color }: { title: string; value: string | number; icon: keyof typeof Ionicons.glyphMap; color: string }) => (
-    <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+    <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
       <View style={[styles.statIconContainer, { backgroundColor: color + '20' }]}>
         <Ionicons name={icon} size={24} color={color} />
       </View>
@@ -157,7 +157,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
     return (
       <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
         <TouchableOpacity
-          style={[styles.menuItem, { backgroundColor: colors.card }]}
+          style={[styles.menuItem, { backgroundColor: colors.surface }]}
           onPress={() => {
             if (Platform.OS !== 'web') {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -185,7 +185,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle={colors.statusBar} />
+      <StatusBar barStyle={colors.background === '#1A1A1A' ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
         maxWidth: 800,

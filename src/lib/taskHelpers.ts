@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { Tag, TaskTag, Subtask, Attachment, TaskReminder, TaskWithDetails } from '../types/loop';
+import { Tag, Subtask, Attachment, TaskReminder, TaskWithDetails } from '../types/loop';
 
 /**
  * Tag Management

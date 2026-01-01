@@ -123,10 +123,10 @@ export function getLoopById(loopId: string): Loop | undefined {
 // Library Folder Management
 
 const DEFAULT_FOLDERS: LibraryFolder[] = [
-  { id: 'favorites', name: 'Favorites', color: '#FEC041', order: 0, isDefault: true, filterType: 'favorites' },
-  { id: 'personal', name: 'Personal', color: '#FE356C', order: 1, isDefault: true, filterType: 'personal' },
-  { id: 'work', name: 'Work', color: '#0CB6CC', order: 2, isDefault: true, filterType: 'work' },
-  { id: 'shared', name: 'Shared', color: '#7952B4', order: 3, isDefault: true, filterType: 'shared' },
+  { id: 'favorites', name: 'Favorites', color: '#FEC041', order: 0, isDefault: true, filterType: 'favorites', icon: '⭐️', count: 0 },
+  { id: 'personal', name: 'Personal', color: '#FE356C', order: 1, isDefault: true, filterType: 'personal', icon: '🏡', count: 0 },
+  { id: 'work', name: 'Work', color: '#0CB6CC', order: 2, isDefault: true, filterType: 'work', icon: '💼', count: 0 },
+  { id: 'shared', name: 'Shared', color: '#7952B4', order: 3, isDefault: true, filterType: 'shared', icon: '👥', count: 0 },
 ];
 
 export function getStoredFolders(): LibraryFolder[] {
