@@ -234,7 +234,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text }]}>Due Date</Text>
                 {Platform.OS === 'web' ? (
-                  <View style={[styles.dateButton, {
+                  <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
                     backgroundColor: colors.surface
                   }]}>
@@ -249,22 +249,25 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         }
                       }}
                       style={{
-                        flex: 1,
+                        width: '100%',
+                        height: 44,
+                        padding: '0 12px',
                         border: 'none',
                         background: 'transparent',
-                        color: dueDate ? colors.text : colors.textSecondary,
+                        color: colors.text,
                         fontSize: 16,
                         fontFamily: 'inherit',
                         outline: 'none',
                         cursor: 'pointer',
+                        boxSizing: 'border-box',
                       } as any}
                     />
                     {dueDate && (
                       <TouchableOpacity
+                        style={styles.webClearButton}
                         onPress={() => setDueDate(undefined)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Text style={{ color: colors.textSecondary }}>  ✕</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 18 }}>✕</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -340,7 +343,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text }]}>Reminder</Text>
                 {Platform.OS === 'web' ? (
-                  <View style={[styles.dateButton, {
+                  <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
                     backgroundColor: colors.surface
                   }]}>
@@ -355,22 +358,25 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         }
                       }}
                       style={{
-                        flex: 1,
+                        width: '100%',
+                        height: 44,
+                        padding: '0 12px',
                         border: 'none',
                         background: 'transparent',
-                        color: reminderDate ? colors.text : colors.textSecondary,
+                        color: colors.text,
                         fontSize: 16,
                         fontFamily: 'inherit',
                         outline: 'none',
                         cursor: 'pointer',
+                        boxSizing: 'border-box',
                       } as any}
                     />
                     {reminderDate && (
                       <TouchableOpacity
+                        style={styles.webClearButton}
                         onPress={() => setReminderDate(undefined)}
-                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Text style={{ color: colors.textSecondary }}>  ✕</Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 18 }}>✕</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -622,6 +628,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
+  },
+  webDateContainer: {
+    position: 'relative',
+    borderWidth: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  webClearButton: {
+    position: 'absolute',
+    right: 12,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
   },
   pickerDoneButton: {
     paddingVertical: 10,
