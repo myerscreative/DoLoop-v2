@@ -12,11 +12,30 @@ import {
   Platform,
   StyleSheet,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
 import { TaskTag } from './TaskTag';
+
+// Only import DateTimePicker on native platforms
+let DateTimePicker: any = null;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+}
+
+// Helper to format date for HTML input
+const formatDateForInput = (date: Date | undefined): string => {
+  if (!date) return '';
+  return date.toISOString().split('T')[0];
+};
+
+// Helper to format datetime for HTML input
+const formatDateTimeForInput = (date: Date | undefined): string => {
+  if (!date) return '';
+  // Format: YYYY-MM-DDTHH:mm
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 
 interface TaskEditModalProps {
   visible: boolean;
@@ -214,50 +233,89 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               {/* Due Date */}
               <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text }]}>Due Date</Text>
-                <TouchableOpacity
-                  style={[styles.dateButton, {
+                {Platform.OS === 'web' ? (
+                  <View style={[styles.dateButton, {
                     borderColor: colors.border,
                     backgroundColor: colors.surface
-                  }]}
-                  onPress={() => setShowDueDatePicker(true)}
-                >
-                  <Text style={{ color: dueDate ? colors.text : colors.textSecondary }}>
-                    {dueDate ? dueDate.toLocaleDateString() : 'No due date'}
-                  </Text>
-                  {dueDate && (
-                    <TouchableOpacity
-                      onPress={() => setDueDate(undefined)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Text style={{ color: colors.textSecondary }}>  ✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-                {showDueDatePicker && (
-                  <DateTimePicker
-                    value={dueDate || new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(event: any, date?: Date) => {
-                      if (Platform.OS === 'android') {
-                        setShowDueDatePicker(false);
-                        if (event.type === 'set' && date) {
-                          setDueDate(date);
+                  }]}>
+                    <input
+                      type="date"
+                      value={formatDateForInput(dueDate)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setDueDate(new Date(e.target.value + 'T00:00:00'));
+                        } else {
+                          setDueDate(undefined);
                         }
-                      } else {
-                        // iOS - picker stays open, only update date
-                        if (date) setDueDate(date);
-                      }
-                    }}
-                  />
-                )}
-                {Platform.OS === 'ios' && showDueDatePicker && (
-                  <TouchableOpacity
-                    style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
-                    onPress={() => setShowDueDatePicker(false)}
-                  >
-                    <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
-                  </TouchableOpacity>
+                      }}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        background: 'transparent',
+                        color: dueDate ? colors.text : colors.textSecondary,
+                        fontSize: 16,
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      } as any}
+                    />
+                    {dueDate && (
+                      <TouchableOpacity
+                        onPress={() => setDueDate(undefined)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      >
+                        <Text style={{ color: colors.textSecondary }}>  ✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateButton, {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface
+                      }]}
+                      onPress={() => setShowDueDatePicker(true)}
+                    >
+                      <Text style={{ color: dueDate ? colors.text : colors.textSecondary }}>
+                        {dueDate ? dueDate.toLocaleDateString() : 'No due date'}
+                      </Text>
+                      {dueDate && (
+                        <TouchableOpacity
+                          onPress={() => setDueDate(undefined)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={{ color: colors.textSecondary }}>  ✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                    {showDueDatePicker && DateTimePicker && (
+                      <DateTimePicker
+                        value={dueDate || new Date()}
+                        mode="date"
+                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                        onChange={(event: any, date?: Date) => {
+                          if (Platform.OS === 'android') {
+                            setShowDueDatePicker(false);
+                            if (event.type === 'set' && date) {
+                              setDueDate(date);
+                            }
+                          } else {
+                            // iOS - picker stays open, only update date
+                            if (date) setDueDate(date);
+                          }
+                        }}
+                      />
+                    )}
+                    {Platform.OS === 'ios' && showDueDatePicker && (
+                      <TouchableOpacity
+                        style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
+                        onPress={() => setShowDueDatePicker(false)}
+                      >
+                        <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
 
@@ -281,99 +339,138 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
               {/* Reminder */}
               <View style={styles.section}>
                 <Text style={[styles.label, { color: colors.text }]}>Reminder</Text>
-                <TouchableOpacity
-                  style={[styles.dateButton, {
+                {Platform.OS === 'web' ? (
+                  <View style={[styles.dateButton, {
                     borderColor: colors.border,
                     backgroundColor: colors.surface
-                  }]}
-                  onPress={() => {
-                    setReminderPickerMode('date');
-                    setTempReminderDate(reminderDate || new Date());
-                    setShowReminderPicker(true);
-                  }}
-                >
-                  <Text style={{ color: reminderDate ? colors.text : colors.textSecondary }}>
-                    {reminderDate ? reminderDate.toLocaleString() : 'No reminder'}
-                  </Text>
-                  {reminderDate && (
-                    <TouchableOpacity
-                      onPress={() => setReminderDate(undefined)}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    >
-                      <Text style={{ color: colors.textSecondary }}>  ✕</Text>
-                    </TouchableOpacity>
-                  )}
-                </TouchableOpacity>
-                {showReminderPicker && Platform.OS === 'ios' && (
-                  <>
-                    <DateTimePicker
-                      value={tempReminderDate || new Date()}
-                      mode="datetime"
-                      display="spinner"
-                      onChange={(event: any, date?: Date) => {
-                        if (date) setTempReminderDate(date);
+                  }]}>
+                    <input
+                      type="datetime-local"
+                      value={formatDateTimeForInput(reminderDate)}
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          setReminderDate(new Date(e.target.value));
+                        } else {
+                          setReminderDate(undefined);
+                        }
                       }}
+                      style={{
+                        flex: 1,
+                        border: 'none',
+                        background: 'transparent',
+                        color: reminderDate ? colors.text : colors.textSecondary,
+                        fontSize: 16,
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      } as any}
                     />
-                    <View style={styles.pickerButtonRow}>
+                    {reminderDate && (
                       <TouchableOpacity
-                        style={[styles.pickerCancelButton, { borderColor: colors.border }]}
-                        onPress={() => {
-                          setShowReminderPicker(false);
-                          setTempReminderDate(undefined);
-                        }}
+                        onPress={() => setReminderDate(undefined)}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
+                        <Text style={{ color: colors.textSecondary }}>  ✕</Text>
                       </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
-                        onPress={() => {
-                          setReminderDate(tempReminderDate);
-                          setShowReminderPicker(false);
-                          setTempReminderDate(undefined);
+                    )}
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.dateButton, {
+                        borderColor: colors.border,
+                        backgroundColor: colors.surface
+                      }]}
+                      onPress={() => {
+                        setReminderPickerMode('date');
+                        setTempReminderDate(reminderDate || new Date());
+                        setShowReminderPicker(true);
+                      }}
+                    >
+                      <Text style={{ color: reminderDate ? colors.text : colors.textSecondary }}>
+                        {reminderDate ? reminderDate.toLocaleString() : 'No reminder'}
+                      </Text>
+                      {reminderDate && (
+                        <TouchableOpacity
+                          onPress={() => setReminderDate(undefined)}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <Text style={{ color: colors.textSecondary }}>  ✕</Text>
+                        </TouchableOpacity>
+                      )}
+                    </TouchableOpacity>
+                    {showReminderPicker && Platform.OS === 'ios' && DateTimePicker && (
+                      <>
+                        <DateTimePicker
+                          value={tempReminderDate || new Date()}
+                          mode="datetime"
+                          display="spinner"
+                          onChange={(event: any, date?: Date) => {
+                            if (date) setTempReminderDate(date);
+                          }}
+                        />
+                        <View style={styles.pickerButtonRow}>
+                          <TouchableOpacity
+                            style={[styles.pickerCancelButton, { borderColor: colors.border }]}
+                            onPress={() => {
+                              setShowReminderPicker(false);
+                              setTempReminderDate(undefined);
+                            }}
+                          >
+                            <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Cancel</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[styles.pickerDoneButton, { backgroundColor: colors.primary }]}
+                            onPress={() => {
+                              setReminderDate(tempReminderDate);
+                              setShowReminderPicker(false);
+                              setTempReminderDate(undefined);
+                            }}
+                          >
+                            <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'date' && DateTimePicker && (
+                      <DateTimePicker
+                        value={tempReminderDate || new Date()}
+                        mode="date"
+                        display="default"
+                        onChange={(event: any, date?: Date) => {
+                          if (event.type === 'dismissed') {
+                            setShowReminderPicker(false);
+                            setTempReminderDate(undefined);
+                            return;
+                          }
+                          if (event.type === 'set' && date) {
+                            // Store the date and show time picker
+                            setTempReminderDate(date);
+                            setReminderPickerMode('time');
+                          }
                         }}
-                      >
-                        <Text style={{ color: 'white', fontWeight: '600' }}>Done</Text>
-                      </TouchableOpacity>
-                    </View>
+                      />
+                    )}
+                    {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'time' && DateTimePicker && (
+                      <DateTimePicker
+                        value={tempReminderDate || new Date()}
+                        mode="time"
+                        display="default"
+                        onChange={(event: any, date?: Date) => {
+                          setShowReminderPicker(false);
+                          if (event.type === 'set' && date && tempReminderDate) {
+                            // Combine the date from step 1 with the time from step 2
+                            const finalDate = new Date(tempReminderDate);
+                            finalDate.setHours(date.getHours());
+                            finalDate.setMinutes(date.getMinutes());
+                            setReminderDate(finalDate);
+                          }
+                          setTempReminderDate(undefined);
+                          setReminderPickerMode('date');
+                        }}
+                      />
+                    )}
                   </>
-                )}
-                {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'date' && (
-                  <DateTimePicker
-                    value={tempReminderDate || new Date()}
-                    mode="date"
-                    display="default"
-                    onChange={(event: any, date?: Date) => {
-                      if (event.type === 'dismissed') {
-                        setShowReminderPicker(false);
-                        setTempReminderDate(undefined);
-                        return;
-                      }
-                      if (event.type === 'set' && date) {
-                        // Store the date and show time picker
-                        setTempReminderDate(date);
-                        setReminderPickerMode('time');
-                      }
-                    }}
-                  />
-                )}
-                {showReminderPicker && Platform.OS === 'android' && reminderPickerMode === 'time' && (
-                  <DateTimePicker
-                    value={tempReminderDate || new Date()}
-                    mode="time"
-                    display="default"
-                    onChange={(event: any, date?: Date) => {
-                      setShowReminderPicker(false);
-                      if (event.type === 'set' && date && tempReminderDate) {
-                        // Combine the date from step 1 with the time from step 2
-                        const finalDate = new Date(tempReminderDate);
-                        finalDate.setHours(date.getHours());
-                        finalDate.setMinutes(date.getMinutes());
-                        setReminderDate(finalDate);
-                      }
-                      setTempReminderDate(undefined);
-                      setReminderPickerMode('date');
-                    }}
-                  />
                 )}
               </View>
 
