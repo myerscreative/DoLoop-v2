@@ -232,7 +232,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
               {/* Due Date */}
               <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text }]}>Due Date</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Due Date (Platform: {Platform.OS})</Text>
                 {Platform.OS === 'web' ? (
                   <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
@@ -341,7 +341,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
               {/* Reminder */}
               <View style={styles.section}>
-                <Text style={[styles.label, { color: colors.text }]}>Reminder</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Reminder (Platform: {Platform.OS})</Text>
                 {Platform.OS === 'web' ? (
                   <View style={[styles.webDateContainer, {
                     borderColor: colors.border,
