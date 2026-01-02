@@ -24,14 +24,17 @@ The Loop Library is a new feature that allows DoLoop users to browse and add pre
 ## Key Features
 
 ### 1. Template Library Browsing
+
 - Browse all available loop templates in a beautiful, organized interface
 - Search templates by name, creator, book title, or description
-- Filter by category (Personal, Work, Daily, Shared)
+- Filter by category (Personal, Work, Daily, Shared, Manual, Weekly, Goals)
 - View featured templates highlighted by the DoLoop team
 - See popularity metrics showing how many users have added each template
 
 ### 2. Detailed Template Pages
+
 Each template has a detailed page that includes:
+
 - **Template Information**: Title, description, and color
 - **Creator Bio**: Full profile of the teacher/coach/business leader who inspired the loop
 - **Source Material**: The book, course, or training that inspired the template
@@ -40,17 +43,20 @@ Each template has a detailed page that includes:
 - **Usage Statistics**: See how popular each template is
 
 ### 3. One-Click Add to My Loops
+
 - Users can instantly copy any template to their personal loop collection
 - All tasks are automatically duplicated
 - Loop settings (color, reset rule) are pre-configured based on the template
 - Usage is tracked and popularity scores are updated automatically
 
 ### 4. Monetization Support
+
 - Each template can include an affiliate link
 - When users view templates, they can click "Learn More" to purchase the source material
 - Supports creator partnerships and revenue sharing opportunities
 
 ### 5. Ratings & Reviews System ⭐ NEW
+
 - Users can rate templates from 1-5 stars
 - Optional text reviews to share detailed feedback
 - Average rating displayed prominently on template cards
@@ -58,18 +64,21 @@ Each template has a detailed page that includes:
 - Real-time rating statistics via automatic database triggers
 
 ### 6. Favorites System ❤️ NEW
+
 - Heart icon on each template card to favorite/unfavorite
 - Dedicated "Favorites" tab for quick access
 - Favorites persist across sessions
 - Visual indication of favorited templates
 
 ### 7. My Library Tab 📖 NEW
+
 - Three-tab navigation: Browse, My Library, Favorites
 - "My Library" shows all templates user has added to their loops
 - "✓ Added" badges on template cards
 - Easy organization and filtering of owned content
 
 ### 8. Template Sharing 📤 NEW
+
 - Share button on each template card
 - Native share sheet integration (iOS/Android)
 - Shares template name, creator, and book info
@@ -78,20 +87,24 @@ Each template has a detailed page that includes:
 ## User Flow
 
 1. **Discovery**
+
    - User sees "Loop Library" button on the home screen
    - Taps to browse available templates
 
 2. **Browse**
+
    - User can search or filter templates
    - Views template cards showing key information
    - Sees featured templates at the top
 
 3. **Explore Details**
+
    - User taps a template to view full details
    - Reads creator bio and template description
    - Reviews all tasks included in the template
 
 4. **Add to Loops**
+
    - User taps "Add to My Loops" button
    - Template is copied to their personal collection
    - User is redirected to the new loop or back to browse more
@@ -105,24 +118,28 @@ Each template has a detailed page that includes:
 The feature now includes **7 high-quality templates** from renowned experts:
 
 ### 1. Atomic Habits Daily Reset
+
 - **Creator**: James Clear
 - **Source**: Atomic Habits
 - **Category**: Daily
 - **Tasks**: 6 recurring tasks focused on implementing the Four Laws of Behavior Change
 
 ### 2. GTD Weekly Review
+
 - **Creator**: David Allen
 - **Source**: Getting Things Done
 - **Category**: Work
 - **Tasks**: 6 recurring tasks for the complete GTD weekly review process
 
 ### 3. Morning Routine Optimization
+
 - **Creator**: Tim Ferriss
 - **Source**: The 4-Hour Workweek
 - **Category**: Personal
 - **Tasks**: 6 tasks for a high-performance morning routine
 
 ### 4. Deep Work Session ⭐ NEW
+
 - **Creator**: Cal Newport
 - **Source**: Deep Work
 - **Category**: Work
@@ -130,6 +147,7 @@ The feature now includes **7 high-quality templates** from renowned experts:
 - **Popularity**: 150 uses
 
 ### 5. The 5 AM Club Routine ⭐ NEW
+
 - **Creator**: Robin Sharma
 - **Source**: The 5 AM Club
 - **Category**: Daily
@@ -137,6 +155,7 @@ The feature now includes **7 high-quality templates** from renowned experts:
 - **Popularity**: 200 uses
 
 ### 6. Tiny Habits Starter Pack ⭐ NEW
+
 - **Creator**: BJ Fogg
 - **Source**: Tiny Habits
 - **Category**: Personal
@@ -144,6 +163,7 @@ The feature now includes **7 high-quality templates** from renowned experts:
 - **Popularity**: 175 uses
 
 ### 7. 7 Habits Weekly Check-In ⭐ NEW
+
 - **Creator**: Stephen Covey
 - **Source**: The 7 Habits of Highly Effective People
 - **Category**: Work
@@ -155,7 +175,9 @@ The feature now includes **7 high-quality templates** from renowned experts:
 ### Database Schema
 
 #### `template_creators`
+
 Stores information about the teachers/coaches/business leaders:
+
 - `id`: UUID (primary key)
 - `name`: Creator's name
 - `bio`: Full biography
@@ -165,7 +187,9 @@ Stores information about the teachers/coaches/business leaders:
 - `created_at`, `updated_at`: Timestamps
 
 #### `loop_templates`
+
 Stores the loop templates:
+
 - `id`: UUID (primary key)
 - `creator_id`: Foreign key to template_creators
 - `title`: Template name
@@ -173,7 +197,7 @@ Stores the loop templates:
 - `book_course_title`: Source material title
 - `affiliate_link`: Affiliate URL for purchases
 - `color`: Hex color for the loop
-- `category`: Loop category (personal, work, daily, shared)
+- `category`: Loop category (personal, work, daily, shared, manual, weekly, goals)
 - `is_featured`: Boolean flag for featured templates
 - `popularity_score`: Integer tracking usage count
 - `average_rating`: Decimal (3,2) for average star rating ⭐ NEW
@@ -181,7 +205,9 @@ Stores the loop templates:
 - `created_at`, `updated_at`: Timestamps
 
 #### `template_tasks`
+
 Tasks within each template:
+
 - `id`: UUID (primary key)
 - `template_id`: Foreign key to loop_templates
 - `description`: Task description
@@ -191,7 +217,9 @@ Tasks within each template:
 - `created_at`: Timestamp
 
 #### `user_template_usage`
+
 Tracks which users have added which templates:
+
 - `id`: UUID (primary key)
 - `user_id`: Foreign key to auth.users
 - `template_id`: Foreign key to loop_templates
@@ -199,7 +227,9 @@ Tracks which users have added which templates:
 - `added_at`: Timestamp
 
 #### `template_reviews` ⭐ NEW
+
 User ratings and reviews for templates:
+
 - `id`: UUID (primary key)
 - `template_id`: Foreign key to loop_templates
 - `user_id`: Foreign key to auth.users
@@ -209,7 +239,9 @@ User ratings and reviews for templates:
 - UNIQUE constraint: One review per user per template
 
 #### `template_favorites` ⭐ NEW
+
 User favorites for quick access:
+
 - `id`: UUID (primary key)
 - `template_id`: Foreign key to loop_templates
 - `user_id`: Foreign key to auth.users
@@ -228,6 +260,7 @@ User favorites for quick access:
 ### UI Components
 
 1. **TemplateLibraryScreen** (`src/screens/TemplateLibraryScreen.tsx`) ⭐ ENHANCED
+
    - Three-tab navigation: Browse, My Library, Favorites
    - Main browsing interface with search and filters
    - Template cards with ratings, favorites, and share buttons
@@ -238,6 +271,7 @@ User favorites for quick access:
    - Real-time favorite toggling
 
 2. **TemplateDetailScreen** (`src/screens/TemplateDetailScreen.tsx`)
+
    - Detailed template view with ratings display
    - Creator bio section with photo
    - Full task preview
@@ -252,6 +286,7 @@ User favorites for quick access:
 ### Type Definitions
 
 New TypeScript interfaces in `src/types/loop.ts`:
+
 - `TemplateCreator`
 - `LoopTemplate`
 - `TemplateTask`
@@ -271,6 +306,7 @@ To enable this feature in your Supabase instance, run the migration:
 ```
 
 The migration includes:
+
 - Table creation with proper constraints
 - Indexes for performance
 - RLS policies for security
@@ -282,6 +318,7 @@ The migration includes:
 Potential improvements for future iterations:
 
 ### ✅ Already Implemented
+
 - ✅ Template reviews and ratings (5-star system)
 - ✅ Favorite templates for quick access
 - ✅ Share templates with friends (native share)
@@ -290,30 +327,35 @@ Potential improvements for future iterations:
 ### 🚀 Coming Soon
 
 1. **Enhanced Review System**
+
    - Full review submission interface on detail screen
    - Display all user reviews with pagination
    - Helpful/unhelpful voting on reviews
    - Filter reviews by rating
 
 2. **Admin Panel**
+
    - Web interface to add new templates
    - Manage creators and templates
    - Review and approve community submissions
    - Analytics dashboard for template performance
 
 3. **Community Templates**
+
    - Allow users to submit their own templates
    - Voting system for community templates
    - Template collections and bundles
    - Curator badges for top contributors
 
 4. **Personalization**
+
    - Recommend templates based on user behavior
    - AI-powered template suggestions
    - "Templates you might like" section
    - Trending templates this week
 
 5. **Enhanced Monetization**
+
    - Multiple affiliate programs support
    - Premium template marketplace
    - Subscription for exclusive templates
@@ -328,6 +370,7 @@ Potential improvements for future iterations:
 ## Access the Feature
 
 Users can access the Loop Library by:
+
 1. Opening the DoLoop app
 2. On the Home screen, scroll down to "Discover Loops"
 3. Tap the "Loop Library" button
@@ -342,38 +385,39 @@ To add new templates programmatically:
 ```typescript
 // 1. Insert creator
 const { data: creator } = await supabase
-  .from('template_creators')
-  .insert([{ name: 'Creator Name', bio: '...', title: '...' }])
+  .from("template_creators")
+  .insert([{ name: "Creator Name", bio: "...", title: "..." }])
   .select()
   .single();
 
 // 2. Insert template
 const { data: template } = await supabase
-  .from('loop_templates')
-  .insert([{
-    creator_id: creator.id,
-    title: 'Template Title',
-    description: '...',
-    book_course_title: 'Book Title',
-    affiliate_link: 'https://...',
-    category: 'daily',
-    is_featured: true
-  }])
+  .from("loop_templates")
+  .insert([
+    {
+      creator_id: creator.id,
+      title: "Template Title",
+      description: "...",
+      book_course_title: "Book Title",
+      affiliate_link: "https://...",
+      category: "daily",
+      is_featured: true,
+    },
+  ])
   .select()
   .single();
 
 // 3. Insert tasks
-await supabase
-  .from('template_tasks')
-  .insert([
-    { template_id: template.id, description: 'Task 1', display_order: 1 },
-    { template_id: template.id, description: 'Task 2', display_order: 2 }
-  ]);
+await supabase.from("template_tasks").insert([
+  { template_id: template.id, description: "Task 1", display_order: 1 },
+  { template_id: template.id, description: "Task 2", display_order: 2 },
+]);
 ```
 
 ### Testing
 
 Key test scenarios:
+
 1. Browse templates without crashing
 2. Search and filter work correctly
 3. Template detail page loads with all information
