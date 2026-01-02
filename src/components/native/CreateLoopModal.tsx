@@ -60,6 +60,16 @@ export default function CreateLoopModal({
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
+  const getGradientColors = (tabId: string) => {
+    switch (tabId) {
+      case 'manual': return ['#FFFACD', '#FFD700'];
+      case 'daily': return ['#FFD700', '#FFA500'];
+      case 'weekly': return ['#DAA520', '#B8860B'];
+      case 'goals': return ['#8B4513', '#A0522D'];
+      default: return ['#FFD700', '#FFA500'];
+    }
+  };
+
   useEffect(() => {
     if (visible && initialData) {
       setName(initialData.name || '');
@@ -151,7 +161,7 @@ export default function CreateLoopModal({
                         autoFocus={!isEditing}
                       />
                       <LinearGradient
-                        colors={isFocused ? ['#FFD700', '#FFA500'] : ['#e2e8f0', '#e2e8f0']}
+                        colors={isFocused ? getGradientColors(type) : ['#e2e8f0', '#e2e8f0']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.animatedBorder}
@@ -252,7 +262,7 @@ export default function CreateLoopModal({
                     style={styles.saveButtonWrapper}
                   >
                     <LinearGradient
-                      colors={['#FFD700', '#FFA500']}
+                      colors={getGradientColors(type)}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={[styles.saveButton, (!name.trim() || loading) && styles.saveButtonDisabled]}
