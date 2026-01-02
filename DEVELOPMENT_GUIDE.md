@@ -7,7 +7,8 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 ## Brand Identity
 
 - **Mascot**: Bee theme (🐝)
-- **Primary Colors**: Gold/Yellow (#fbbf24, #f59e0b) - NOT purple
+- **Primary Colors**: Gold/Yellow (#fbbf24, #f59e0b)
+- **Secondary**: Dark Goldenrod (#B8860B), Saddle Brown (#8B4513)
 - **Visual Style**: Clean, professional with playful bee accents
 - **Key Metaphor**: Circular progress indicators reinforce the "loop" concept
 - **Target Indicators**: Rounded gold squares (bullseye/target style) serve as both goal achievement symbols and bee-themed visual elements
@@ -15,6 +16,7 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 ## Tech Stack
 
 ### Frontend
+
 - **Framework**: React Native with Expo
 - **Language**: TypeScript (strict mode enabled)
 - **Styling**: React Native StyleSheet with theme support
@@ -23,6 +25,7 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 - **State Management**: React Context API or Zustand for global state
 
 ### Backend
+
 - **Platform**: Supabase
 - **Authentication**: Supabase Auth (Apple Sign In, Google Sign In)
 - **Database**: PostgreSQL via Supabase
@@ -30,7 +33,8 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 - **Storage**: Supabase Storage (if needed for future features)
 
 ### Build & Deployment
-- **Platform**: iOS (with Android support structure)
+
+- **Platform**: iOS, Web (Hybrid), Android (Support structure)
 - **Build Tool**: EAS Build (Expo Application Services)
 - **Distribution**: TestFlight for beta testing
 - **Environment**: Development, Staging, Production configs
@@ -50,6 +54,7 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 ```
 
 **Key Screens:**
+
 - Welcome/Landing screen
 - Sign in screen
 - Account creation
@@ -108,8 +113,8 @@ interface Loop {
   description?: string;
   color: string; // hex color for visual identification
   icon?: string; // emoji or icon identifier
-  category?: 'playful' | 'focus' | 'family' | 'pro' | 'wellness' | 'custom';
-  reset_schedule: 'daily' | 'weekly' | 'custom';
+  category?: "playful" | "focus" | "family" | "pro" | "wellness" | "custom";
+  reset_schedule: "daily" | "weekly" | "custom";
   tasks: Task[];
   created_at: string;
   updated_at: string;
@@ -143,6 +148,7 @@ interface TaskCompletion {
 ```
 
 **Key Screens:**
+
 - Loop Library (main view with categories/filters)
 - Loop Detail (view/edit specific loop)
 - Loop Creation (step-by-step loop builder)
@@ -151,6 +157,7 @@ interface TaskCompletion {
 ### 4. Home Screen
 
 **Layout:**
+
 ```
 - Header with user greeting and profile
 - "Today's Loops" section
@@ -161,6 +168,7 @@ interface TaskCompletion {
 ```
 
 **Loop Cards:**
+
 - Compact, tappable cards
 - Circular progress indicator showing completion (0-100%)
 - Loop name and icon/color
@@ -170,6 +178,7 @@ interface TaskCompletion {
 ### 5. Progress Tracking
 
 **Features:**
+
 - Circular progress visualization (SVG with Framer Motion style animations)
 - Streak tracking (consecutive days/weeks completing loops)
 - Completion history
@@ -192,6 +201,7 @@ interface CircularProgressProps {
 ### 6. Categories & Organization
 
 **Default Categories:**
+
 - 🐝 Playful (Fun & lighthearted)
 - 🎯 Focus (Minimal distractions)
 - 👨‍👩‍👧 Family (Shared & collaborative)
@@ -201,6 +211,7 @@ interface CircularProgressProps {
 - 🆕 Custom categories (user-created)
 
 **Loop Library Features:**
+
 - Tab navigation between categories
 - Search/filter functionality
 - Sort options (alphabetical, recent, most used)
@@ -213,33 +224,35 @@ interface CircularProgressProps {
 ```typescript
 const colors = {
   // Primary (Bee/Gold theme)
-  primary: '#fbbf24',
-  primaryDark: '#f59e0b',
-  primaryLight: '#fde68a',
-  
+  primary: "#fbbf24",
+  primaryDark: "#f59e0b",
+  primaryLight: "#fde68a",
+
   // Neutrals
-  background: '#ffffff',
-  backgroundSecondary: '#f9fafb',
-  surface: '#ffffff',
-  
+  background: "#ffffff",
+  backgroundSecondary: "#f9fafb",
+  surface: "#ffffff",
+
   // Text
-  text: '#111827',
-  textSecondary: '#6b7280',
-  textTertiary: '#9ca3af',
-  
+  text: "#111827",
+  textSecondary: "#6b7280",
+  textTertiary: "#9ca3af",
+
   // Status
-  success: '#10b981',
-  error: '#ef4444',
-  warning: '#f59e0b',
-  
+  success: "#10b981",
+  error: "#ef4444",
+  warning: "#f59e0b",
+
   // Dark mode
   dark: {
-    background: '#111827',
-    backgroundSecondary: '#1f2937',
-    surface: '#374151',
-    text: '#f9fafb',
-    textSecondary: '#d1d5db',
-  }
+    background: "#111827",
+    backgroundSecondary: "#1f2937",
+    surface: "#374151",
+    text: "#f9fafb",
+    textSecondary: "#d1d5db",
+    shared: "#B8860B", // Dark Goldenrod
+    goals: "#8B4513", // Saddle Brown
+  },
 };
 ```
 
@@ -247,12 +260,12 @@ const colors = {
 
 ```typescript
 const typography = {
-  h1: { fontSize: 32, fontWeight: '700' },
-  h2: { fontSize: 24, fontWeight: '600' },
-  h3: { fontSize: 20, fontWeight: '600' },
-  body: { fontSize: 16, fontWeight: '400' },
-  caption: { fontSize: 14, fontWeight: '400' },
-  button: { fontSize: 16, fontWeight: '600' },
+  h1: { fontSize: 32, fontWeight: "700" },
+  h2: { fontSize: 24, fontWeight: "600" },
+  h3: { fontSize: 20, fontWeight: "600" },
+  body: { fontSize: 16, fontWeight: "400" },
+  caption: { fontSize: 14, fontWeight: "400" },
+  button: { fontSize: 16, fontWeight: "600" },
 };
 ```
 
@@ -270,6 +283,7 @@ const spacing = {
 ```
 
 ### Components
+
 - Rounded corners (8-16px border radius)
 - Subtle shadows for elevation
 - Smooth transitions (300ms ease)
@@ -489,6 +503,7 @@ doloop/
 ## Development Guidelines
 
 ### Code Style
+
 - Use functional components with hooks (no class components)
 - TypeScript strict mode enabled
 - Use named exports (avoid default exports except for screens)
@@ -497,6 +512,7 @@ doloop/
 - Implement proper error boundaries
 
 ### Performance
+
 - Use React.memo for expensive components
 - Implement FlatList for long lists (loops, tasks)
 - Lazy load screens with React.lazy
@@ -504,11 +520,13 @@ doloop/
 - Use Supabase real-time subscriptions wisely (avoid unnecessary listeners)
 
 ### Testing (Future)
+
 - Jest for unit tests
 - React Native Testing Library for component tests
 - E2E tests with Detox
 
 ### Security
+
 - Never commit API keys or secrets
 - Use environment variables for sensitive data
 - Implement proper RLS policies in Supabase
@@ -556,6 +574,7 @@ doloop/
 ## Success Criteria
 
 ### MVP (Phase 1)
+
 - ✅ User can sign in with Apple
 - ✅ User completes onboarding flow
 - ✅ User can create a loop with tasks
@@ -565,6 +584,7 @@ doloop/
 - ✅ Loop Library with categories
 
 ### Phase 2
+
 - Shared loops (collaboration)
 - Loop templates marketplace
 - Advanced statistics and insights
@@ -595,6 +615,7 @@ doloop/
 ## Additional Context
 
 **Design Philosophy:**
+
 - "Momentum Through Completion" - The app should feel satisfying to use
 - Visual feedback is crucial (animations, celebrations)
 - Keep it simple - don't overwhelm with features
@@ -602,12 +623,14 @@ doloop/
 - Professional yet playful
 
 **User Psychology:**
+
 - Loop completion should trigger dopamine (celebration animations)
 - Streaks create commitment and consistency
 - Circular progress gives clear visual goal
 - Categories reduce cognitive load
 
 **Future Vision:**
+
 - Community loop templates
 - Team/family shared loops
 - Integration with calendar/reminders
@@ -617,6 +640,7 @@ doloop/
 ---
 
 **When implementing, prioritize:**
+
 1. Solid authentication and data persistence
 2. Smooth, delightful animations
 3. Reliable loop reset logic
@@ -624,5 +648,3 @@ doloop/
 5. Performance (app should feel fast)
 
 Good luck building DoLoop! 🐝✨
-
-
