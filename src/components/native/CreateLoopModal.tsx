@@ -29,7 +29,7 @@ interface CreateLoopModalProps {
     name: string;
     description: string;
     affiliate_link: string;
-    type: 'manual' | 'daily' | 'weekly';
+    type: 'manual' | 'daily' | 'weekly' | 'goals';
     due_date?: string;
   }) => void;
   initialData?: {
@@ -56,7 +56,7 @@ export default function CreateLoopModal({
   const [priority, setPriority] = useState('Medium');
   const [dueDate, setDueDate] = useState('');
   const [timeEstimate, setTimeEstimate] = useState('');
-  const [type, setType] = useState<'manual' | 'daily' | 'weekly'>('manual');
+  const [type, setType] = useState<'manual' | 'daily' | 'weekly' | 'goals'>('manual');
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 

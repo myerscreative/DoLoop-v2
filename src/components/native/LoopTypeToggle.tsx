@@ -14,34 +14,37 @@ import Animated, {
 } from 'react-native-reanimated';
 
 interface LoopTypeToggleProps {
-  activeTab: 'manual' | 'daily' | 'weekly';
-  onChange: (type: 'manual' | 'daily' | 'weekly') => void;
+  activeTab: 'manual' | 'daily' | 'weekly' | 'goals';
+  onChange: (type: 'manual' | 'daily' | 'weekly' | 'goals') => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - 40, 460); // 500px max width for desktop-like feel
+const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - 40, 460);
 
 export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeToggleProps) {
   const tabs = [
-    { id: 'manual', label: 'One-Time Task' },
-    { id: 'daily', label: 'Recurring Loop' },
+    { id: 'manual', label: 'Task' },
+    { id: 'daily', label: 'Loop' },
+    { id: 'weekly', label: 'Weekly' },
+    { id: 'goals', label: 'Goal' },
   ];
 
-  // Map 'weekly' to 'daily' for the simplified toggle UI
-  const displayTab = activeTab === 'weekly' ? 'daily' : activeTab;
-  const activeIndex = tabs.findIndex(tab => tab.id === displayTab);
+  const activeIndex = tabs.findIndex(tab => tab.id === activeTab);
+  // Fallback if activeTab not found (e.g. if we add more types later)
+  const effectiveIndex = activeIndex === -1 ? 0 : activeIndex;
 
   const animatedStyle = useAnimatedStyle(() => {
-    const tabWidth = (CONTAINER_WIDTH - 8) / 2;
+    const tabWidth = (CONTAINER_WIDTH - 8) / tabs.length;
     return {
       transform: [
         {
-          translateX: withSpring(activeIndex * tabWidth, {
+          translateX: withSpring(effectiveIndex * tabWidth, {
             stiffness: 300,
             damping: 30,
           }),
         },
       ],
+      width: `${100 / tabs.length}%`,
     };
   });
 
@@ -65,8 +68,10 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
           <Text
             style={[
               styles.tabText,
-              displayTab === tab.id && styles.activeTabText,
+              activeTab === tab.id && styles.activeTabText,
             ]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
           >
             {tab.label}
           </Text>
@@ -94,7 +99,7 @@ const styles = StyleSheet.create({
     top: 2,
     left: 2,
     bottom: 2,
-    width: '50%',
+    // Width handled by animatedStyle
     borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#FFA500',
