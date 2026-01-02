@@ -206,6 +206,12 @@ export const HomeScreen: React.FC = () => {
     setCreating(true);
 
     try {
+      // Determine reset rule and category
+      const isGoal = data.type === 'goals';
+      const category = data.type as LoopType;
+      // 'goals' uses 'manual' reset rule in DB
+      const dbResetRule = isGoal ? 'manual' : data.type;
+
       let nextResetAt: string | null = null;
       if (data.type === 'daily') {
         nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
@@ -221,7 +227,8 @@ export const HomeScreen: React.FC = () => {
           description: data.description,
           affiliate_link: data.affiliate_link,
           color: FOLDER_COLORS[data.type as LoopType] || FOLDER_COLORS.personal,
-          reset_rule: data.type,
+          category: category,
+          reset_rule: dbResetRule,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
         })
@@ -253,12 +260,17 @@ export const HomeScreen: React.FC = () => {
     setCreating(true);
 
     try {
+      const isGoal = data.type === 'goals';
+      const category = data.type as LoopType;
+      const dbResetRule = isGoal ? 'manual' : data.type;
+
       let nextResetAt: string | null = editingLoop.next_reset_at ?? null;
 
-      if (data.type === 'manual') {
+      if (dbResetRule === 'manual') {
         nextResetAt = null;
       } else if (data.type === 'daily' || data.type === 'weekly') {
-        if (editingLoop.reset_rule !== data.type || !editingLoop.next_reset_at) {
+        // If type changed or next_reset_at missing, recalculate
+        if (editingLoop.reset_rule !== dbResetRule || !editingLoop.next_reset_at) {
           const days = data.type === 'daily' ? 1 : 7;
           nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         }
@@ -270,7 +282,8 @@ export const HomeScreen: React.FC = () => {
           name: data.name,
           description: data.description,
           affiliate_link: data.affiliate_link,
-          reset_rule: data.type,
+          category: category,
+          reset_rule: dbResetRule,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
         })

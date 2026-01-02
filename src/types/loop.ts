@@ -2,7 +2,7 @@
  * Supabase Database Types - Core data structures for DoLoop
  */
 
-export type ResetRule = 'manual' | 'daily' | 'weekly' | 'goals';
+export type ResetRule = 'manual' | 'daily' | 'weekly';
 export type TaskStatus = 'pending' | 'done';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
 
@@ -20,6 +20,7 @@ export interface Loop {
   color?: string;
   description?: string; // AI Synopsis or user description
   affiliate_link?: string; // Link to order book/training
+  category?: LoopType;
   reset_rule?: ResetRule;
   next_reset_at?: string; // ISO date string
   due_date?: string; // ISO date string для manual loops

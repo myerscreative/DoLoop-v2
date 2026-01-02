@@ -24,32 +24,32 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     ? (loop.completedCount! / loop.totalCount) * 100
     : 0;
 
-  const getEmoji = (rule: string) => {
+  const getEmoji = (rule: string, category?: string) => {
+    if (category === 'goals') return '🏆';
     switch (rule) {
       case 'daily': return '☀️';
       case 'weekly': return '🎯';
       case 'manual': return '✓';
-      case 'goals': return '🏆';
       default: return '☀️';
     }
   };
 
-  const getBadgeColors = (rule: string) => {
+  const getBadgeColors = (rule: string, category?: string) => {
+    if (category === 'goals') return ['#8B4513', '#A0522D'];
     switch (rule) {
       case 'daily': return ['#FFD700', '#FFA500'];
       case 'weekly': return ['#DAA520', '#B8860B'];
       case 'manual': return ['#FFFACD', '#FFD700'];
-      case 'goals': return ['#8B4513', '#A0522D'];
       default: return ['#FFD700', '#FFA500'];
     }
   };
 
-  const getBadgeLabel = (rule: string) => {
+  const getBadgeLabel = (rule: string, category?: string) => {
+    if (category === 'goals') return 'Goal';
     switch (rule) {
       case 'daily': return 'Daily';
       case 'weekly': return 'Weekly';
       case 'manual': return 'Checklist';
-      case 'goals': return 'Goal';
       default: return rule.charAt(0).toUpperCase() + rule.slice(1);
     }
   };
@@ -71,11 +71,11 @@ export const LoopCard: React.FC<LoopCardProps> = ({
         ) : (
           <ProgressRing 
             progress={progress} 
-            icon={getEmoji(loop.reset_rule || 'daily')} 
+            icon={getEmoji(loop.reset_rule || 'daily', loop.category)} 
             size={48}
             colors={loop.reset_rule === 'daily' || !loop.reset_rule ? undefined : {
-                start: getBadgeColors(loop.reset_rule || 'daily')[0],
-                end: getBadgeColors(loop.reset_rule || 'daily')[1],
+                start: getBadgeColors(loop.reset_rule || 'daily', loop.category)[0],
+                end: getBadgeColors(loop.reset_rule || 'daily', loop.category)[1],
                 bg: '#f3f4f6'
             }}
           />
@@ -91,12 +91,12 @@ export const LoopCard: React.FC<LoopCardProps> = ({
              </Text>
           ) : (
             <LinearGradient
-              colors={getBadgeColors(loop.reset_rule || 'daily') as [string, string, ...string[]]}
+              colors={getBadgeColors(loop.reset_rule || 'daily', loop.category) as [string, string, ...string[]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.badge}
             >
-              <Text style={styles.badgeText}>{getBadgeLabel(loop.reset_rule || 'daily')}</Text>
+              <Text style={styles.badgeText}>{getBadgeLabel(loop.reset_rule || 'daily', loop.category)}</Text>
             </LinearGradient>
           )}
         </View>

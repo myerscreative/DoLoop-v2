@@ -6,9 +6,9 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 
 ## Brand Identity
 
-- **Mascot**: Bee theme (🐝)
-- **Primary Colors**: Gold/Yellow (#fbbf24, #f59e0b)
-- **Secondary**: Dark Goldenrod (#B8860B), Saddle Brown (#8B4513)
+- **Theme**: Professional Bee/Honey
+- **Primary Palette**: Gold Gradient (#FFD700 to #FFA500)
+- **Constraint**: Strictly NO Purple. Use Dark Bronze or Amber for high-contrast elements.
 - **Visual Style**: Clean, professional with playful bee accents
 - **Key Metaphor**: Circular progress indicators reinforce the "loop" concept
 - **Target Indicators**: Rounded gold squares (bullseye/target style) serve as both goal achievement symbols and bee-themed visual elements
@@ -17,6 +17,8 @@ You are building **DoLoop**, a productivity app centered around "Momentum Throug
 
 ### Frontend
 
+- **Platform**: Hybrid (Next.js Web + React Native/Expo)
+- **Structure**: Use `src/components/native/` for mobile-specific overrides and `src/web-polyfills.ts` for web compatibility.
 - **Framework**: React Native with Expo
 - **Language**: TypeScript (strict mode enabled)
 - **Styling**: React Native StyleSheet with theme support
@@ -114,7 +116,7 @@ interface Loop {
   color: string; // hex color for visual identification
   icon?: string; // emoji or icon identifier
   category?: "playful" | "focus" | "family" | "pro" | "wellness" | "custom";
-  reset_rule: "manual" | "daily" | "weekly" | "goals";
+  reset_rule: "manual" | "daily" | "weekly";
   tasks: Task[];
   created_at: string;
   updated_at: string;
@@ -380,6 +382,8 @@ CREATE TABLE tasks (
   loop_id UUID REFERENCES loops(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   order_index INTEGER DEFAULT 0,
+  is_one_time BOOLEAN DEFAULT false,
+  completed BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
