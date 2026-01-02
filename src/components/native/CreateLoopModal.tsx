@@ -60,7 +60,7 @@ export default function CreateLoopModal({
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  const getGradientColors = (tabId: string) => {
+  const getGradientColors = (tabId: string): [string, string, ...string[]] => {
     switch (tabId) {
       case 'manual': return ['#FFFACD', '#FFD700'];
       case 'daily': return ['#FFD700', '#FFA500'];

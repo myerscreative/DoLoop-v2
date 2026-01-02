@@ -48,7 +48,7 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
     };
   });
 
-  const getGradientColors = (tabId: string) => {
+  const getGradientColors = (tabId: string): [string, string, ...string[]] => {
     switch (tabId) {
       case 'manual': return ['#FFFACD', '#FFD700'];
       case 'daily': return ['#FFD700', '#FFA500'];
