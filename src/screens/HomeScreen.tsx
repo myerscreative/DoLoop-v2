@@ -75,21 +75,38 @@ export const HomeScreen: React.FC = () => {
     }
 
     const now = new Date();
-    // Use the end of today as boundary (anything tomorrow onwards is upcoming)
-    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    const todayMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const getDueMidnight = (dateStr: string) => {
+        const d = new Date(dateStr);
+        // Treat UTC date components as Local Date components
+        return new Date(
+            d.getUTCFullYear(),
+            d.getUTCMonth(),
+            d.getUTCDate()
+        );
+    };
 
     const today = filtered.filter(loop => {
       if (loop.reset_rule !== 'manual') return true;
       if (!loop.due_date) return true;
-      const dueDate = new Date(loop.due_date);
-      return dueDate <= endOfToday;
+      
+      const dueMidnight = getDueMidnight(loop.due_date);
+      // If due date is today or in the past
+      return dueMidnight <= todayMidnight;
     });
 
     const upcoming = filtered.filter(loop => {
       if (loop.reset_rule !== 'manual') return false;
       if (!loop.due_date) return false;
-      const dueDate = new Date(loop.due_date);
-      return dueDate > endOfToday;
+      
+      const dueMidnight = getDueMidnight(loop.due_date);
+      // If due date is strictly after today
+      return dueMidnight > todayMidnight;
     });
 
     setTodayLoops(today);

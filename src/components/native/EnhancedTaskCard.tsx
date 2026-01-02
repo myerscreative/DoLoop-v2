@@ -19,16 +19,30 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
   const { colors } = useTheme();
 
   const formatDueDate = (dueDate: string) => {
-    const date = new Date(dueDate);
+    // Parse the UTC date components directly to properly treat it as a "Date" (ignoring time)
+    // This ensures "2026-01-02T..." is always treated as Jan 2nd Local
+    const due = new Date(dueDate);
+    const dueMidnight = new Date(
+        due.getUTCFullYear(),
+        due.getUTCMonth(),
+        due.getUTCDate()
+    );
+
     const now = new Date();
-    const diffMs = date.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    const todayMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+    );
+
+    const diffTime = dueMidnight.getTime() - todayMidnight.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) return `Overdue by ${Math.abs(diffDays)}d`;
     if (diffDays === 0) return 'Due today';
     if (diffDays === 1) return 'Due tomorrow';
     if (diffDays <= 7) return `Due in ${diffDays}d`;
-    return date.toLocaleDateString();
+    return dueMidnight.toLocaleDateString();
   };
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;

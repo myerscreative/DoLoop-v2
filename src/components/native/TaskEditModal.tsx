@@ -13,14 +13,19 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import { useTheme } from '../../contexts/ThemeContext';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag } from '../../types/loop';
+import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS } from '../../types/loop';
 import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
+
+// Conditionally import DateTimePicker only for native platforms
+let DateTimePicker: any;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+}
 
 interface TaskEditModalProps {
   visible: boolean;
@@ -151,6 +156,15 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     }
   };
 
+  // Helper for Web Dates
+  const formatDateForWeb = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+
+  const formatTimeForWeb = (date: Date): string => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+  };
+
   return (
     <Modal
       visible={visible}
@@ -263,26 +277,55 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                             </TouchableOpacity>
                          </View>
 
-                         {/* DUE DATE PICKER (INLINE TOGGLE) */}
+                         {/* DUE DATE PICKER */}
                          <View style={[styles.inputGroup, { flex: 1 }]}>
                             <Text style={styles.subLabel}>Due Date</Text>
-                            <TouchableOpacity 
-                               style={[styles.pickerButton, showDatePicker && styles.pickerButtonActive]}
-                               onPress={() => {
-                                   setShowDatePicker(!showDatePicker);
-                                   setShowPriorityPicker(false);
-                                   setShowReminderPicker(false);
-                               }}
-                             >
-                              <Text style={styles.pickerButtonText}>
-                                {dueDate ? dueDate.toLocaleDateString() : 'Set date'}
-                              </Text>
-                              <Ionicons name="calendar-outline" size={14} color="#64748b" />
-                            </TouchableOpacity>
+                            {Platform.OS === 'web' ? (
+                                /* WEB: HTML DATE INPUT */
+                                <View style={styles.webInputContainer}>
+                                    <input 
+                                        type="date"
+                                        value={dueDate ? formatDateForWeb(dueDate) : ''}
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                setDueDate(new Date(e.target.value + 'T00:00:00'));
+                                            } else {
+                                                setDueDate(undefined);
+                                            }
+                                        }}
+                                        style={{
+                                            border: 'none',
+                                            padding: '10px',
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            fontSize: '14px',
+                                            borderRadius: '12px',
+                                            backgroundColor: '#f8fafc',
+                                            outline: 'none',
+                                            color: '#0f172a'
+                                        }}
+                                    />
+                                </View>
+                            ) : (
+                                /* NATIVE: INLINE TOGGLE */
+                                <TouchableOpacity 
+                                   style={[styles.pickerButton, showDatePicker && styles.pickerButtonActive]}
+                                   onPress={() => {
+                                       setShowDatePicker(!showDatePicker);
+                                       setShowPriorityPicker(false);
+                                       setShowReminderPicker(false);
+                                   }}
+                                 >
+                                  <Text style={styles.pickerButtonText}>
+                                    {dueDate ? dueDate.toLocaleDateString() : 'Set date'}
+                                  </Text>
+                                  <Ionicons name="calendar-outline" size={14} color="#64748b" />
+                                </TouchableOpacity>
+                            )}
                          </View>
                       </View>
 
-                      {/* INLINE EXPANSION: PRIORITY */}
+                      {/* INLINE EXPANSION: PRIORITY (Common for both) */}
                       {showPriorityPicker && (
                         <View style={styles.inlineDropdown}>
                             {(['none', 'low', 'medium', 'high', 'urgent'] as TaskPriority[]).map((p) => (
@@ -309,8 +352,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         </View>
                        )}
 
-                      {/* INLINE EXPANSION: DATE PICKER */}
-                      {showDatePicker && (
+                      {/* INLINE EXPANSION: DATE PICKER (NATIVE ONLY) */}
+                      {Platform.OS !== 'web' && showDatePicker && DateTimePicker && (
                           <View style={styles.inlinePickerContainer}>
                               <DateTimePicker
                                 value={dueDate || new Date()}
@@ -318,7 +361,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                 display="inline"
                                 themeVariant="light"
                                 textColor="black"
-                                onChange={(event, selectedDate) => {
+                                onChange={(event: any, selectedDate?: Date) => {
                                   if (selectedDate) setDueDate(selectedDate);
                                 }}
                                 style={{ height: 300, width: '100%' }}
@@ -347,22 +390,54 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                       </View>
 
                       <View style={styles.inputRow}>
-                        {/* REMINDER PICKER (INLINE TOGGLE) */}
+                        {/* REMINDER PICKER */}
                         <View style={[styles.inputGroup, { flex: 1 }]}>
                           <Text style={styles.subLabel}>Reminder</Text>
-                          <TouchableOpacity 
-                             style={[styles.pickerButton, showReminderPicker && styles.pickerButtonActive]}
-                             onPress={() => {
-                                 setShowReminderPicker(!showReminderPicker);
-                                 setShowDatePicker(false);
-                                 setShowPriorityPicker(false);
-                             }}
-                           >
-                            <Text style={styles.pickerButtonText}>
-                              {reminderDate ? reminderDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No reminder'}
-                            </Text>
-                            <Ionicons name="notifications-outline" size={14} color="#64748b" />
-                          </TouchableOpacity>
+                          {Platform.OS === 'web' ? (
+                                /* WEB: HTML TIME INPUT */
+                                <View style={styles.webInputContainer}>
+                                    <input 
+                                        type="time"
+                                        value={reminderDate ? formatTimeForWeb(reminderDate) : ''}
+                                        onChange={(e) => {
+                                            if (e.target.value) {
+                                                const [hours, minutes] = e.target.value.split(':');
+                                                const newDate = new Date();
+                                                newDate.setHours(parseInt(hours), parseInt(minutes));
+                                                setReminderDate(newDate);
+                                            } else {
+                                                setReminderDate(undefined);
+                                            }
+                                        }}
+                                        style={{
+                                            border: 'none',
+                                            padding: '10px',
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            fontSize: '14px',
+                                            borderRadius: '12px',
+                                            backgroundColor: '#f8fafc',
+                                            outline: 'none',
+                                            color: '#0f172a'
+                                        }}
+                                    />
+                                </View>
+                            ) : (
+                                /* NATIVE: INLINE TOGGLE */
+                                <TouchableOpacity 
+                                   style={[styles.pickerButton, showReminderPicker && styles.pickerButtonActive]}
+                                   onPress={() => {
+                                       setShowReminderPicker(!showReminderPicker);
+                                       setShowDatePicker(false);
+                                       setShowPriorityPicker(false);
+                                   }}
+                                 >
+                                  <Text style={styles.pickerButtonText}>
+                                    {reminderDate ? reminderDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'No reminder'}
+                                  </Text>
+                                  <Ionicons name="notifications-outline" size={14} color="#64748b" />
+                                </TouchableOpacity>
+                            )}
                         </View>
                         <View style={[styles.inputGroup, { flex: 1 }]}>
                           <Text style={styles.subLabel}>Time Estimate</Text>
@@ -377,8 +452,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         </View>
                       </View>
 
-                       {/* INLINE EXPANSION: REMINDER PICKER */}
-                       {showReminderPicker && (
+                       {/* INLINE EXPANSION: REMINDER PICKER (NATIVE ONLY) */}
+                       {Platform.OS !== 'web' && showReminderPicker && DateTimePicker && (
                           <View style={styles.inlinePickerContainer}>
                               <DateTimePicker
                                 value={reminderDate || new Date()}
@@ -386,7 +461,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                 display="spinner"
                                 themeVariant="light"
                                 textColor="black"
-                                onChange={(event, selectedDate) => {
+                                onChange={(event: any, selectedDate?: Date) => {
                                   if (selectedDate) setReminderDate(selectedDate);
                                 }}
                                 style={{ height: 120, width: '100%' }}
@@ -767,5 +842,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#000',
+  },
+  webInputContainer: {
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    overflow: 'hidden',
   },
 });
