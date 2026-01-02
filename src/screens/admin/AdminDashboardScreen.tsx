@@ -66,7 +66,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       title: 'Templates',
       icon: 'albums-outline' as const,
       screen: 'AdminTemplates' as const,
-      color: '#667eea',
+      color: '#B8860B',
       description: 'Manage loop templates',
     },
     {
@@ -108,7 +108,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       title: 'Audit Logs',
       icon: 'document-text-outline' as const,
       screen: 'AdminAuditLogs' as const,
-      color: '#8b5cf6',
+      color: '#8B4513',
       description: 'Track admin actions',
     },
     {
