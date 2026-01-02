@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
+import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { AssigneeDot } from '../ui/AssigneeDot';
 import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS } from '../../types/loop';
 import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
@@ -45,11 +47,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onCreateTag,
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
+
+  // Ref for input to re-focus after saving
+  const descriptionInputRef = useRef<any>(null);
 
   // Form state
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('none');
+  const [assignedTo, setAssignedTo] = useState<string | null>(null);
   const [isOneTime, setIsOneTime] = useState(false);
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
@@ -74,6 +81,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       setDescription(task.description || '');
       setNotes(task.notes || '');
       setPriority(task.priority || 'none');
+      setAssignedTo(task.assigned_user_id || null);
       setIsOneTime(task.is_one_time ?? false);
       setDueDate(task.due_date ? new Date(task.due_date) : undefined);
       setReminderDate(task.reminder_at ? new Date(task.reminder_at) : undefined);
@@ -88,6 +96,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setDescription('');
     setNotes('');
     setPriority('none');
+    setAssignedTo(null);
     setIsOneTime(false);
     setDueDate(undefined);
     setReminderDate(undefined);
@@ -126,7 +135,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = async (closeModal: boolean = true) => {
     if (!description.trim()) {
       Alert.alert('Error', 'Please enter a task description');
       return;
@@ -138,6 +147,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         description: description.trim(),
         notes: notes.trim() || undefined,
         priority,
+        assigned_to: assignedTo,
         is_one_time: isOneTime,
         due_date: dueDate?.toISOString(),
         reminder_at: reminderDate?.toISOString(),
@@ -146,8 +156,18 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       };
 
       await onSave(taskData);
-      onClose();
-      resetForm();
+      
+      if (closeModal) {
+        onClose();
+        resetForm();
+      } else {
+        // Keep modal open for rapid entry
+        resetForm();
+        // Re-focus the input after a brief delay to allow state to update
+        setTimeout(() => {
+          descriptionInputRef.current?.focus();
+        }, 100);
+      }
     } catch (error) {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');
@@ -164,6 +184,10 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const formatTimeForWeb = (date: Date): string => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
+
+  // Determine accent color based on task type
+  const accentColor = isOneTime ? '#D4AF37' : '#EA580C'; // Gold for Task, Orange for Loop
+  const accentBg = isOneTime ? '#FBF5E6' : '#FFF0D4'; 
 
   return (
     <Modal
@@ -217,6 +241,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     <Text style={styles.label}>Task</Text>
                     <View style={styles.mainInputContainer}>
                       <TextInput
+                        ref={descriptionInputRef}
                         style={styles.primaryInput}
                         placeholder="What needs to be done?"
                         placeholderTextColor="#94a3b8"
@@ -225,28 +250,47 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         onFocus={() => setIsFocused(true)}
                         onBlur={() => setIsFocused(false)}
                         autoFocus={!task}
+                        onKeyPress={(e: any) => {
+                          // Handle Enter key for quick save & add another
+                          if (e.nativeEvent.key === 'Enter') {
+                            e.preventDefault();
+                            const isCtrlOrCmd = e.nativeEvent.ctrlKey || e.nativeEvent.metaKey;
+                            handleSave(!isCtrlOrCmd); // Ctrl/Cmd+Enter closes, Enter keeps open
+                          }
+                        }}
+                        blurOnSubmit={false}
                       />
                       <LinearGradient
-                        colors={isFocused ? ['#FFD700', '#FFA500'] : ['#e2e8f0', '#e2e8f0']}
+                        colors={isFocused ? [accentColor, accentColor] : ['#e2e8f0', '#e2e8f0']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 0 }}
                         style={styles.animatedBorder}
                       />
                     </View>
+                    <Text style={styles.hintText}>
+                      Press Enter to save & add another • {Platform.OS === 'web' ? '⌘' : 'Ctrl'}+Enter to finish
+                    </Text>
                   </View>
 
                   {/* Progressive Disclosure Toggle */}
                   <TouchableOpacity
                     onPress={() => setShowDetails(!showDetails)}
-                    style={styles.detailsToggle}
+                    style={[styles.detailsToggle]}
                     activeOpacity={0.6}
                   >
-                    <View style={styles.detailsToggleContent}>
-                      <Text style={styles.detailsToggleText}>Add Details</Text>
+                    <View style={[
+                        styles.detailsToggleContent, 
+                        { 
+                            backgroundColor: 'transparent', 
+                            borderWidth: 1, 
+                            borderColor: accentColor,
+                        }
+                    ]}>
+                      <Text style={[styles.detailsToggleText, { color: accentColor }]}>Add Details</Text>
                       <Ionicons
                         name={showDetails ? 'remove-circle-outline' : 'add-circle-outline'}
                         size={18}
-                        color="#FFB800"
+                        color={accentColor}
                       />
                     </View>
                   </TouchableOpacity>
@@ -475,6 +519,32 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                           </View>
                       )}
 
+                      {/* ASSIGNMENT */}
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.subLabel}>Assignment</Text>
+                        <TouchableOpacity 
+                            style={[styles.pickerButton, !!assignedTo && styles.pickerButtonActive]}
+                            onPress={() => {
+                                // Toggle assignment to self if logged in
+                                if (user) {
+                                    setAssignedTo(assignedTo === user.id ? null : user.id);
+                                }
+                            }}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                                {assignedTo ? (
+                                    <AssigneeDot initials="ME" size={24} />
+                                ) : (
+                                    <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 1, borderColor: '#cbd5e1', borderStyle: 'dashed', backgroundColor: '#f1f5f9' }} />
+                                )}
+                                <Text style={styles.pickerButtonText}>
+                                    {assignedTo ? 'Assigned to Me' : 'Unassigned'}
+                                </Text>
+                            </View>
+                            {!assignedTo && <Ionicons name="person-add-outline" size={16} color="#94a3b8" />}
+                        </TouchableOpacity>
+                      </View>
+                      
                       <View style={styles.inputGroup}>
                         <Text style={styles.subLabel}>Tags</Text>
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -511,7 +581,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                     onPress={() => setShowTagInput(true)}
                                     style={styles.addTagButton}
                                 >
-                                    <Ionicons name="add" size={20} color="#FFB800" />
+                                    <Ionicons name="add" size={20} color="#FEC00F" />
                                 </TouchableOpacity>
                            )}
                         </View>
@@ -527,22 +597,23 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    onPress={handleSave}
+                    onPress={() => handleSave(true)}
                     disabled={saving || !description.trim()}
                     style={styles.saveButtonWrapper}
                   >
-                    <LinearGradient
-                      colors={['#FFD700', '#FFA500']}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[styles.saveButton, (!description.trim() || saving) && styles.saveButtonDisabled]}
+                    <View
+                      style={[
+                        styles.saveButton, 
+                        { backgroundColor: '#EFB810' }, // Refined Gold
+                        (!description.trim() || saving) && styles.saveButtonDisabled
+                      ]}
                     >
                       {saving ? (
                         <ActivityIndicator size="small" color="#000" />
                       ) : (
                         <Text style={styles.saveButtonText}>Save Task</Text>
                       )}
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>
@@ -632,6 +703,12 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 1,
   },
+  hintText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 6,
+    fontStyle: 'italic',
+  },
   detailsToggle: {
     alignItems: 'center',
     paddingVertical: 10,
@@ -649,7 +726,7 @@ const styles = StyleSheet.create({
   detailsToggleText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFB800',
+    color: '#FEC00F',
   },
   detailsContainer: {
     gap: 16,
@@ -678,7 +755,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   pickerButtonActive: {
-    borderColor: '#FFB800',
+    borderColor: '#FEC00F',
     backgroundColor: '#FFF9E5',
   },
   pickerButtonText: {
@@ -765,7 +842,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#FFB800',
+    borderColor: '#FEC00F',
     borderStyle: 'dashed',
     marginBottom: 6,
   },
