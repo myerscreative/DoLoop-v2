@@ -46,7 +46,7 @@ const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
     success: '#00E5A2', // Success green (locked brand color)
     secondary: '#FF1E88', // Hot pink (locked brand color)
     accent1: '#2EC4B6', // Turquoise/cyan (locked brand color)
-    accent2: '#9B51E0', // Purple (locked brand color)
+    accent2: '#B8860B', // Dark Goldenrod (Replacing Purple)
     accentYellow: '#FFB800', // Brand yellow (locked)
     border: isDark ? '#374151' : '#E5E7EB',
     error: isDark ? '#F87171' : '#EF4444',

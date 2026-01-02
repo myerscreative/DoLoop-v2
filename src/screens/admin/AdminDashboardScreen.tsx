@@ -264,7 +264,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 title="Templates"
                 value={stats.total_templates.toLocaleString()}
                 icon="albums"
-                color="#9B51E0"
+                color="#B8860B"
               />
             </View>
 

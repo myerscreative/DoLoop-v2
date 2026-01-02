@@ -210,7 +210,7 @@ export interface LoopTemplateWithDetails extends LoopTemplate {
  * UI-specific types and helpers
  */
 
-export type LoopType = 'personal' | 'work' | 'daily' | 'shared';
+export type LoopType = 'personal' | 'work' | 'daily' | 'shared' | 'manual' | 'weekly';
 
 export interface LibraryFolder {
   id: string;
@@ -260,14 +260,18 @@ export const FOLDER_ICONS: Record<LoopType, string> = {
   work: '💼',
   daily: '☀️',
   shared: '👥',
+  manual: '✓',
+  weekly: '🎯',
 };
 
 // Folder colors - Brand Kit
 export const FOLDER_COLORS: Record<LoopType, string> = {
   personal: '#FF1E88', // Hot pink
   work: '#2EC4B6',     // Turquoise
-  daily: '#FFB800',    // Brand primary (golden yellow)
-  shared: '#9B51E0',   // Purple
+  daily: '#FFA500',    // Amber (Daily)
+  shared: '#B8860B',   // Dark Goldenrod
+  manual: '#FFD700',   // Bright Gold (Checklist)
+  weekly: '#B8860B',   // Dark Goldenrod (Weekly)
 };
 
 // Priority colors
