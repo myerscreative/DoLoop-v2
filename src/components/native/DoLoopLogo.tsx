@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, Platform, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 
 interface DoLoopLogoProps {
   size?: number;
@@ -8,44 +8,26 @@ interface DoLoopLogoProps {
 }
 
 /**
- * DoLoop Logo Component
- * Uses official SVG for web, fallback for native
+ * DoLoop Logo Component - Native Implementation
  */
 export const DoLoopLogo: React.FC<DoLoopLogoProps> = ({ 
   size = 120,
 }) => {
   const logoWidth = size;
-  const logoHeight = size * 0.93; // Aspect ratio from SVG (649.36 / 696.76)
+  const logoHeight = size * 0.93;
 
-  if (Platform.OS === 'web') {
-    return (
-      <Image
-        source={{ uri: '/doloop-logo-full.svg' }}
-        style={{
-          width: logoWidth,
-          height: logoHeight,
-        }}
-        resizeMode="contain"
-        accessible={true}
-        accessibilityLabel="DoLoop Logo"
-      />
-    );
-  }
-
-  // For native, you'll need PNG exports
-  // Export 3 sizes: @1x, @2x, @3x and place in /assets/images/
+  // Fallback for native - just show a placeholder for now
   return (
     <View style={styles.container}>
-      <Image
-        source={require('../../../assets/icon.png')} // Placeholder - replace with actual logo
-        style={{
-          width: logoWidth,
-          height: logoHeight,
-        }}
-        resizeMode="contain"
-        accessible={true}
-        accessibilityLabel="DoLoop Logo"
-      />
+      <View style={{
+        width: logoWidth,
+        height: logoHeight,
+        backgroundColor: '#EFB810',
+        borderRadius: 8,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+      </View>
     </View>
   );
 };
@@ -56,4 +38,3 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 });
-
