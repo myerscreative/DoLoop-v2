@@ -29,6 +29,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
       case 'daily': return '☀️';
       case 'weekly': return '🎯';
       case 'manual': return '✓';
+      case 'goals': return '🏆';
       default: return '☀️';
     }
   };
@@ -38,6 +39,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
       case 'daily': return ['#FFD700', '#FFA500'];
       case 'weekly': return ['#DAA520', '#B8860B'];
       case 'manual': return ['#FFFACD', '#FFD700'];
+      case 'goals': return ['#8B4513', '#A0522D'];
       default: return ['#FFD700', '#FFA500'];
     }
   };
@@ -47,6 +49,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
       case 'daily': return 'Daily';
       case 'weekly': return 'Weekly';
       case 'manual': return 'Checklist';
+      case 'goals': return 'Goal';
       default: return rule.charAt(0).toUpperCase() + rule.slice(1);
     }
   };
