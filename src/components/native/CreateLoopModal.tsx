@@ -176,11 +176,11 @@ export default function CreateLoopModal({
                     activeOpacity={0.6}
                   >
                     <View style={styles.detailsToggleContent}>
-                      <Text style={styles.detailsToggleText}>Add Details</Text>
+                      <Text style={[styles.detailsToggleText, { color: getGradientColors(type)[1] }]}>Add Details</Text>
                       <Ionicons
                         name={showDetails ? 'remove-circle-outline' : 'add-circle-outline'}
                         size={18}
-                        color="#FFB800"
+                        color={getGradientColors(type)[1]}
                       />
                     </View>
                   </TouchableOpacity>
