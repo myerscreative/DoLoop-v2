@@ -276,6 +276,14 @@ export const FOLDER_COLORS: Record<LoopType, string> = {
   goals: '#8B4513',    // Saddle Brown (Goals)
 };
 
+// Explicit Color Mapping (from Design System)
+export const LOOP_TYPE_COLORS = {
+  CHECKLIST: '#FFD700', // Bright Gold
+  DAILY: '#FFA500',     // Amber
+  WEEKLY: '#B8860B',    // Dark Goldenrod
+  GOALS: '#8B4513',     // Saddle Brown/Bronze
+};
+
 // Priority colors
 export const PRIORITY_COLORS: Record<TaskPriority, string> = {
   none: '#9CA3AF',

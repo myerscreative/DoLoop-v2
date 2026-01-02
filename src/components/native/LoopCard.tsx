@@ -36,8 +36,8 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   const getBadgeColors = (rule: string) => {
     switch (rule) {
       case 'daily': return ['#FFD700', '#FFA500'];
-      case 'weekly': return ['#8B5CF6', '#7C3AED'];
-      case 'manual': return ['#10B981', '#059669'];
+      case 'weekly': return ['#DAA520', '#B8860B'];
+      case 'manual': return ['#FFFACD', '#FFD700'];
       default: return ['#FFD700', '#FFA500'];
     }
   };
