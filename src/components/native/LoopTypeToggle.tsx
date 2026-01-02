@@ -48,11 +48,21 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
     };
   });
 
+  const getGradientColors = (tabId: string) => {
+    switch (tabId) {
+      case 'manual': return ['#FFFACD', '#FFD700'];
+      case 'daily': return ['#FFD700', '#FFA500'];
+      case 'weekly': return ['#DAA520', '#B8860B'];
+      case 'goals': return ['#8B4513', '#A0522D'];
+      default: return ['#FFD700', '#FFA500'];
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Animated.View style={[styles.activeBackground, animatedStyle]}>
         <LinearGradient
-          colors={['#FFD700', '#FFA500']}
+          colors={getGradientColors(activeTab)}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFill}

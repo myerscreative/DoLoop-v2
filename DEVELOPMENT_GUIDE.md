@@ -114,7 +114,7 @@ interface Loop {
   color: string; // hex color for visual identification
   icon?: string; // emoji or icon identifier
   category?: "playful" | "focus" | "family" | "pro" | "wellness" | "custom";
-  reset_rule: "manual" | "daily" | "weekly";
+  reset_rule: "manual" | "daily" | "weekly" | "goals";
   tasks: Task[];
   created_at: string;
   updated_at: string;
