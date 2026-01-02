@@ -114,7 +114,7 @@ interface Loop {
   color: string; // hex color for visual identification
   icon?: string; // emoji or icon identifier
   category?: "playful" | "focus" | "family" | "pro" | "wellness" | "custom";
-  reset_schedule: "daily" | "weekly" | "custom";
+  reset_rule: "manual" | "daily" | "weekly";
   tasks: Task[];
   created_at: string;
   updated_at: string;
@@ -367,7 +367,7 @@ CREATE TABLE loops (
   color TEXT DEFAULT '#fbbf24',
   icon TEXT,
   category TEXT,
-  reset_schedule TEXT NOT NULL DEFAULT 'daily',
+  reset_rule TEXT NOT NULL DEFAULT 'daily',
   is_favorite BOOLEAN DEFAULT false,
   order_index INTEGER DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -437,11 +437,11 @@ doloop/
 │   │   │   ├── CircularProgress.tsx
 │   │   │   ├── Card.tsx
 │   │   │   └── Input.tsx
-│   │   ├── loops/
+│   │   ├── native/
 │   │   │   ├── LoopCard.tsx
-│   │   │   ├── LoopList.tsx
-│   │   │   ├── TaskItem.tsx
-│   │   │   └── TaskCompletionModal.tsx
+│   │   │   ├── EnhancedTaskCard.tsx
+│   │   │   ├── TaskEditModal.tsx
+│   │   │   └── CreateLoopModal.tsx
 │   │   └── onboarding/
 │   │       ├── WelcomeScreen.tsx
 │   │       ├── UserTypeScreen.tsx
