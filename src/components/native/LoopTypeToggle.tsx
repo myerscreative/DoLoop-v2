@@ -48,45 +48,55 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
     };
   });
 
-  const getGradientColors = (tabId: string): [string, string, ...string[]] => {
+  const getTabColors = (tabId: string) => {
     switch (tabId) {
-      case 'manual': return ['#FFFACD', '#FFD700'];
-      case 'daily': return ['#FFD700', '#FFA500'];
-      case 'weekly': return ['#DAA520', '#B8860B'];
-      case 'goals': return ['#8B4513', '#A0522D'];
-      default: return ['#FFD700', '#FFA500'];
+      case 'manual': return { bg: '#FBF5E6', text: '#D4AF37' }; // Champagne / Gold
+      case 'daily': return { bg: '#FFF0D4', text: '#EA580C' }; // Pale Honey / Dark Orange
+      case 'weekly': return { bg: '#F0E6D2', text: '#B8860B' }; // Pale Bronze / Dark Goldenrod
+      case 'goals': return { bg: '#F5DEB3', text: '#8B4513' }; // Wheat / SaddleBrown
+      default: return { bg: '#FFF0D4', text: '#EA580C' };
     }
   };
 
+  const activeColors = getTabColors(activeTab);
+
   return (
     <View style={styles.container}>
-      <Animated.View style={[styles.activeBackground, animatedStyle]}>
-        <LinearGradient
-          colors={getGradientColors(activeTab)}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={StyleSheet.absoluteFill}
-        />
-      </Animated.View>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.id}
-          activeOpacity={0.7}
-          onPress={() => onChange(tab.id as any)}
-          style={styles.tab}
-        >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === tab.id && styles.activeTabText,
-            ]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
+      <Animated.View 
+        style={[
+          styles.activeBackground, 
+          animatedStyle,
+          { backgroundColor: activeColors.bg }
+        ]} 
+      />
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.id;
+        const tabColors = isActive ? activeColors : { bg: '', text: '#64748b' };
+        
+        return (
+          <TouchableOpacity
+            key={tab.id}
+            activeOpacity={0.7}
+            onPress={() => onChange(tab.id as any)}
+            style={styles.tab}
           >
-            {tab.label}
-          </Text>
-        </TouchableOpacity>
-      ))}
+            <Text
+              style={[
+                styles.tabText,
+                { color: tabColors.text },
+                isActive && styles.activeTabFont
+              ]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {tab.label}
+            </Text>
+            {isActive && (
+              <View style={[styles.underline, { backgroundColor: tabColors.text }]} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -94,7 +104,7 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#f1f5f9',
+    backgroundColor: '#ffffff', // Clean white background
     borderRadius: 14,
     padding: 2,
     height: 44,
@@ -102,7 +112,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: '#e2e8f0', // Very subtle border, definitely nog blue
   },
   activeBackground: {
     position: 'absolute',
@@ -111,12 +121,6 @@ const styles = StyleSheet.create({
     bottom: 2,
     // Width handled by animatedStyle
     borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#FFA500',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
   },
   tab: {
     flex: 1,
@@ -126,10 +130,18 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748b',
   },
-  activeTabText: {
-    color: '#000',
+  activeTabFont: {
+    fontWeight: '800',
+  },
+  underline: {
+    position: 'absolute',
+    bottom: 6,
+    height: 2,
+    width: 20,
+    borderRadius: 1,
+    opacity: 0.3, // Subtle underline as requested
   },
 });

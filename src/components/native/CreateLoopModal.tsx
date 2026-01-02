@@ -60,15 +60,17 @@ export default function CreateLoopModal({
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
-  const getGradientColors = (tabId: string): [string, string, ...string[]] => {
+  const getThemeColors = (tabId: string) => {
     switch (tabId) {
-      case 'manual': return ['#FFFACD', '#FFD700'];
-      case 'daily': return ['#FFD700', '#FFA500'];
-      case 'weekly': return ['#DAA520', '#B8860B'];
-      case 'goals': return ['#8B4513', '#A0522D'];
-      default: return ['#FFD700', '#FFA500'];
+      case 'manual': return { strong: '#D4AF37', tint: '#FBF5E6' };
+      case 'daily': return { strong: '#EA580C', tint: '#FFF0D4' };
+      case 'weekly': return { strong: '#B8860B', tint: '#F0E6D2' };
+      case 'goals': return { strong: '#8B4513', tint: '#F5DEB3' };
+      default: return { strong: '#EA580C', tint: '#FFF0D4' };
     }
   };
+
+  const themeColors = getThemeColors(type);
 
   useEffect(() => {
     if (visible && initialData) {
@@ -160,11 +162,11 @@ export default function CreateLoopModal({
                         onBlur={() => setIsFocused(false)}
                         autoFocus={!isEditing}
                       />
-                      <LinearGradient
-                        colors={isFocused ? getGradientColors(type) : ['#e2e8f0', '#e2e8f0']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.animatedBorder}
+                      <View
+                        style={[
+                          styles.animatedBorder, 
+                          { backgroundColor: isFocused ? themeColors.strong : '#e2e8f0' }
+                        ]}
                       />
                     </View>
                   </View>
@@ -175,12 +177,19 @@ export default function CreateLoopModal({
                     style={styles.detailsToggle}
                     activeOpacity={0.6}
                   >
-                    <View style={styles.detailsToggleContent}>
-                      <Text style={[styles.detailsToggleText, { color: getGradientColors(type)[1] }]}>Add Details</Text>
+                    <View style={[
+                      styles.detailsToggleContent, 
+                      { 
+                        backgroundColor: 'transparent',
+                        borderColor: themeColors.strong,
+                        borderWidth: 1
+                      }
+                    ]}>
+                      <Text style={[styles.detailsToggleText, { color: themeColors.strong }]}>Add Details</Text>
                       <Ionicons
                         name={showDetails ? 'remove-circle-outline' : 'add-circle-outline'}
                         size={18}
-                        color={getGradientColors(type)[1]}
+                        color={themeColors.strong}
                       />
                     </View>
                   </TouchableOpacity>
@@ -261,18 +270,22 @@ export default function CreateLoopModal({
                     disabled={loading || !name.trim()}
                     style={styles.saveButtonWrapper}
                   >
-                    <LinearGradient
-                      colors={getGradientColors(type)}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={[styles.saveButton, (!name.trim() || loading) && styles.saveButtonDisabled]}
+                    <View
+                      style={[
+                        styles.saveButton, 
+                        (!name.trim() || loading) && styles.saveButtonDisabled,
+                        { 
+                          backgroundColor: '#EFB810',
+                          shadowColor: themeColors.strong
+                        }
+                      ]}
                     >
                       {loading ? (
                         <ActivityIndicator size="small" color="#000" />
                       ) : (
                         <Text style={styles.saveButtonText}>Save Loop</Text>
                       )}
-                    </LinearGradient>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </KeyboardAvoidingView>

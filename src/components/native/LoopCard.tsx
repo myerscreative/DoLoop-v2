@@ -35,12 +35,13 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   };
 
   const getBadgeColors = (rule: string, category?: string) => {
-    if (category === 'goals') return ['#8B4513', '#A0522D'];
+    // Returns [BackgroundTint, TextColor/StrongColor]
+    if (category === 'goals') return ['#F5DEB3', '#8B4513']; // Wheat / SaddleBrown
     switch (rule) {
-      case 'daily': return ['#FFD700', '#FFA500'];
-      case 'weekly': return ['#DAA520', '#B8860B'];
-      case 'manual': return ['#FFFACD', '#FFD700'];
-      default: return ['#FFD700', '#FFA500'];
+      case 'daily': return ['#FFF0D4', '#EA580C']; // Pale Honey / Dark Orange
+      case 'weekly': return ['#F0E6D2', '#B8860B']; // Pale Bronze / Dark Goldenrod
+      case 'manual': return ['#FBF5E6', '#D4AF37']; // Champagne / Gold
+      default: return ['#FFF0D4', '#EA580C'];
     }
   };
 
@@ -53,6 +54,10 @@ export const LoopCard: React.FC<LoopCardProps> = ({
       default: return rule.charAt(0).toUpperCase() + rule.slice(1);
     }
   };
+
+  const colors = getBadgeColors(loop.reset_rule || 'daily', loop.category);
+  const badgeBg = colors[0];
+  const badgeText = colors[1];
 
   return (
     <TouchableOpacity 
@@ -69,16 +74,11 @@ export const LoopCard: React.FC<LoopCardProps> = ({
             <Ionicons name="calendar-outline" size={24} color="#94a3b8" />
           </View>
         ) : (
-          <ProgressRing 
-            progress={progress} 
-            icon={getEmoji(loop.reset_rule || 'daily', loop.category)} 
-            size={48}
-            colors={loop.reset_rule === 'daily' || !loop.reset_rule ? undefined : {
-                start: getBadgeColors(loop.reset_rule || 'daily', loop.category)[0],
-                end: getBadgeColors(loop.reset_rule || 'daily', loop.category)[1],
-                bg: '#f3f4f6'
-            }}
-          />
+          <View style={[styles.iconCircle, { backgroundColor: badgeBg }]}>
+             <Text style={{ fontSize: 24 }}>
+               {getEmoji(loop.reset_rule || 'daily', loop.category)}
+             </Text>
+          </View>
         )}
         
         <View style={styles.textContainer}>
@@ -90,14 +90,11 @@ export const LoopCard: React.FC<LoopCardProps> = ({
                {loop.due_date ? `Due ${new Date(loop.due_date).toLocaleDateString()}` : 'Future Task'}
              </Text>
           ) : (
-            <LinearGradient
-              colors={getBadgeColors(loop.reset_rule || 'daily', loop.category) as [string, string, ...string[]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.badge}
-            >
-              <Text style={styles.badgeText}>{getBadgeLabel(loop.reset_rule || 'daily', loop.category)}</Text>
-            </LinearGradient>
+            <View style={[styles.badge, { backgroundColor: badgeBg }]}>
+              <Text style={[styles.badgeText, { color: badgeText }]}>
+                {getBadgeLabel(loop.reset_rule || 'daily', loop.category)}
+              </Text>
+            </View>
           )}
         </View>
       </View>
@@ -142,12 +139,10 @@ const styles = StyleSheet.create({
     borderColor: '#F3F4F6',
     borderRadius: 16,
     marginBottom: 12,
-    // Shadow for iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
-    // Shadow for Android
     elevation: 2,
     maxWidth: 600,
     width: '100%',
@@ -175,14 +170,13 @@ const styles = StyleSheet.create({
   },
   badge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 9999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
-    color: 'white',
   },
   upcomingTitle: {
     color: '#64748b',
@@ -192,6 +186,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFA500',
     marginTop: 2,
+  },
+  iconCircle: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: 'center',
+      justifyContent: 'center',
   },
   calendarIconWrapper: {
     width: 48,
@@ -217,10 +218,12 @@ const styles = StyleSheet.create({
   },
   editText: {
     fontSize: 12,
-    color: '#3B82F6',
+    color: '#374151', // Dark Charcoal
+    fontWeight: '600',
   },
   deleteText: {
     fontSize: 12,
-    color: '#EF4444',
+    color: '#DC2626', // Softer Red
+    fontWeight: '600',
   },
 });
