@@ -21,6 +21,11 @@ export async function checkIsAdmin(): Promise<boolean> {
       .single();
 
     if (error) {
+      // If column missing, it's not an admin (old schema)
+      if (error.code === '42703') { // undefined_column
+          console.warn('[Admin] is_admin column missing, defaulting to false');
+          return false;
+      }
       console.error('Error checking admin status:', error);
       return false;
     }

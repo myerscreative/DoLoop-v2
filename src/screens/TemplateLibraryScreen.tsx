@@ -104,6 +104,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -114,15 +115,11 @@ export function TemplateLibraryScreen({ navigation }: Props) {
   }, [searchQuery, selectedCategory, templates, activeTab]);
 
   const fetchTemplates = async () => {
-    if (!user) {
-      console.log('[TemplateLibrary] No user, skipping fetch');
-      return;
-    }
-
     try {
       setLoading(true);
       console.log('[TemplateLibrary] Fetching templates...');
 
+      // 1. Fetch all templates (publicly accessible)
       const { data: templateData, error: templateError } = await supabase
         .from('loop_templates')
         .select(`
@@ -140,27 +137,33 @@ export function TemplateLibraryScreen({ navigation }: Props) {
 
       console.log(`[TemplateLibrary] Raw template data:`, templateData?.length || 0, 'templates');
 
-      const { data: favoritesData } = await supabase
-        .from('template_favorites')
-        .select('template_id')
-        .eq('user_id', user.id);
+      // Initialize user-specific data sets
+      let favoriteIds = new Set<string>();
+      let addedIds = new Set<string>();
+      let userRatings = new Map<string, number>();
 
-      const favoriteIds = new Set(favoritesData?.map(f => f.template_id) || []);
+      // 2. If user is logged in, fetch their specific data
+      if (user) {
+        const { data: favoritesData } = await supabase
+          .from('template_favorites')
+          .select('template_id')
+          .eq('user_id', user.id);
+        favoriteIds = new Set(favoritesData?.map(f => f.template_id) || []);
 
-      const { data: usageData } = await supabase
-        .from('user_template_usage')
-        .select('template_id')
-        .eq('user_id', user.id);
+        const { data: usageData } = await supabase
+          .from('user_template_usage')
+          .select('template_id')
+          .eq('user_id', user.id);
+        addedIds = new Set(usageData?.map(u => u.template_id) || []);
 
-      const addedIds = new Set(usageData?.map(u => u.template_id) || []);
+        const { data: ratingsData } = await supabase
+          .from('template_reviews')
+          .select('template_id, rating')
+          .eq('user_id', user.id);
+        userRatings = new Map(ratingsData?.map(r => [r.template_id, r.rating]) || []);
+      }
 
-      const { data: ratingsData } = await supabase
-        .from('template_reviews')
-        .select('template_id, rating')
-        .eq('user_id', user.id);
-
-      const userRatings = new Map(ratingsData?.map(r => [r.template_id, r.rating]) || []);
-
+      // 3. Process templates with creator and user-specific details
       const templatesWithDetails: LoopTemplateWithDetails[] = (templateData || [])
         .map((template: any) => {
           const creator = Array.isArray(template.creator) ? template.creator[0] : template.creator;
@@ -175,10 +178,12 @@ export function TemplateLibraryScreen({ navigation }: Props) {
             average_rating: template.average_rating || 0,
             review_count: template.review_count || 0,
           };
-        })
-        .filter((template: LoopTemplateWithDetails) => template.creator !== null && template.creator !== undefined);
+        });
 
       console.log(`[TemplateLibrary] Loaded ${templatesWithDetails.length} templates`);
+      const distinctCats = [...new Set(templatesWithDetails.map(t => t.category))];
+      console.log('[TemplateLibrary] Distinct categories in state:', distinctCats);
+
       setTemplates(templatesWithDetails);
       setFilteredTemplates(templatesWithDetails);
     } catch (error) {
@@ -204,7 +209,24 @@ export function TemplateLibraryScreen({ navigation }: Props) {
     }
 
     if (selectedCategory) {
-      filtered = filtered.filter(t => t.category === selectedCategory);
+      // Robust matching: lower-case and handle shorthand aliases in-memory
+      const catLower = selectedCategory.toLowerCase();
+      filtered = filtered.filter(t => {
+        const itemCatLower = t.category.toLowerCase();
+        
+        // Exact match
+        if (itemCatLower === catLower) return true;
+        
+        // Logical aliases for broader categories
+        if (catLower === 'personal development' && (itemCatLower === 'personal' || itemCatLower === 'growth')) return true;
+        if (catLower === 'productivity & work' && (itemCatLower === 'work' || itemCatLower === 'productivity')) return true;
+        if (catLower === 'health & wellness' && (itemCatLower === 'health' || itemCatLower === 'wellness')) return true;
+        if (catLower === 'fitness & sports' && (itemCatLower === 'fitness' || itemCatLower === 'sports')) return true;
+        if (catLower === 'relationships & social' && (itemCatLower === 'social' || itemCatLower === 'relationships')) return true;
+        if (catLower === 'finance & money' && (itemCatLower === 'money' || itemCatLower === 'finance')) return true;
+        
+        return false;
+      });
       console.log(`[TemplateLibrary] After category filter (${selectedCategory}): ${filtered.length} templates`);
     }
 
@@ -408,22 +430,76 @@ export function TemplateLibraryScreen({ navigation }: Props) {
       checklist: '✓',
       daily: '☀️',
       weekly: '🎯',
-      personal: '🏡',
+      personal: '🌱',
       work: '💼',
       shared: '👥',
+      'Personal Development': '🧠',
+      'Health & Wellness': '🥗',
+      'Productivity & Work': '⚡',
+      'Fitness & Sports': '💪',
+      'Travel & Adventure': '✈️',
+      'Finance & Money': '💰',
+      'Creativity & Hobbies': '🎨',
+      'Learning & Education': '📚',
+      'Relationships & Social': '❤️',
+      'Mindfulness & Spirituality': '🧘',
+      'Home & Organization': '🏠',
+      'Career & Entrepreneurship': '🚀',
+      'Environmental & Sustainability': '🌿',
+      'Community & Campaigns': '📢',
+      'Recovery & Rehab': '🛁',
     };
     return icons[category] || '📋';
   };
 
-  const categories = [
-    { id: null, label: 'All', icon: '⭐' },
-    { id: 'checklist', label: 'Checklists', icon: '✓' },
-    { id: 'daily', label: 'Daily', icon: '☀️' },
-    { id: 'weekly', label: 'Weekly', icon: '🎯' },
-    { id: 'personal', label: 'Personal', icon: '🌱' },
-    { id: 'work', label: 'Work', icon: '💼' },
-    { id: 'shared', label: 'Shared', icon: '👥' },
-  ];
+  // Calculate counts for each category to hide empty ones
+  const categoryCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    templates.forEach(t => {
+      const cat = t.category || 'other';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return counts;
+  }, [templates]);
+
+  const categories = React.useMemo(() => {
+    // Labels and icons for known categories
+    const categoryConfig: Record<string, { label: string; icon: string }> = {
+      'Personal Development': { label: 'Growth', icon: '🧠' },
+      'Health & Wellness': { label: 'Health', icon: '🥗' },
+      'Productivity & Work': { label: 'Work', icon: '⚡' },
+      'Fitness & Sports': { label: 'Fitness', icon: '💪' },
+      'Travel & Adventure': { label: 'Travel', icon: '✈️' },
+      'Finance & Money': { label: 'Money', icon: '💰' },
+      'Creativity & Hobbies': { label: 'Creative', icon: '🎨' },
+      'Learning & Education': { label: 'Learn', icon: '📚' },
+      'Relationships & Social': { label: 'Social', icon: '❤️' },
+      'Mindfulness & Spirituality': { label: 'Spirit', icon: '🧘' },
+      'Home & Organization': { label: 'Home', icon: '🏠' },
+      'Career & Entrepreneurship': { label: 'Career', icon: '🚀' },
+      'Environmental & Sustainability': { label: 'Eco', icon: '🌿' },
+      'Community & Campaigns': { label: 'Legacy', icon: '📢' },
+      'Recovery & Rehab': { label: 'Review', icon: '🛁' },
+      'daily': { label: 'Daily', icon: '☀️' },
+      'weekly': { label: 'Weekly', icon: '🎯' },
+      'checklist': { label: 'Checklist', icon: '✓' },
+    };
+
+    // Get unique categories from fetched templates
+    const uniqueCats = [...new Set(templates.map(t => t.category))].sort();
+    
+    // Always put "All" first
+    const items = [{ id: null as string | null, label: 'All', icon: '⭐' }];
+    
+    // Add categories that exist in the data
+    uniqueCats.forEach(catId => {
+      if (!catId) return;
+      const config = categoryConfig[catId] || { label: catId, icon: '📋' };
+      items.push({ id: catId, label: config.label, icon: config.icon });
+    });
+
+    return items;
+  }, [templates]);
 
   const tabs = [
     { id: 'browse' as TabType, label: 'Browse', icon: '📚' },
@@ -552,42 +628,62 @@ export function TemplateLibraryScreen({ navigation }: Props) {
 
       {/* Filters */}
       <View style={styles.filtersSection}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filtersContent}
-        >
-          {categories.map((filter) => (
-            <TouchableOpacity
-              key={filter.id || 'all'}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.selectionAsync();
-                }
-                setSelectedCategory(filter.id);
-              }}
-            >
-              {selectedCategory === filter.id ? (
-                <LinearGradient
-                  colors={[colors.accentYellow, '#FFA500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.filterChipActive}
-                >
-                  <Text style={styles.filterChipTextActive}>
-                    {filter.icon} {filter.label}
-                  </Text>
-                </LinearGradient>
-              ) : (
-                <View style={styles.filterChip}>
-                  <Text style={styles.filterChipText}>
-                    {filter.icon} {filter.label}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.filtersContent}>
+          {categories
+            .filter((filter) => {
+              if (isFiltersExpanded) return true;
+              // When collapsed, show "All" and the currently selected category
+              // If no category is selected, show the first 3-4 options
+              if (filter.id === null || filter.id === selectedCategory) return true;
+              if (!selectedCategory && categories.indexOf(filter) < 4) return true;
+              return false;
+            })
+            .map((filter) => (
+              <TouchableOpacity
+                key={filter.id || 'all'}
+                onPress={() => {
+                  if (Platform.OS !== 'web') {
+                    Haptics.selectionAsync();
+                  }
+                  setSelectedCategory(filter.id);
+                }}
+                style={{ marginBottom: 4 }}
+              >
+                {selectedCategory === filter.id ? (
+                  <LinearGradient
+                    colors={[colors.accentYellow, '#FFA500']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.filterChipActive}
+                  >
+                    <Text style={styles.filterChipTextActive}>
+                      {filter.icon} {filter.label} ({categoryCounts[filter.id!] || 0})
+                    </Text>
+                  </LinearGradient>
+                ) : (
+                  <View style={styles.filterChip}>
+                    <Text style={styles.filterChipText}>
+                      {filter.icon} {filter.label} ({filter.id === null ? templates.length : (categoryCounts[filter.id] || 0)})
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          
+          <TouchableOpacity 
+            onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
+            style={styles.seeAllButton}
+          >
+            <Text style={styles.seeAllText}>
+              {isFiltersExpanded ? 'Show less' : 'See all'}
+            </Text>
+            <Ionicons 
+              name={isFiltersExpanded ? "chevron-up" : "chevron-down"} 
+              size={14} 
+              color="#666" 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Templates List */}
@@ -623,7 +719,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <CompactLoopItem 
               emoji={getCategoryIcon(item.category)}
-              name={item.title}
+              name={`${item.title} (${item.category})`}
               description={loopDescriptions[item.title] || item.description}
               isSelected={selectedTemplateId === item.id}
               onPress={() => {
@@ -764,10 +860,24 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   filtersContent: {
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingHorizontal: 20,
     gap: 8,
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  seeAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    gap: 4,
+    marginBottom: 4,
+  },
+  seeAllText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '600',
   },
   filterChip: {
     paddingVertical: 10,

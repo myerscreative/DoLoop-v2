@@ -12,8 +12,18 @@ The Loop Library just got a massive upgrade! Here's what's new:
 - 📤 **Share Templates** - Share templates with friends via native share sheet
 - 🎯 **4 New Templates** - Deep Work, 5 AM Club, Tiny Habits, and 7 Habits templates added
 - 🎨 **Enhanced UI** - Beautiful star ratings, favorite hearts, and "Added" badges
+- 📤 **Share Templates** - Share templates with friends via native share sheet
 
-Now with **7 premium templates** from world-class experts!
+**v2.1 Expansion - January 3, 2026**
+
+The Loop Library has been expanded with a massive injection of high-quality content:
+
+- 🏗️ **Improved Schema** - Dedicated core library migrations for better reliability
+- 🌍 **60 Total Templates** - Expanded from 15 to 60+ templates across 15+ new categories
+- 📂 **15+ New Categories** - Personal Development, Health & Wellness, Productivity & Work, fitness, Travel, Finance, and more
+- 👨‍🏫 **5 Specialist Creators** - Added 'Wellness Coach', 'Productivity Expert', 'Finance Advisor', 'Creative Mentor', and 'Community Leader'
+- 🧩 **200+ New Tasks** - Every template comes pre-loaded with curated, actionable steps
+- 📱 **Enhanced Filtering** - UI updated to support browsing by detailed categories
 
 ---
 

@@ -72,6 +72,72 @@ export const LoginScreen: React.FC = () => {
     }
   };
 
+  const handleDevLogin = async () => {
+    // Use a fresh test account to avoid "Wrong Password" conflicts with old dev data
+    const devEmail = 'admin@doloop.com';
+    const devPass = 'doloop123';
+    
+    setEmail(devEmail);
+    setPassword(devPass);
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log('[Login] Attempting Dev Login with:', devEmail);
+      // 1. Try Sign In
+      let { error } = await signIn(devEmail, devPass);
+
+      // 2. If Sign In invalid (user missing or wrong pass), Try Sign Up
+      if (error) {
+        console.log('[Login] Sign In failed:', error.message);
+        if (error.message.includes('Invalid login credentials') || error.message.includes('not found')) {
+            console.log('[Login] Attempting Sign Up...');
+            const signUpResult = await signUp(devEmail, devPass);
+            
+            if (signUpResult.error) {
+                // If Sign Up failed (maybe user DID exist but password was wrong?), show that error
+                console.error('[Login] Sign Up failed:', signUpResult.error);
+                error = signUpResult.error;
+            } else {
+                console.log('[Login] Sign Up successful');
+                error = undefined; // Clear error, we strictly succeeded
+                
+                // If auto-confirm is off, we might need to sign in again, 
+                // but usually the session is established if no confirm needed.
+                // Let's retry sign in just in case?
+                const retrySignIn = await signIn(devEmail, devPass);
+                if (!retrySignIn.error) {
+                    error = undefined;
+                }
+            }
+        }
+      }
+
+      if (error) {
+        console.error('[Login] Final Dev Auth error:', error);
+        const errorMessage = error.message || 'Dev login failed';
+        setError(errorMessage + ' (Check console)');
+        showAlert('Error', errorMessage);
+      } else {
+        console.log('[Login] Dev Login successful');
+        // Small delay to ensure AuthContext updates
+        setTimeout(() => {
+            navigation.replace('Home');
+        }, 500);
+      }
+    } catch (error: any) {
+      console.error('[Login] Unexpected error:', error);
+      setError(error.message);
+      showAlert('Error', error.message);
+    } finally {
+      if (Platform.OS !== 'web') {
+           setLoading(false); // On web we might navigate away, so avoid state update warning? 
+           // actually safer to just always set false, react handles unmount gracefully mostly 
+      }
+       setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
@@ -158,7 +224,7 @@ export const LoginScreen: React.FC = () => {
             alignItems: 'center',
             marginBottom: 16,
           }}
-          onPress={handleAuth}
+          onPress={() => handleAuth()}
           disabled={loading}
         >
           <Text style={{
@@ -230,11 +296,7 @@ export const LoginScreen: React.FC = () => {
               borderWidth: 2,
               borderColor: '#FFD700',
             }}
-            onPress={async () => {
-              setEmail('dev@dev.com');
-              setPassword('dev123');
-              await handleAuth();
-            }}
+            onPress={handleDevLogin}
           >
             <Text style={{
               color: '#000',
