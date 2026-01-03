@@ -166,47 +166,28 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
             )}
           </View>
 
-          {/* Feature Icons Row */}
+          {/* Feature Icons Row - Simple line icons */}
           <View style={styles.iconsRow}>
             {hasAssignee && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="person-outline" size={14} color="#64748b" />
-              </View>
+              <Ionicons name="person-outline" size={14} color="#9ca3af" />
             )}
             {isRecurring && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="refresh-outline" size={14} color="#64748b" />
-              </View>
+              <Ionicons name="sync-outline" size={14} color="#9ca3af" />
             )}
             {hasDueDate && (
-              <View style={[styles.iconBadge, isOverdue && styles.iconBadgeAlert]}>
-                <Ionicons name="calendar-outline" size={14} color={isOverdue ? '#EF4444' : '#64748b'} />
-                <Text style={[styles.iconText, isOverdue && { color: '#EF4444' }]}>
-                  {formatDueDate(task.due_date!)}
-                </Text>
-              </View>
+              <Ionicons name="calendar-outline" size={14} color={isOverdue ? '#EF4444' : '#9ca3af'} />
             )}
             {hasAttachments && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="attach-outline" size={14} color="#64748b" />
-                <Text style={styles.iconText}>{task.attachments!.length}</Text>
-              </View>
+              <Ionicons name="image-outline" size={14} color="#9ca3af" />
             )}
             {hasNotes && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="chatbubble-outline" size={14} color="#64748b" />
-              </View>
+              <Ionicons name="document-text-outline" size={14} color="#9ca3af" />
             )}
             {hasReminder && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="notifications-outline" size={14} color="#64748b" />
-              </View>
+              <Ionicons name="alarm-outline" size={14} color="#9ca3af" />
             )}
             {hasSubtasks && (
-              <View style={styles.iconBadge}>
-                <Ionicons name="list-outline" size={14} color="#64748b" />
-                <Text style={styles.iconText}>{completedSubtasks}/{totalSubtasks}</Text>
-              </View>
+              <Ionicons name="chevron-down-outline" size={14} color="#9ca3af" />
             )}
           </View>
         </TouchableOpacity>
@@ -379,26 +360,9 @@ const styles = StyleSheet.create({
   },
   iconsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 8,
-  },
-  iconBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    backgroundColor: '#f1f5f9',
-    borderRadius: 4,
-  },
-  iconBadgeAlert: {
-    backgroundColor: '#FEE2E2',
-  },
-  iconText: {
-    fontSize: 11,
-    color: '#64748b',
-    fontWeight: '500',
+    gap: 10,
+    marginTop: 2,
   },
   expandButton: {
     padding: 4,
