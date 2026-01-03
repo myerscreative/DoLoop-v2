@@ -268,6 +268,44 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
+  const [generatingHints, setGeneratingHints] = useState(false);
+
+  const handleGenerateTaskHints = async () => {
+    if (!loopData) return;
+
+    // Check if any tasks are missing hints
+    const tasksWithoutHints = loopData.tasks.filter(t => !t.notes || t.notes.trim() === '');
+
+    if (tasksWithoutHints.length === 0) {
+      Alert.alert('All Set!', 'All your tasks already have hints.');
+      return;
+    }
+
+    try {
+      setGeneratingHints(true);
+
+      const { data, error } = await supabase.functions.invoke('generate_loop_task_hints', {
+        body: { loop_id: loopId },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.tasks) {
+        console.log('[LoopDetail] AI hints generated successfully');
+
+        // Refresh the loop data to show the new hints
+        await fetchLoopData();
+
+        Alert.alert('Success!', `Generated hints for ${tasksWithoutHints.length} task${tasksWithoutHints.length > 1 ? 's' : ''}.`);
+      }
+    } catch (err) {
+      console.error('[LoopDetail] Failed to generate task hints:', err);
+      Alert.alert('Error', 'Failed to generate task hints. Please try again.');
+    } finally {
+      setGeneratingHints(false);
+    }
+  };
+
   const handleEditTask = (task: TaskWithDetails) => {
     setEditingTask(task);
     setModalVisible(true);
@@ -804,6 +842,35 @@ export const LoopDetailScreen: React.FC = () => {
                 onToggle={() => toggleTask(task)}
               />
             ))}
+
+            {/* Generate AI Hints Button */}
+            {recurringTasks.some(t => !t.notes || t.notes.trim() === '') && (
+              <TouchableOpacity
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: '#FFF9E6',
+                  padding: 16,
+                  borderRadius: 8,
+                  marginBottom: 8,
+                  borderWidth: 1,
+                  borderColor: '#FEC00F',
+                }}
+                onPress={handleGenerateTaskHints}
+                activeOpacity={0.7}
+                disabled={generatingHints}
+              >
+                <Text style={{ fontSize: 20, marginRight: 12 }}>💡</Text>
+                <Text style={{
+                  flex: 1,
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: '#5D4E37',
+                }}>
+                  {generatingHints ? 'Generating AI Hints...' : 'Generate AI Hints for Tasks'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Add Task Button */}
             <TouchableOpacity

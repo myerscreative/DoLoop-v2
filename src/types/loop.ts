@@ -73,6 +73,7 @@ export interface Task {
   loop_id: string;
   description: string;
   notes?: string; // Additional details/description
+  ai_generated_at?: string; // ISO timestamp when AI generated the notes
   completed: boolean;
   completed_at?: string; // When task was completed
   is_one_time: boolean;
