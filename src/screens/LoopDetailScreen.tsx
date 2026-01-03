@@ -25,10 +25,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
 import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
-import { EnhancedTaskCard } from '../components/native/EnhancedTaskCard';
+import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, updateTaskExtended, createTag } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag } from '../lib/taskHelpers';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -128,23 +128,29 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (tasksError) throw tasksError;
 
-      // Load tags for each task
-      const tasksWithTags = await Promise.all(
+      // Load tags, subtasks, and attachments for each task
+      const tasksWithDetails = await Promise.all(
         (tasks || []).map(async (task) => {
-          const tags = await getTaskTags(task.id);
+          const [tags, subtasks, attachments] = await Promise.all([
+            getTaskTags(task.id),
+            getTaskSubtasks(task.id),
+            getTaskAttachments(task.id),
+          ]);
           return {
             ...task,
             tag_details: tags,
+            subtasks,
+            attachments,
           };
         })
       );
 
-      const completedCount = tasksWithTags?.filter(task => task.completed && !task.is_one_time).length || 0;
-      const totalCount = tasksWithTags?.filter(task => !task.is_one_time).length || 0;
+      const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
+      const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
 
       const loopWithTasks: LoopWithTasks = {
         ...loop,
-        tasks: tasksWithTags || [],
+        tasks: tasksWithDetails || [],
         completedCount,
         totalCount,
       };
@@ -718,11 +724,12 @@ export const LoopDetailScreen: React.FC = () => {
             </Text>
 
             {recurringTasks.map((task) => (
-              <EnhancedTaskCard
+              <ExpandableTaskCard
                 key={task.id}
                 task={task as TaskWithDetails}
                 onPress={() => handleEditTask(task as TaskWithDetails)}
                 onToggle={() => toggleTask(task)}
+                onSubtaskChange={loadLoopData}
               />
             ))}
 
@@ -779,11 +786,12 @@ export const LoopDetailScreen: React.FC = () => {
             </Text>
 
             {oneTimeTasks.map((task) => (
-              <EnhancedTaskCard
+              <ExpandableTaskCard
                 key={task.id}
                 task={task as TaskWithDetails}
                 onPress={() => handleEditTask(task as TaskWithDetails)}
                 onToggle={() => toggleTask(task)}
+                onSubtaskChange={loadLoopData}
               />
             ))}
           </View>

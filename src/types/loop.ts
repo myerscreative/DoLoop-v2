@@ -101,11 +101,12 @@ export interface Task {
 
 export interface Subtask {
   id: string;
-  task_id: string;
+  parent_task_id: string;
   description: string;
-  completed: boolean;
-  order_index?: number;
+  status: 'pending' | 'done';
+  sort_order?: number;
   created_at?: string;
+  updated_at?: string;
 }
 
 export interface Attachment {

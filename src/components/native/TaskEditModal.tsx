@@ -12,14 +12,17 @@ import {
   Platform,
   StyleSheet,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
+import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AssigneeDot } from '../ui/AssigneeDot';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS } from '../../types/loop';
+import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment } from '../../types/loop';
 import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
 import { CustomDaySelector } from './CustomDaySelector';
@@ -64,7 +67,15 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
   const [timeEstimate, setTimeEstimate] = useState('');
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  
+
+  // Attachment state
+  const [pendingAttachments, setPendingAttachments] = useState<{
+    uri: string;
+    name: string;
+    type: 'image' | 'file';
+    mimeType?: string;
+  }[]>([]);
+
   // Interactive State
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
@@ -106,12 +117,72 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setReminderDate(undefined);
     setTimeEstimate('');
     setSelectedTags([]);
+    setPendingAttachments([]);
     setShowDetails(false);
     setShowPriorityPicker(false);
     setShowDatePicker(false);
     setShowReminderPicker(false);
     setShowTagInput(false);
     setNewTagName('');
+  };
+
+  // Image picker
+  const handlePickImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        const fileName = asset.fileName || `image_${Date.now()}.jpg`;
+        setPendingAttachments(prev => [...prev, {
+          uri: asset.uri,
+          name: fileName,
+          type: 'image',
+          mimeType: asset.mimeType || 'image/jpeg',
+        }]);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  // Document picker
+  const handlePickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setPendingAttachments(prev => [...prev, {
+          uri: asset.uri,
+          name: asset.name,
+          type: 'file',
+          mimeType: asset.mimeType || 'application/octet-stream',
+        }]);
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      Alert.alert('Error', 'Failed to pick file');
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   const toggleTag = (tag: Tag) => {
@@ -601,13 +672,66 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                    </TouchableOpacity>
                                </View>
                            ) : (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     onPress={() => setShowTagInput(true)}
                                     style={styles.addTagButton}
                                 >
                                     <Ionicons name="add" size={20} color="#FEC00F" />
                                 </TouchableOpacity>
                            )}
+                        </View>
+                      </View>
+
+                      {/* ATTACHMENTS SECTION */}
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.subLabel}>Attachments</Text>
+
+                        {/* Pending Attachments Preview */}
+                        {pendingAttachments.length > 0 && (
+                          <View style={styles.attachmentsList}>
+                            {pendingAttachments.map((attachment, index) => (
+                              <View key={index} style={styles.attachmentItem}>
+                                {attachment.type === 'image' ? (
+                                  <Image
+                                    source={{ uri: attachment.uri }}
+                                    style={styles.attachmentThumbnail}
+                                  />
+                                ) : (
+                                  <View style={styles.attachmentFileBadge}>
+                                    <Ionicons name="document-outline" size={20} color="#64748b" />
+                                  </View>
+                                )}
+                                <Text style={styles.attachmentName} numberOfLines={1}>
+                                  {attachment.name}
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={() => removeAttachment(index)}
+                                  style={styles.attachmentRemove}
+                                >
+                                  <Ionicons name="close-circle" size={20} color="#EF4444" />
+                                </TouchableOpacity>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+
+                        {/* Add Attachment Buttons */}
+                        <View style={styles.attachmentButtons}>
+                          <TouchableOpacity
+                            onPress={handlePickImage}
+                            style={styles.attachmentButton}
+                          >
+                            <Ionicons name="image-outline" size={20} color="#64748b" />
+                            <Text style={styles.attachmentButtonText}>Add Image</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            onPress={handlePickDocument}
+                            style={styles.attachmentButton}
+                          >
+                            <Ionicons name="attach-outline" size={20} color="#64748b" />
+                            <Text style={styles.attachmentButtonText}>Add File</Text>
+                          </TouchableOpacity>
                         </View>
                       </View>
                     </Animated.View>
@@ -950,5 +1074,62 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#f8fafc',
     overflow: 'hidden',
+  },
+  // Attachment styles
+  attachmentsList: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 8,
+    gap: 10,
+  },
+  attachmentThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#e2e8f0',
+  },
+  attachmentFileBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  attachmentName: {
+    flex: 1,
+    fontSize: 14,
+    color: '#475569',
+  },
+  attachmentRemove: {
+    padding: 4,
+  },
+  attachmentButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  attachmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  attachmentButtonText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
   },
 });
