@@ -105,6 +105,7 @@ export interface Subtask {
   description: string;
   completed: boolean;
   order_index?: number;
+  notes?: string;
   created_at?: string;
 }
 

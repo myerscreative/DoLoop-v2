@@ -1,170 +1,135 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { useTheme } from '../../contexts/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-interface StarterRecipeCardProps {
+interface StarterRecipeProps {
+  title: string;
+  emoji: string;
+  items: string[];
+  color?: string; // e.g. 'purple', 'orange'
   onPress: () => void;
+  width?: number | string;
 }
 
-export const StarterRecipeCard: React.FC<StarterRecipeCardProps> = ({ onPress }) => {
+export const StarterRecipeCard: React.FC<StarterRecipeProps> = ({
+  title,
+  emoji,
+  items,
+  color = '#8b5cf6', // default purple
+  onPress,
+  width = 300
+}) => {
+  const { colors } = useTheme();
+
   return (
-    <View style={styles.cardContainer}>
-      {/* Header Section */}
+    <View style={[styles.card, { width }]}>
+        {/* Header Icon + Title */}
       <View style={styles.header}>
-        <View style={styles.progressRing}>
-          <Text style={styles.progressText}>0%</Text>
-        </View>
-        <View style={styles.headerText}>
-          <Text style={styles.title}>First Recipe</Text>
-          <Text style={styles.subtitle}>Let's get your first loop started.</Text>
-        </View>
+        <Text style={styles.emoji}>{emoji}</Text>
+        <Text style={styles.title}>{title}</Text>
       </View>
 
-      {/* Checklist Section */}
-      <View style={styles.checklist}>
-        {/* Item 1: Active */}
-        <View style={[styles.checklistItem, styles.activeItem]}>
-          <View style={[styles.checkbox, styles.activeCheckbox]} />
-          <Text style={styles.activeText}>Give your first loop a name</Text>
-        </View>
+      {/* List Items Preview */}
+      <View style={styles.listContainer}>
+        {items.map((item, index) => (
+          <View key={index} style={styles.listItem}>
+            <View style={styles.radioCircle} />
+            <Text style={styles.itemText}>{item}</Text>
+          </View>
+        ))}
+      </View>
 
-        {/* Item 2: Inactive */}
-        <View style={[styles.checklistItem, styles.inactiveItem]}>
-          <View style={styles.checkbox} />
-          <Text style={styles.inactiveText}>Add three steps (ingredients)</Text>
-        </View>
-
-        {/* Item 3: Inactive */}
-        <View style={[styles.checklistItem, styles.inactiveItem]}>
-          <View style={styles.checkbox} />
-          <Text style={styles.inactiveText}>Hit the "Reloop" button</Text>
+      {/* Progress Bar Placeholder */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: '0%' }]} />
         </View>
       </View>
 
       {/* Action Button */}
-      <TouchableOpacity
+      <TouchableOpacity 
+        style={[styles.button, { backgroundColor: color }]} 
         onPress={onPress}
-        activeOpacity={0.8}
-        style={styles.buttonWrapper}
       >
-        <LinearGradient
-          colors={['#FFD700', '#FFA500']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.button}
-        >
-          <Text style={styles.buttonText}>Create My First Loop</Text>
-        </LinearGradient>
+        <Text style={styles.buttonText}>Try This Loop</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  cardContainer: {
-    maxWidth: 400,
-    width: '100%',
-    backgroundColor: '#FFF',
+  card: {
+    backgroundColor: '#ffffff',
     borderRadius: 24,
     padding: 24,
-    // Box Shadow
+    width: 300,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
-    shadowRadius: 25,
-    elevation: 5,
+    shadowRadius: 12,
+    elevation: 3,
+    marginRight: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
-    alignSelf: 'center',
+    borderColor: '#f3f4f6',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  progressRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30, // 50%
-    borderWidth: 6,
-    borderColor: '#FDE68A', // Light yellow stroke
-    alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 20,
+    gap: 12,
   },
-  progressText: {
-    fontWeight: 'bold',
-    color: '#B8860B', // Dark goldenrod
-    fontSize: 16,
-  },
-  headerText: {
-    marginLeft: 16,
+  emoji: {
+    fontSize: 24,
   },
   title: {
-    fontSize: 20, // 1.25rem approx
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937', // Gray 800
-    marginBottom: 2,
+    color: '#1f2937',
   },
-  subtitle: {
-    fontSize: 14, // 0.875rem
-    color: '#6B7280', // Gray 500
-  },
-  checklist: {
-    gap: 12, // display: flex; gap: 12px
-    flexDirection: 'column',
+  listContainer: {
+    gap: 12,
     marginBottom: 24,
   },
-  checklistItem: {
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    gap: 12,
   },
-  checkbox: {
+  radioCircle: {
     width: 20,
     height: 20,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#D1D5DB',
-    borderRadius: 6,
-    marginRight: 12,
+    borderColor: '#e5e7eb',
   },
-  activeItem: {
-    backgroundColor: '#FFF9E6',
-    borderColor: '#FFE082',
+  itemText: {
+    fontSize: 14,
+    color: '#4b5563',
   },
-  activeCheckbox: {
-    borderColor: '#FFA500',
+  progressContainer: {
+    marginBottom: 20,
   },
-  activeText: {
-    color: '#4B5563', // Gray 600
-    fontWeight: '500',
-  },
-  inactiveItem: {
-    borderColor: '#E5E7EB',
-    opacity: 0.6,
-  },
-  inactiveText: {
-    color: '#4B5563',
-  },
-  buttonWrapper: {
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#f3f4f6',
+    borderRadius: 3,
     width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#e5e7eb',
   },
   button: {
-    paddingVertical: 14,
-    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   buttonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 15,
   },
 });

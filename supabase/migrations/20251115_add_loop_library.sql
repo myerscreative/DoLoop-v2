@@ -133,6 +133,8 @@ INSERT INTO template_creators (id, name, bio, title, photo_url) VALUES
   );
 
 -- Insert sample loop templates
+-- NOTE: Replace 'YOUR_AMAZON_TAG-20' with your actual Amazon Associates tag
+-- Example: If your tag is 'doloop-20', change all URLs to use ?tag=doloop-20
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
   (
     '10000000-0000-0000-0000-000000000001',
@@ -140,7 +142,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     'Atomic Habits Daily Reset',
     'Build better habits with James Clear''s proven framework. This loop helps you implement the Four Laws of Behavior Change: make it obvious, make it attractive, make it easy, and make it satisfying.',
     'Atomic Habits',
-    'https://www.amazon.com/Atomic-Habits-Proven-Build-Break/dp/0735211299',
+    'https://www.amazon.com/dp/0735211299?tag=YOUR_AMAZON_TAG-20',
     '#4CAF50',
     'daily',
     true
@@ -151,7 +153,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     'GTD Weekly Review',
     'Master your productivity with David Allen''s Getting Things Done methodology. This weekly review loop ensures you stay on top of all your commitments and maintain a clear mind.',
     'Getting Things Done',
-    'https://www.amazon.com/Getting-Things-Done-Stress-Free-Productivity/dp/0143126563',
+    'https://www.amazon.com/dp/0143126563?tag=YOUR_AMAZON_TAG-20',
     '#0CB6CC',
     'work',
     true
@@ -162,7 +164,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     'Morning Routine Optimization',
     'Start your day like a high performer using principles from Tim Ferriss. This morning routine combines journaling, exercise, and strategic planning to set you up for success.',
     'The 4-Hour Workweek',
-    'https://www.amazon.com/4-Hour-Workweek-Escape-Live-Anywhere/dp/0307465357',
+    'https://www.amazon.com/dp/0307465357?tag=YOUR_AMAZON_TAG-20',
     '#FEC041',
     'personal',
     true

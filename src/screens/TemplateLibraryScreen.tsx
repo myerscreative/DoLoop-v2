@@ -15,6 +15,7 @@ import {
   SafeAreaView,
   StatusBar,
   ScrollView,
+  useWindowDimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,21 @@ import { supabase } from '../lib/supabase';
 import { LoopTemplateWithDetails } from '../types/loop';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { ResponsiveContainer } from '../components/layout/ResponsiveContainer';
+import { WebSidebar } from '../components/layout/WebSidebar';
+import { trackAffiliateClick } from '../lib/admin';
+import { CompactLoopItem } from '../components/CompactLoopItem';
+import { LoopDetailView } from '../components/LoopDetailView';
+
+const loopDescriptions: Record<string, string> = {
+  'Morning Momentum': 'Start your day with energy and intention',
+  'Deep Work Session': 'Create the perfect environment for focused, distraction-free work',
+  'Weekly Reset': 'Review your week and plan ahead for success',
+  'Workout Routine': 'Stay consistent with your fitness goals',
+  'Evening Wind Down': 'Prepare your mind and body for restful sleep',
+  'Learning Sprint': 'Dedicate time to developing new skills',
+  'Home Maintenance': 'Keep your living space clean and organized',
+};
 
 type TemplateLibraryScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -64,13 +80,12 @@ const SkeletonCard = () => {
   });
 
   return (
-    <View style={styles.templateCard}>
+    <View style={styles.skeletonCard}>
       <View style={styles.cardContent}>
-        <Animated.View style={[styles.skeletonImage, { opacity }]} />
+        <Animated.View style={[styles.skeletonEmoji, { opacity }]} />
         <View style={{ flex: 1 }}>
           <Animated.View style={[styles.skeletonTitle, { opacity }]} />
-          <Animated.View style={[styles.skeletonText, { opacity, width: '60%', marginTop: 8 }]} />
-          <Animated.View style={[styles.skeletonText, { opacity, width: '80%', marginTop: 4 }]} />
+          <Animated.View style={[styles.skeletonText, { opacity, width: '80%' }]} />
         </View>
       </View>
     </View>
@@ -79,17 +94,20 @@ const SkeletonCard = () => {
 
 export function TemplateLibraryScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const [templates, setTemplates] = useState<LoopTemplateWithDetails[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<LoopTemplateWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('browse');
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   useEffect(() => {
     filterTemplates();
@@ -249,138 +267,139 @@ export function TemplateLibraryScreen({ navigation }: Props) {
     }
   };
 
-  const TemplateCard = ({ item }: { item: LoopTemplateWithDetails }) => {
-    const scaleAnim = React.useRef(new Animated.Value(1)).current;
-    const favoriteScale = React.useRef(new Animated.Value(1)).current;
+  const selectedTemplate = templates.find(t => t.id === selectedTemplateId) || null;
 
-    const handlePressIn = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 0.98,
-        useNativeDriver: Platform.OS !== 'web',
-      }).start();
-    };
+  const handleAddToMyLoops = async (template: LoopTemplateWithDetails) => {
+    if (!user) {
+      Alert.alert('Error', 'Please log in to add this template to your loops');
+      return;
+    }
 
-    const handlePressOut = () => {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: Platform.OS !== 'web',
-      }).start();
-    };
+    try {
+      setIsAdding(true);
 
-    const animateFavorite = () => {
-      Animated.sequence([
-        Animated.timing(favoriteScale, {
-          toValue: 1.3,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-        Animated.timing(favoriteScale, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: Platform.OS !== 'web',
-        }),
-      ]).start();
-    };
+      // Check if this template has already been added for this user
+      const { data: existingUsage } = await supabase
+        .from('user_template_usage')
+        .select('loop_id')
+        .eq('user_id', user.id)
+        .eq('template_id', template.id);
 
-    return (
-      <Animated.View style={[{ transform: [{ scale: scaleAnim }] }]}>
-        <TouchableOpacity
-          style={styles.loopCard}
-          onPress={() => {
-            if (Platform.OS !== 'web') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (existingUsage && existingUsage.length > 0) {
+        const existingLoopId = existingUsage[0].loop_id;
+        Alert.alert(
+          'Already Added',
+          `"${template.title}" is already in your loops.`,
+          [
+            {
+              text: 'View Loop',
+              onPress: () => navigation.navigate('LoopDetail', { loopId: existingLoopId }),
+            },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+        setIsAdding(false);
+        return;
+      }
+
+      // Create a new loop based on this template
+      const { data: newLoop, error: loopError } = await supabase
+        .from('loops')
+        .insert([
+          {
+            owner_id: user.id,
+            name: template.title,
+            color: template.color,
+            description: template.description,
+            affiliate_link: template.affiliate_link,
+            reset_rule: template.category === 'daily' ? 'daily' : 'manual',
+            is_favorite: false,
+          },
+        ])
+        .select()
+        .single();
+
+      if (loopError) throw loopError;
+
+      // Copy all tasks from the template to the new loop
+      const tasksToInsert = template.tasks.map((task: any) => ({
+        loop_id: newLoop.id,
+        description: task.description,
+        is_one_time: task.is_one_time || false,
+        completed: false,
+        notes: task.hint, // Copy hint to task notes
+      }));
+
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .insert(tasksToInsert);
+
+      if (tasksError) throw tasksError;
+
+      // Track that this user added this template
+      await supabase
+        .from('user_template_usage')
+        .insert([{ user_id: user.id, template_id: template.id, loop_id: newLoop.id }]);
+
+      setShowSuccess(true);
+      
+      if (Platform.OS === 'web') {
+        setTimeout(() => {
+          setShowSuccess(false);
+          navigation.navigate('LoopDetail', { loopId: newLoop.id });
+        }, 2000);
+      } else {
+        Alert.alert(
+          'Success!',
+          `"${template.title}" has been added to your loops!`,
+          [
+            {
+              text: 'View Loop',
+              onPress: () => {
+                setShowSuccess(false);
+                navigation.navigate('LoopDetail', { loopId: newLoop.id });
+              },
+            },
+            {
+              text: 'Browse More',
+              onPress: () => setShowSuccess(false),
+              style: 'cancel',
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error adding template to loops:', error);
+      Alert.alert('Error', 'Failed to add template to your loops');
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  const handleLearnMore = (template: LoopTemplateWithDetails) => {
+    if (!template.affiliate_link) return;
+
+    if (Platform.OS === 'web') {
+        trackAffiliateClick(template.id, template.affiliate_link);
+        return;
+    }
+
+    Alert.alert(
+      'Learn More',
+      `This will open a link to "${template.book_course_title}" where you can learn more.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Open Link',
+          onPress: async () => {
+            try {
+              await trackAffiliateClick(template.id, template.affiliate_link!);
+            } catch (err) {
+              Linking.openURL(template.affiliate_link!);
             }
-            navigation.navigate('TemplateDetail', { templateId: item.id });
-          }}
-          onPressIn={handlePressIn}
-          onPressOut={handlePressOut}
-          activeOpacity={0.7}
-        >
-          <View style={styles.loopCardHeader}>
-            {item.is_featured && (
-              <LinearGradient
-                colors={[colors.accentYellow, '#FFA500']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.featuredBadgeSmall}
-              >
-                <Text style={styles.featuredBadgeText}>⭐ FEATURED</Text>
-              </LinearGradient>
-            )}
-            {!item.is_featured && <View />}
-            <Animated.View style={{ transform: [{ scale: favoriteScale }] }}>
-              <TouchableOpacity
-                style={[
-                  styles.favoriteButton,
-                  item.isFavorite && styles.favoriteButtonActive,
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  animateFavorite();
-                  toggleFavorite(item.id, item.isFavorite || false);
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={item.isFavorite ? 'heart' : 'heart-outline'}
-                  size={18}
-                  color={item.isFavorite ? '#ff4444' : '#999'}
-                />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
-          <View style={styles.cardMainContent}>
-            {/* Creator Photo */}
-            <View style={styles.imageContainer}>
-              {item.creator?.photo_url ? (
-                <Image
-                  source={{ uri: item.creator.photo_url }}
-                  style={styles.creatorImage}
-                  resizeMode="cover"
-                />
-              ) : (
-                <View style={styles.imagePlaceholder}>
-                  <Text style={styles.imagePlaceholderText}>
-                    {item.creator?.name?.charAt(0) || '📚'}
-                  </Text>
-                </View>
-              )}
-            </View>
-
-            {/* Card Content */}
-            <View style={styles.cardTextContent}>
-              <Text style={styles.loopTitle}>{item.title}</Text>
-              <Text style={styles.loopSubtitleSmall}>
-                From: {item.book_course_title}
-              </Text>
-              <Text style={styles.loopDescription} numberOfLines={2}>
-                {item.description}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.loopFooter}>
-            <View style={styles.loopStats}>
-              <View style={styles.loopStat}>
-                <Text style={styles.loopStatValue}>{item.taskCount}</Text>
-                <Text style={styles.loopStatLabel}> tasks</Text>
-              </View>
-              <View style={styles.loopStat}>
-                <Text style={[styles.loopStatValue, styles.loopStatValueGold]}>
-                  {item.popularity_score}
-                </Text>
-                <Text style={styles.loopStatLabel}> uses</Text>
-              </View>
-            </View>
-            <View style={styles.loopCategory}>
-              <Text style={styles.loopCategoryText}>
-                {getCategoryIcon(item.category)} {item.category}
-              </Text>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
+          },
+        },
+      ]
     );
   };
 
@@ -420,14 +439,35 @@ export function TemplateLibraryScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
-      <StatusBar barStyle="dark-content" />
+    <ResponsiveContainer
+        layout="productivity"
+        sidebar={
+          <WebSidebar 
+            activeItem="library"
+            selectedFilter='all'
+            onCreatePress={() => {}}
+            counts={{ all: 0, daily: 0, weekly: 0, manual: 0 }}
+            onSelectFilter={(filter) => {
+               navigation.navigate('Home', { screen: 'Home', params: { initialFilter: filter } } as any);
+            }}
+            onNavigateToLibrary={() => {}}
+            onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
+          />
+        }
+        rightPanel={
+          <LoopDetailView 
+            template={selectedTemplate}
+            onAdd={() => selectedTemplate && handleAddToMyLoops(selectedTemplate)}
+          />
+        }
+      >
+      <SafeAreaView style={styles.container}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={{
         flex: 1,
-        maxWidth: 800,
         width: '100%',
         alignSelf: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#ffffff',
       }}>
 
         {/* Header */}
@@ -439,7 +479,12 @@ export function TemplateLibraryScreen({ navigation }: Props) {
               if (Platform.OS !== 'web') {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               }
-              navigation.goBack();
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                // Fallback to Home if there's no back stack
+                navigation.navigate('Home' as any);
+              }
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -487,7 +532,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
       </View>
 
       {/* Search */}
-      <View style={styles.searchSection}>
+      <View style={[styles.searchSection, { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }]}>
         <View style={styles.searchBar}>
           <Ionicons
             name="search"
@@ -575,7 +620,22 @@ export function TemplateLibraryScreen({ navigation }: Props) {
       ) : (
         <FlatList
           data={filteredTemplates}
-          renderItem={({ item }) => <TemplateCard item={item} />}
+          renderItem={({ item }) => (
+            <CompactLoopItem 
+              emoji={getCategoryIcon(item.category)}
+              name={item.title}
+              description={loopDescriptions[item.title] || item.description}
+              isSelected={selectedTemplateId === item.id}
+              onPress={() => {
+                if (Platform.OS !== 'web') {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  navigation.navigate('TemplateDetail', { templateId: item.id });
+                } else {
+                  setSelectedTemplateId(item.id);
+                }
+              }}
+            />
+          )}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
@@ -583,6 +643,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
       )}
       </View>
     </SafeAreaView>
+    </ResponsiveContainer>
   );
 }
 
@@ -743,171 +804,38 @@ const styles = StyleSheet.create({
     gap: 16,
   },
 
-  // Loop Card
-  loopCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  loopCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  featuredBadgeSmall: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-  featuredBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#000',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  favoriteButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  favoriteButtonActive: {
-    backgroundColor: '#ffe5e5',
-  },
-  cardMainContent: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 16,
-  },
-  imageContainer: {
-    width: 80,
-    height: 80,
-    flexShrink: 0,
-  },
-  creatorImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#f5f5f5',
-  },
-  imagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
-    backgroundColor: '#f0f0f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePlaceholderText: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#999',
-  },
-  cardTextContent: {
-    flex: 1,
-  },
-  loopTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 4,
-    lineHeight: 23,
-  },
-  loopSubtitleSmall: {
-    fontSize: 12,
-    color: '#0066cc',
-    marginBottom: 6,
-  },
-  loopDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  loopFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  loopStats: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'center',
-  },
-  loopStat: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  loopStatValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#1a1a1a',
-  },
-  loopStatValueGold: {
-    color: '#FFB800',
-  },
-  loopStatLabel: {
-    fontSize: 13,
-    color: '#999',
-  },
-  loopCategory: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-  },
-  loopCategoryText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-  },
 
   // Skeleton styles
-  templateCard: {
+  // Skeleton styles
+  skeletonCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   cardContent: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
-  skeletonImage: {
-    width: 80,
-    height: 80,
+  skeletonEmoji: {
+    width: 32,
+    height: 32,
     backgroundColor: '#E5E7EB',
-    borderRadius: 12,
+    borderRadius: 8,
   },
   skeletonTitle: {
-    height: 24,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 6,
-    marginBottom: 8,
-  },
-  skeletonText: {
-    height: 16,
+    height: 18,
     backgroundColor: '#E5E7EB',
     borderRadius: 4,
-    marginTop: 6,
+    marginBottom: 8,
+    width: '60%',
+  },
+  skeletonText: {
+    height: 14,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
   },
   emptyContainer: {
     flex: 1,

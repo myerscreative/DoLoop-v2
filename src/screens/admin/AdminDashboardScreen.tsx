@@ -66,7 +66,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       title: 'Templates',
       icon: 'albums-outline' as const,
       screen: 'AdminTemplates' as const,
-      color: '#B8860B',
+      color: '#8A2BE2',
       description: 'Manage loop templates',
     },
     {
@@ -108,7 +108,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
       title: 'Audit Logs',
       icon: 'document-text-outline' as const,
       screen: 'AdminAuditLogs' as const,
-      color: '#8B4513',
+      color: '#8A2BE2',
       description: 'Track admin actions',
     },
     {
@@ -264,7 +264,7 @@ export function AdminDashboardScreen({ navigation }: Props) {
                 title="Templates"
                 value={stats.total_templates.toLocaleString()}
                 icon="albums"
-                color="#B8860B"
+                color="#8A2BE2"
               />
             </View>
 

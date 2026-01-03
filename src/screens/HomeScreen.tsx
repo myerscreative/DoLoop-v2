@@ -185,6 +185,9 @@ export const HomeScreen: React.FC = () => {
       }
 
       setLoops(loopsWithStats);
+      if (loopsWithStats.length > 0 && !selectedLoopId) {
+        setSelectedLoopId(loopsWithStats[0].id);
+      }
     } catch (error) {
       console.error('Error loading home data:', error);
     }
@@ -423,34 +426,25 @@ export const HomeScreen: React.FC = () => {
             onClose={() => setSelectedLoopId(null)}
           />
       ) : (
-          // Empty State for Wide 3rd Column
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
-             <View style={{ 
-               width: 80, 
-               height: 80, 
-               borderRadius: 40, 
-               backgroundColor: `${colors.textSecondary}10`, // 10% opacity
-               alignItems: 'center', 
-               justifyContent: 'center',
-               marginBottom: 24
-             }}>
-                <Ionicons name="arrow-back" size={40} color={colors.textSecondary} />
-             </View>
+          /* Empty State for Wide 3rd Column - Matches User Mockup */
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff', paddingHorizontal: 40 }}>
+             <Text style={{ fontSize: 72, marginBottom: 24, opacity: 0.2 }}>📋</Text>
              
              <Text style={{ 
-               fontSize: 24, 
-               fontWeight: '800', 
-               color: colors.text, 
-               marginBottom: 8 
+               fontSize: 20, 
+               fontWeight: '600', 
+               color: '#374151', 
+               marginBottom: 8,
+               textAlign: 'center'
              }}>
                Select a Loop
              </Text>
              
              <Text style={{ 
                fontSize: 16, 
-               color: colors.textSecondary, 
+               color: '#6B7280', 
                textAlign: 'center',
-               maxWidth: 300,
+               maxWidth: 320,
                lineHeight: 24,
                marginBottom: 32
              }}>
@@ -459,14 +453,11 @@ export const HomeScreen: React.FC = () => {
 
              <TouchableOpacity 
                style={{ 
-                 flexDirection: 'row',
-                 alignItems: 'center',
-                 gap: 8,
                  paddingVertical: 14, 
                  paddingHorizontal: 32, 
-                 backgroundColor: colors.primary, 
-                 borderRadius: 16,
-                 shadowColor: colors.primary,
+                 backgroundColor: '#FEC00F', 
+                 borderRadius: 12,
+                 shadowColor: '#FEC00F',
                  shadowOffset: { width: 0, height: 4 },
                  shadowOpacity: 0.3,
                  shadowRadius: 10,
@@ -474,8 +465,7 @@ export const HomeScreen: React.FC = () => {
                }}
                onPress={openCreateLoopModal}
              >
-               <Ionicons name="add" size={24} color={colors.text} />
-               <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>Create New Loop</Text>
+               <Text style={{ color: '#111827', fontWeight: '700', fontSize: 16 }}>Create New Loop</Text>
              </TouchableOpacity>
           </View>
       )
@@ -534,6 +524,7 @@ export const HomeScreen: React.FC = () => {
             forcedColumns={1}
             title={getGridTitle()}
             activeFilter={selectedFilter}
+            selectedLoopId={selectedLoopId}
           />
         ) : (
           <View style={{ flex: 1 }}>

@@ -34,6 +34,7 @@ import { AdminAnalyticsScreen } from "./src/screens/admin/AdminAnalyticsScreen";
 import { AdminAuditLogsScreen } from "./src/screens/admin/AdminAuditLogsScreen";
 import { AdminRolesScreen } from "./src/screens/admin/AdminRolesScreen";
 import { AdminSettingsScreen } from "./src/screens/admin/AdminSettingsScreen";
+import { LoopSommelierScreen } from "./src/screens/LoopSommelierScreen";
 
 export type RootStackParamList = {
   Onboarding: undefined;
@@ -53,6 +54,7 @@ export type RootStackParamList = {
   AdminAuditLogs: undefined;
   AdminRoles: undefined;
   AdminSettings: undefined;
+  LoopSommelier: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -74,6 +76,7 @@ const linking = {
       AdminUsers: "admin/users",
       AdminAffiliates: "admin/affiliates",
       AdminReviews: "admin/reviews",
+      LoopSommelier: "sommelier",
     },
   },
 };
@@ -190,6 +193,10 @@ export default function App() {
               <Stack.Screen
                 name="AdminSettings"
                 component={AdminSettingsScreen}
+              />
+              <Stack.Screen
+                name="LoopSommelier"
+                component={LoopSommelierScreen}
               />
             </Stack.Navigator>
           </NavigationContainer>

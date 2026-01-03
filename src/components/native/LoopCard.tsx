@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
 import { Loop } from '../../types/loop';
+import { Colors } from '../../constants/Colors';
 
 interface LoopCardProps {
   loop: Loop & { completedCount?: number; totalCount?: number };
@@ -35,16 +36,19 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   };
 
   const getBadgeColors = (rule: string, category?: string) => {
-    // Returns [BackgroundTint, TextColor/StrongColor]
-    if (category === 'goals') return ['#F5DEB3', '#8B4513']; // Wheat / SaddleBrown
+    // Returns [BackgroundTint, TextColor]
+    const c = Colors.light;
+    
+    if (category === 'goals') return [c.focus, '#FFFFFF']; // Blue + White
+    
     switch (rule) {
-      case 'daily': return ['#FFF0D4', '#EA580C']; // Pale Honey / Dark Orange
-      case 'weekly': return ['#F0E6D2', '#B8860B']; // Pale Bronze / Dark Goldenrod
-      case 'manual': return ['#FBF5E6', '#D4AF37']; // Champagne / Gold
-      default: return ['#FFF0D4', '#EA580C'];
+      case 'daily': return [c.primary, c.text]; // Bumblebee Yellow + Black
+      case 'weekly': return [c.family, '#FFFFFF']; // Violet + White
+      case 'manual': return [c.playful, '#FFFFFF']; // Pink + White
+      default: return [c.surface, c.text]; // Grey + Black
     }
   };
-
+  
   const getBadgeLabel = (rule: string, category?: string) => {
     if (category === 'goals') return 'Goal';
     switch (rule) {
@@ -122,7 +126,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
             </TouchableOpacity>
           </View>
         )}
-        <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+        <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
       </View>
     </TouchableOpacity>
   );
@@ -134,9 +138,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: 'white',
+    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: Colors.light.border,
     borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000',
@@ -149,10 +153,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   upcomingCard: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Colors.light.backgroundSecondary,
     opacity: 0.7,
     borderStyle: 'dashed',
-    borderColor: '#E5E7EB',
+    borderColor: Colors.light.border,
   },
   leftSection: {
     flexDirection: 'row',
@@ -164,8 +168,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '700', // Bold
+    color: Colors.light.text, // Jet Black
     marginBottom: 4,
   },
   badge: {
@@ -175,8 +179,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   upcomingTitle: {
     color: '#64748b',
@@ -223,7 +229,7 @@ const styles = StyleSheet.create({
   },
   deleteText: {
     fontSize: 12,
-    color: '#DC2626', // Softer Red
+    color: '#EF4444', // Softer Red
     fontWeight: '600',
   },
 });

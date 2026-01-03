@@ -11,6 +11,7 @@ import {
   Linking,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +42,20 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [bioExpanded, setBioExpanded] = useState(false);
+  const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
+
+  const toggleHint = (taskId: string) => {
+    setExpandedHints(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
 
   useEffect(() => {
     fetchTemplateDetails();
@@ -76,11 +91,52 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
       };
 
       setTemplate(templateWithDetails);
+
+      // Check if hints are missing and generate them if needed
+      const missingHints = templateWithDetails.tasks.some(t => !t.hint || t.hint.trim() === '');
+      if (missingHints) {
+        console.log('[TemplateDetail] Missing hints detected, triggering AI generation...');
+        // We don't await this to avoid blocking the initial render, 
+        // but we'll refresh the template after it completes
+        triggerHintGeneration(templateId);
+      }
     } catch (error) {
       console.error('Error fetching template details:', error);
       Alert.alert('Error', 'Failed to load template details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerHintGeneration = async (id: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate_template_hints', {
+        body: { template_id: id },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.tasks) {
+        console.log('[TemplateDetail] AI hints generated successfully');
+        
+        // Update the template in state with the new tasks
+        setTemplate(prev => {
+          if (!prev || prev.id !== id) return prev;
+          
+          const sortedTasks = (data.tasks || []).sort(
+            (a: TemplateTask, b: TemplateTask) => a.display_order - b.display_order
+          );
+
+          return {
+            ...prev,
+            tasks: sortedTasks,
+            taskCount: sortedTasks.length,
+          };
+        });
+      }
+    } catch (err) {
+      console.warn('[TemplateDetail] Failed to generate AI hints:', err);
+      // We don't show an alert here as it's a background enhancement
     }
   };
 
@@ -165,6 +221,7 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
         description: task.description,
         is_one_time: task.is_one_time || false,
         completed: false,
+        notes: task.hint, // Copy hint to task notes
       }));
 
       console.log('[TemplateDetail] Inserting tasks:', tasksToInsert.length);
@@ -293,7 +350,7 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFB800" />
+        <ActivityIndicator size="large" color="#FEC00F" />
         <Text style={styles.loadingText}>Loading template...</Text>
       </View>
     );
@@ -389,59 +446,132 @@ export function TemplateDetailScreen({ navigation, route }: Props) {
           <View style={styles.taskList}>
             {template.tasks.map((task: TemplateTask, index: number) => (
               <View key={task.id} style={styles.taskItem}>
-                <LinearGradient
-                  colors={['#FFD700', '#FFA500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.taskNumber}
-                >
-                  <Text style={styles.taskNumberText}>{index + 1}</Text>
-                </LinearGradient>
-                <View style={styles.taskContent}>
-                  <Text style={styles.taskTitle}>{task.description}</Text>
-                  {task.is_recurring && (
-                    <View style={styles.taskMeta}>
-                      <Ionicons name="repeat" size={14} color="#999" />
-                      <Text style={styles.taskMetaText}>Recurring</Text>
-                    </View>
-                  )}
-                  {task.is_one_time && (
-                    <View style={styles.taskMeta}>
-                      <Ionicons name="checkmark-circle-outline" size={14} color="#999" />
-                      <Text style={styles.taskMetaText}>One-time</Text>
-                    </View>
+                <View style={styles.taskRow}>
+                  <LinearGradient
+                    colors={['#FFD700', '#FFA500']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.taskNumber}
+                  >
+                    <Text style={styles.taskNumberText}>{index + 1}</Text>
+                  </LinearGradient>
+                  <View style={styles.taskContent}>
+                    <Text style={styles.taskTitle}>{task.description}</Text>
+                    {task.is_recurring && (
+                      <View style={styles.taskMeta}>
+                        <Ionicons name="repeat" size={14} color="#999" />
+                        <Text style={styles.taskMetaText}>Recurring</Text>
+                      </View>
+                    )}
+                    {task.is_one_time && (
+                      <View style={styles.taskMeta}>
+                        <Ionicons name="checkmark-circle-outline" size={14} color="#999" />
+                        <Text style={styles.taskMetaText}>One-time</Text>
+                      </View>
+                    )}
+                  </View>
+                  {task.hint && (
+                    <TouchableOpacity
+                      style={styles.hintButton}
+                      onPress={() => toggleHint(task.id)}
+                    >
+                      <Ionicons
+                        name={expandedHints.has(task.id) ? "information-circle" : "information-circle-outline"}
+                        size={22}
+                        color={expandedHints.has(task.id) ? "#FEC00F" : "#999"}
+                      />
+                    </TouchableOpacity>
                   )}
                 </View>
+                {task.hint && expandedHints.has(task.id) && (
+                  <View style={styles.hintContainer}>
+                    <Text style={styles.hintIcon}>💡</Text>
+                    <Text style={styles.hintText}>{task.hint}</Text>
+                  </View>
+                )}
               </View>
             ))}
           </View>
         </View>
 
-        {/* Creator Section */}
+        {/* Inspired By Section */}
         {template.creator && (
           <View style={styles.section}>
-            <Text style={styles.creatorHeader}>CREATED BY</Text>
+            <View style={styles.inspiredByHeader}>
+              <Text style={styles.inspiredByIcon}>📘</Text>
+              <Text style={styles.inspiredByTitle}>Inspired By</Text>
+            </View>
+            
             <View style={styles.creatorCard}>
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.creatorAvatar}
-              >
-                <Text style={styles.creatorInitials}>
-                  {getCreatorInitials(template.creator.name)}
-                </Text>
-              </LinearGradient>
+              {template.creator.photo_url ? (
+                <Image
+                  source={{ uri: template.creator.photo_url }}
+                  style={styles.creatorPhoto}
+                />
+              ) : (
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.creatorAvatar}
+                >
+                  <Text style={styles.creatorInitials}>
+                    {getCreatorInitials(template.creator.name)}
+                  </Text>
+                </LinearGradient>
+              )}
               <View style={styles.creatorInfo}>
                 <Text style={styles.creatorName}>{template.creator.name}</Text>
                 {template.creator.title && (
                   <Text style={styles.creatorTitle}>{template.creator.title}</Text>
                 )}
-                {template.creator.bio && (
-                  <Text style={styles.creatorBio}>{template.creator.bio}</Text>
-                )}
               </View>
             </View>
+
+            {/* Source Material Info */}
+            <View style={styles.sourceInfo}>
+              <Text style={styles.sourceLabel}>Based on:</Text>
+              <Text style={styles.sourceTitle}>"{template.book_course_title}"</Text>
+            </View>
+
+            {/* Creator Bio */}
+            {template.creator.bio && (
+              <View style={styles.bioContainer}>
+                <Text 
+                  style={styles.creatorBioExpanded}
+                  numberOfLines={bioExpanded ? undefined : 3}
+                >
+                  {template.creator.bio}
+                </Text>
+                {template.creator.bio && template.creator.bio.length > 200 && (
+                  <TouchableOpacity onPress={() => setBioExpanded(!bioExpanded)}>
+                    <Text style={styles.readMoreText}>
+                      {bioExpanded ? 'Show less' : 'Read more'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* Inline Affiliate Link with FTC Disclosure */}
+            {template.affiliate_link && (
+              <TouchableOpacity
+                style={styles.affiliateCard}
+                onPress={handleLearnMore}
+                activeOpacity={0.8}
+              >
+                <View style={styles.affiliateContent}>
+                  <Text style={styles.affiliateIcon}>📖</Text>
+                  <View style={styles.affiliateText}>
+                    <Text style={styles.affiliateTitle}>Get "{template.book_course_title}"</Text>
+                    <Text style={styles.affiliateDisclosure}>
+                      Affiliate link • We may earn a commission
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -620,7 +750,7 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
   },
   statValueGold: {
-    color: '#FFB800',
+    color: '#FEC00F',
   },
   statLabel: {
     fontSize: 13,
@@ -659,13 +789,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   taskItem: {
-    flexDirection: 'row',
-    gap: 12,
     padding: 16,
     backgroundColor: '#fafafa',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#f0f0f0',
+  },
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   taskNumber: {
     width: 28,
@@ -697,8 +830,45 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
   },
+  hintButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  hintContainer: {
+    flexDirection: 'row',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FFF9E6',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FEC00F',
+  },
+  hintIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#5D4E37',
+    lineHeight: 20,
+  },
 
-  // Creator
+  // Creator / Inspired By
+  inspiredByHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  inspiredByIcon: {
+    fontSize: 24,
+  },
+  inspiredByTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1a1a1a',
+  },
   creatorHeader: {
     fontSize: 13,
     color: '#999',
@@ -715,14 +885,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   creatorAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  creatorPhoto: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   creatorInitials: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -731,12 +906,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   creatorName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#1a1a1a',
   },
   creatorTitle: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
   },
   creatorBio: {
@@ -744,6 +919,70 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 4,
     lineHeight: 18,
+  },
+  sourceInfo: {
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  sourceLabel: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 2,
+  },
+  sourceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0066cc',
+    fontStyle: 'italic',
+  },
+  bioContainer: {
+    marginTop: 16,
+    paddingHorizontal: 4,
+  },
+  creatorBioExpanded: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 21,
+  },
+  readMoreText: {
+    fontSize: 14,
+    color: '#0066cc',
+    fontWeight: '500',
+    marginTop: 6,
+  },
+  affiliateCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    padding: 16,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  affiliateContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  affiliateIcon: {
+    fontSize: 28,
+  },
+  affiliateText: {
+    flex: 1,
+  },
+  affiliateTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    marginBottom: 2,
+  },
+  affiliateDisclosure: {
+    fontSize: 12,
+    color: '#888',
+    fontStyle: 'italic',
   },
 
   // Bottom Buttons

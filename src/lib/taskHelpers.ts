@@ -389,3 +389,54 @@ export async function updateTaskExtended(
     return false;
   }
 }
+
+/**
+ * Collaboration Helpers
+ */
+
+export async function ensureLoopMember(userId: string, loopId: string): Promise<string | null> {
+  try {
+    // 1. Check if member exists
+    const { data: existingMember } = await supabase
+      .from('loop_members')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('loop_id', loopId)
+      .maybeSingle();
+
+    if (existingMember) {
+      return existingMember.id;
+    }
+
+    // 2. If not, create member
+    // Note: This assumes the user has permission to add themselves (e.g. they are the owner)
+    // For now, we'll try to insert. If it fails due to RLS, it means they aren't allowed.
+    const { data: newMember, error } = await supabase
+      .from('loop_members')
+      .insert({
+        user_id: userId,
+        loop_id: loopId,
+        role: 'chef' // We assume if they are creating the first member entry, they might be the owner backfilling
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+        // If error is unique violation (race condition), try selecting again
+        if (error.code === '23505') {
+            const { data: retryMember } = await supabase
+                .from('loop_members')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('loop_id', loopId)
+                .single();
+            return retryMember?.id || null;
+        }
+        throw error;
+    }
+    return newMember.id;
+  } catch (error) {
+    console.error('Error ensuring loop member:', error);
+    return null;
+  }
+}

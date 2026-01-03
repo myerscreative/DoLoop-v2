@@ -1,4 +1,4 @@
-import { Loop, CompletionRecord, MomentumData } from '@/types/loop';
+import { Loop, Task, CompletionRecord, MomentumData } from '@/types/loop';
 
 /**
  * Calculate progress percentage for a loop
@@ -13,6 +13,36 @@ export function calculateProgress(completedTasks: number, totalTasks: number): n
  */
 export function isLoopComplete(loop: Loop): boolean {
   return loop.completedTasks === loop.totalTasks && (loop.totalTasks || 0) > 0;
+}
+
+/**
+ * Check if all critical tasks are completed
+ * Returns true if there are no critical tasks, or all critical tasks are done
+ */
+export function areCriticalTasksComplete(tasks: Task[]): boolean {
+  const criticalTasks = tasks.filter(t => t.is_critical);
+  if (criticalTasks.length === 0) return true;
+  return criticalTasks.every(t => t.completed);
+}
+
+/**
+ * Get incomplete critical tasks
+ * Used to show warning when user tries to Reloop with incomplete critical tasks
+ */
+export function getIncompleteCriticalTasks(tasks: Task[]): Task[] {
+  return tasks.filter(t => t.is_critical && !t.completed);
+}
+
+/**
+ * Check if loop can be marked as complete
+ * A loop cannot be complete if critical tasks are pending
+ */
+export function canCompleteLoop(tasks: Task[]): { canComplete: boolean; blockers: Task[] } {
+  const incompleteCtritical = getIncompleteCriticalTasks(tasks);
+  return {
+    canComplete: incompleteCtritical.length === 0,
+    blockers: incompleteCtritical,
+  };
 }
 
 /**
@@ -170,4 +200,3 @@ export function resetLoop(loop: Loop): Loop {
     updatedAt: new Date(),
   };
 }
-

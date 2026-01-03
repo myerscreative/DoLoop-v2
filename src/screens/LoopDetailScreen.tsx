@@ -27,8 +27,12 @@ import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
 import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 import { EnhancedTaskCard } from '../components/native/EnhancedTaskCard';
 import { TaskEditModal } from '../components/native/TaskEditModal';
+import { InviteModal } from '../components/native/InviteModal';
+import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, updateTaskExtended, createTag } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, updateTaskExtended, createTag, ensureLoopMember } from '../lib/taskHelpers';
+import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
+import { useSharedMomentum } from '../hooks/useSharedMomentum';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -51,6 +55,9 @@ export const LoopDetailScreen: React.FC = () => {
   const [showThemePrompt, setShowThemePrompt] = useState(false);
   const [showResetMenu, setShowResetMenu] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [loopMembers, setLoopMembers] = useState<LoopMemberProfile[]>([]);
+  const [showMemberList, setShowMemberList] = useState(false);
 
   const formatNextReset = (nextResetAt: string | null) => {
     if (!nextResetAt) return 'Not scheduled';
@@ -104,6 +111,12 @@ export const LoopDetailScreen: React.FC = () => {
     loadTags();
   }, [loopId]);
 
+  // Realtime subscription for "Shared Momentum"
+  useSharedMomentum(loopId, () => {
+    console.log('[LoopDetail] Realtime update triggered - reloading data...');
+    loadLoopData();
+  });
+
   const loadTags = async () => {
     if (!user) return;
     const tags = await getUserTags(user.id);
@@ -122,7 +135,12 @@ export const LoopDetailScreen: React.FC = () => {
 
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select('*')
+        .select(`
+          *,
+          assigned_member:assigned_to (
+            user_id
+          )
+        `)
         .eq('loop_id', loopId)
         .order('created_at', { ascending: true });
 
@@ -130,11 +148,12 @@ export const LoopDetailScreen: React.FC = () => {
 
       // Load tags for each task
       const tasksWithTags = await Promise.all(
-        (tasks || []).map(async (task) => {
+        (tasks || []).map(async (task: any) => {
           const tags = await getTaskTags(task.id);
           return {
             ...task,
             tag_details: tags,
+            assigned_user_id: task.assigned_member?.user_id
           };
         })
       );
@@ -150,6 +169,11 @@ export const LoopDetailScreen: React.FC = () => {
       };
 
       setLoopData(loopWithTasks);
+      
+      // Load member profiles for collaboration display
+      const members = await getLoopMemberProfiles(loopId);
+      setLoopMembers(members);
+      
       return loopWithTasks;
     } catch (error) {
       console.error('Error loading loop data:', error);
@@ -251,9 +275,25 @@ export const LoopDetailScreen: React.FC = () => {
 
   const handleSaveTask = async (taskData: Partial<TaskWithDetails>) => {
     try {
+      // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
+      let finalAssignedTo = taskData.assigned_to;
+      if (finalAssignedTo) {
+         // The modal sends userId. We need to ensure they are a loop member.
+         const memberId = await ensureLoopMember(finalAssignedTo, loopId);
+         if (memberId) {
+             finalAssignedTo = memberId;
+         } else {
+             console.warn('Could not ensure loop member for assignment');
+             finalAssignedTo = null; 
+         }
+      }
+
       if (editingTask) {
         // Update existing task
-        await updateTaskExtended(editingTask.id, taskData);
+        await updateTaskExtended(editingTask.id, {
+            ...taskData,
+            assigned_to: finalAssignedTo
+        });
       } else {
         // Create new task - set defaults for required fields
         const { error } = await supabase.from('tasks').insert({
@@ -261,7 +301,7 @@ export const LoopDetailScreen: React.FC = () => {
           description: taskData.description,
           is_one_time: taskData.is_one_time ?? false,
           completed: false,
-          assigned_user_id: user?.id,
+          assigned_to: finalAssignedTo,
           priority: taskData.priority || 'none',
           due_date: taskData.due_date,
           notes: taskData.notes,
@@ -571,7 +611,7 @@ export const LoopDetailScreen: React.FC = () => {
             size={90}
             width={8}
             fill={currentProgress}
-            tintColor={loopData.color || '#FFB800'}
+            tintColor="#FEC00F"
             backgroundColor={colors.border}
           >
             <Text style={{
@@ -597,6 +637,45 @@ export const LoopDetailScreen: React.FC = () => {
               ? 'Manual checklist • Complete when ready'
               : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`}
           </Text>
+
+          {/* Member Avatars - Show collaborators */}
+          {loopMembers.length > 0 && (
+            <View style={{ marginTop: 16, alignItems: 'center' }}>
+              <MemberAvatars
+                members={loopMembers}
+                maxVisible={4}
+                size={36}
+                onPress={() => setShowMemberList(true)}
+              />
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+                {loopMembers.length} member{loopMembers.length !== 1 ? 's' : ''} • Tap to view
+              </Text>
+            </View>
+          )}
+
+          {/* Invite Button - Only for loop owners */}
+          {loopData.owner_id === user?.id && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#FFF9E5',
+                paddingHorizontal: 16,
+                paddingVertical: 10,
+                borderRadius: 20,
+                marginTop: 12,
+                gap: 6,
+                borderWidth: 1,
+                borderColor: '#FEC00F',
+              }}
+              onPress={() => setShowInviteModal(true)}
+            >
+              <Ionicons name="person-add" size={16} color="#8A2BE2" />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#8A2BE2' }}>
+                Invite Collaborator
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Synopsis / Description */}
           {loopData.description ? (
@@ -923,6 +1002,26 @@ export const LoopDetailScreen: React.FC = () => {
           return tag;
         }}
       />
+
+      {/* Invite Modal */}
+      <InviteModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        loopId={loopId}
+        loopName={loopData?.name || 'Loop'}
+        onInviteSent={() => {
+          // Reload members after invite
+          getLoopMemberProfiles(loopId).then(setLoopMembers);
+        }}
+      />
+
+      {/* Member List Modal */}
+      <MemberListModal
+        visible={showMemberList}
+        onClose={() => setShowMemberList(false)}
+        members={loopMembers}
+        loopName={loopData?.name || 'Loop'}
+      />
       </View>
     </SafeAreaView>
   );
@@ -1040,7 +1139,7 @@ const styles = StyleSheet.create({
   synopsisLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#FFB800',
+    color: '#FEC00F',
     letterSpacing: 1,
     marginBottom: 8,
   },

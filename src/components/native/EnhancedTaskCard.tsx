@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
 import { TaskWithDetails } from '../../types/loop';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { PriorityBadge } from './PriorityBadge';
 import { TaskTag } from './TaskTag';
+import { AssigneeDot } from '../ui/AssigneeDot';
 
 interface EnhancedTaskCardProps {
   task: TaskWithDetails;
@@ -17,6 +19,8 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
   onToggle,
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const formatDueDate = (dueDate: string) => {
     // Parse the UTC date components directly to properly treat it as a "Date" (ignoring time)
@@ -92,11 +96,23 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
             >
               {task.description}
             </Text>
-            {task.priority !== 'none' && (
-              <View style={styles.priorityContainer}>
-                <PriorityBadge priority={task.priority} size="small" />
-              </View>
-            )}
+            <View style={styles.actionIcons}>
+              {task.notes && (
+                <TouchableOpacity
+                  onPress={() => setIsExpanded(!isExpanded)}
+                  style={styles.infoButton}
+                >
+                  <Text style={[styles.infoIcon, { color: isExpanded ? colors.primary : colors.textSecondary }]}>
+                    ⓘ
+                  </Text>
+                </TouchableOpacity>
+              )}
+              {task.priority !== 'none' && (
+                <View style={styles.priorityContainer}>
+                  <PriorityBadge priority={task.priority} size="small" />
+                </View>
+              )}
+            </View>
           </View>
 
           {/* Tags */}
@@ -161,16 +177,37 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
                 </Text>
               </View>
             )}
+
+            {/* Assigned To */}
+            {task.assigned_to && (
+              <View style={styles.metadataItem}>
+                 <AssigneeDot 
+                    initials={task.assigned_user_id === user?.id ? 'ME' : 'AS'} 
+                    size={20} 
+                 />
+              </View>
+            )}
           </View>
 
-          {/* Notes Preview */}
+          {/* Notes Preview / Expanded Notes */}
           {task.notes && (
-            <Text
-              style={[styles.notes, { color: colors.textSecondary }]}
-              numberOfLines={2}
-            >
-              {task.notes}
-            </Text>
+            <View style={[
+              styles.notesContainer,
+              isExpanded && styles.notesContainerExpanded,
+              { backgroundColor: isExpanded ? '#FFFBEB' : 'transparent' }
+            ]}>
+              <Text
+                style={[
+                  styles.notes,
+                  { color: colors.textSecondary },
+                  isExpanded && styles.notesExpanded
+                ]}
+                numberOfLines={isExpanded ? undefined : 1}
+              >
+                {isExpanded && <Text style={styles.lightbulb}>💡 </Text>}
+                {task.notes}
+              </Text>
+            </View>
           )}
         </View>
       </View>
@@ -213,8 +250,20 @@ const styles = StyleSheet.create({
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  actionIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoButton: {
+    padding: 4,
+    marginRight: 4,
+  },
+  infoIcon: {
+    fontSize: 20,
+    fontWeight: '600',
   },
   description: {
     flex: 1,
@@ -242,9 +291,23 @@ const styles = StyleSheet.create({
   metadataText: {
     fontSize: 13,
   },
+  notesContainer: {
+    marginTop: 8,
+    borderRadius: 6,
+  },
+  notesContainerExpanded: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
   notes: {
     fontSize: 13,
-    marginTop: 8,
-    fontStyle: 'italic',
+    lineHeight: 18,
+  },
+  notesExpanded: {
+    color: '#92400E',
+  },
+  lightbulb: {
+    fontSize: 14,
   },
 });
