@@ -22,34 +22,50 @@ interface ThemeContextType {
     accentYellow: string;
     border: string;
     error: string;
+    structure: string;
   };
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 // Vibe-based color schemes
+// UNIFIED GOLD BRAND: All vibes use the gold palette from mockup
 const vibeColors: Record<VibeStyle, { primary: string; accent: string }> = {
-  playful: { primary: '#FFB800', accent: '#FF6B6B' }, // Gold + Coral (default/bee theme)
-  focus: { primary: '#64748B', accent: '#475569' }, // Slate
-  family: { primary: '#FBBF77', accent: '#FB923C' }, // Peach
-  pro: { primary: '#6EE7B7', accent: '#059669' }, // Mint
+  playful: { primary: '#FFB800', accent: '#FFD700' }, // Honey Gold + Bright Gold
+  focus: { primary: '#FFB800', accent: '#FFD700' },   // Unified
+  family: { primary: '#FFB800', accent: '#FFD700' },  // Unified
+  pro: { primary: '#FFB800', accent: '#FFD700' },     // Unified
 };
 
 const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
   const vibeColor = vibeColors[vibe];
+  // Light mode colors matching the mockup exactly
+  const base = isDark ? {
+    background: '#09090B',
+    surface: '#27272A',
+    text: '#F4F4F5',
+    textSecondary: '#A1A1AA',
+    border: '#3F3F46',
+    error: '#EF4444',
+    structure: '#312E81', // Indigo 900
+  } : {
+    background: '#FFFFFF',     // Pure white for main areas
+    surface: '#FAFAFA',        // Light gray for list backgrounds
+    text: '#1A1A1A',           // Almost black for primary text
+    textSecondary: '#666666',  // Medium gray for secondary text
+    border: '#E5E5E5',         // Light border
+    error: '#DC2626',
+    structure: '#F5F5F5',      // Lighter gray for input backgrounds
+  };
+
   return {
-    background: isDark ? '#1A1A1A' : '#FFFEF7', // Warm off-white
-    surface: isDark ? '#2A2A2A' : '#FFFFFF',
-    text: isDark ? '#FFFFFF' : '#1A1A1A',
-    textSecondary: isDark ? '#9CA3AF' : '#6B7280',
-    primary: vibeColor.primary,
-    success: '#00E5A2', // Success green (locked brand color)
-    secondary: '#FF1E88', // Hot pink (locked brand color)
-    accent1: '#2EC4B6', // Turquoise/cyan (locked brand color)
-    accent2: '#B8860B', // Dark Goldenrod
-    accentYellow: '#FFB800', // Brand yellow (locked)
-    border: isDark ? '#374151' : '#E5E7EB',
-    error: isDark ? '#F87171' : '#EF4444',
+    ...base,
+    primary: vibeColor.primary,      // #FFB800 - Main gold
+    success: '#059669', 
+    secondary: vibeColor.accent,      // #FFD700 - Bright gold
+    accent1: '#00CED1',               // Bright Teal (Weekly)
+    accent2: '#8A2BE2',               // Blue Violet (Goals)
+    accentYellow: '#FEC00F',          // Vibrant Yellow (Daily)
   };
 };
 
