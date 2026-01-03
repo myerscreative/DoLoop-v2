@@ -31,7 +31,8 @@ interface CreateLoopModalProps {
     name: string;
     description: string;
     affiliate_link: string;
-    type: 'manual' | 'daily' | 'weekly' | 'goals';
+    type: ResetRule;
+    custom_days?: number[];
     due_date?: string;
   }) => void;
   initialData?: {
@@ -95,6 +96,7 @@ export default function CreateLoopModal({
       description: description.trim(),
       affiliate_link: affiliateLink.trim(),
       type,
+      custom_days: type === 'custom' ? customDays : undefined,
       due_date: type === 'manual' ? (dueDate || new Date().toISOString()) : undefined,
     });
   };

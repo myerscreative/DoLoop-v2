@@ -213,10 +213,13 @@ export const HomeScreen: React.FC = () => {
       const dbResetRule = isGoal ? 'manual' : data.type;
 
       let nextResetAt: string | null = null;
-      if (data.type === 'daily') {
+      if (data.type === 'daily' || data.type === 'weekdays') {
         nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       } else if (data.type === 'weekly') {
         nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      } else if (data.type === 'custom' && data.custom_days?.length > 0) {
+        // For custom, calculate next reset based on selected days
+        nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       }
 
       const { data: loop, error } = await supabase
@@ -229,6 +232,7 @@ export const HomeScreen: React.FC = () => {
           color: FOLDER_COLORS[data.type as LoopType] || FOLDER_COLORS.personal,
           category: category,
           reset_rule: dbResetRule,
+          custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
         })
@@ -268,10 +272,10 @@ export const HomeScreen: React.FC = () => {
 
       if (dbResetRule === 'manual') {
         nextResetAt = null;
-      } else if (data.type === 'daily' || data.type === 'weekly') {
+      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
         // If type changed or next_reset_at missing, recalculate
         if (editingLoop.reset_rule !== dbResetRule || !editingLoop.next_reset_at) {
-          const days = data.type === 'daily' ? 1 : 7;
+          const days = data.type === 'weekly' ? 7 : 1;
           nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         }
       }
@@ -284,6 +288,7 @@ export const HomeScreen: React.FC = () => {
           affiliate_link: data.affiliate_link,
           category: category,
           reset_rule: dbResetRule,
+          custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
         })
