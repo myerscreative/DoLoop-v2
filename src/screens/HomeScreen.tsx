@@ -12,8 +12,10 @@ import {
   Platform,
   ActivityIndicator,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,7 +28,14 @@ import { Folder, LoopType, FOLDER_ICONS, FOLDER_COLORS } from '../types/loop';
 import { Header } from '../components/Header';
 import { LoopSelectionModal } from '../components/LoopSelectionModal';
 import { LoopCard } from '../components/native/LoopCard';
+import { StarterRecipeCard } from '../components/native/StarterRecipeCard';
 import CreateLoopModal from '../components/native/CreateLoopModal';
+import { PendingInvitations } from '../components/native/PendingInvitations';
+import { ResponsiveContainer } from '../components/layout/ResponsiveContainer';
+import { WebSidebar } from '../components/layout/WebSidebar';
+import { HomeRightPanel } from '../components/dashboard/HomeRightPanel';
+import { DesktopLoopDetailPanel } from '../components/dashboard/DesktopLoopDetailPanel';
+import { DashboardGrid } from '../components/dashboard/DashboardGrid';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -235,6 +244,8 @@ export const HomeScreen: React.FC = () => {
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
+          reset_time: data.reset_time || '04:00:00',
+          reset_day_of_week: data.reset_day_of_week,
         })
         .select()
         .single();
@@ -378,6 +389,98 @@ export const HomeScreen: React.FC = () => {
   // Deprecated cleanup
   const handleRegenerateAIShim = () => {};
 
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  // Calculate counts for sidebar
+  const counts = {
+    all: loops.length,
+    manual: loops.filter(l => l.reset_rule === 'manual').length,
+    daily: loops.filter(l => l.reset_rule === 'daily').length,
+    weekly: loops.filter(l => l.reset_rule === 'weekly').length,
+  };
+
+  // 3-Column Desktop Logic
+  const [selectedLoopId, setSelectedLoopId] = useState<string | null>(null);
+
+  const handleLoopPressDesktop = (loop: any) => {
+      setSelectedLoopId(loop.id);
+  };
+
+  // Override handleLoopPress based on device
+  const onLoopPress = (loop: any) => {
+      if (isDesktop) {
+          handleLoopPressDesktop(loop);
+      } else {
+          handleLoopPress(loop);
+      }
+  };
+
+  const RightPanelContent = isDesktop ? (
+      selectedLoopId ? (
+          <DesktopLoopDetailPanel 
+            loopId={selectedLoopId} 
+            onClose={() => setSelectedLoopId(null)}
+          />
+      ) : (
+          // Empty State for Wide 3rd Column
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.surface }}>
+             <View style={{ 
+               width: 80, 
+               height: 80, 
+               borderRadius: 40, 
+               backgroundColor: `${colors.textSecondary}10`, // 10% opacity
+               alignItems: 'center', 
+               justifyContent: 'center',
+               marginBottom: 24
+             }}>
+                <Ionicons name="arrow-back" size={40} color={colors.textSecondary} />
+             </View>
+             
+             <Text style={{ 
+               fontSize: 24, 
+               fontWeight: '800', 
+               color: colors.text, 
+               marginBottom: 8 
+             }}>
+               Select a Loop
+             </Text>
+             
+             <Text style={{ 
+               fontSize: 16, 
+               color: colors.textSecondary, 
+               textAlign: 'center',
+               maxWidth: 300,
+               lineHeight: 24,
+               marginBottom: 32
+             }}>
+               Choose a loop from the list to view details, manage tasks, and track progress.
+             </Text>
+
+             <TouchableOpacity 
+               style={{ 
+                 flexDirection: 'row',
+                 alignItems: 'center',
+                 gap: 8,
+                 paddingVertical: 14, 
+                 paddingHorizontal: 32, 
+                 backgroundColor: colors.primary, 
+                 borderRadius: 16,
+                 shadowColor: colors.primary,
+                 shadowOffset: { width: 0, height: 4 },
+                 shadowOpacity: 0.3,
+                 shadowRadius: 10,
+                 elevation: 4
+               }}
+               onPress={openCreateLoopModal}
+             >
+               <Ionicons name="add" size={24} color={colors.text} />
+               <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 16 }}>Create New Loop</Text>
+             </TouchableOpacity>
+          </View>
+      )
+  ) : null;
+
   // Show loading screen while checking auth
   if (loading || !user) {
     return (
@@ -387,268 +490,360 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
+  // Combine loops for the grid
+  const allDisplayLoops = [...todayLoops, ...upcomingLoops];
+
+  const getGridTitle = () => {
+    switch (selectedFilter) {
+      case 'daily': return 'DAILY ROUTINES';
+      case 'weekly': return 'WEEKLY GOALS';
+      case 'manual': return 'CHECKLISTS';
+      default: return "TODAY'S LOOPS";
+    }
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
+      <ResponsiveContainer
+        sidebar={
+          <WebSidebar 
+            selectedFilter={selectedFilter}
+            onSelectFilter={setSelectedFilter}
+            onNavigateToLibrary={() => navigation.navigate('TemplateLibrary')}
+            onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
+            counts={counts}
+            onCreatePress={openCreateLoopModal}
+            activeItem={selectedFilter}
+          />
+        }
+        rightPanel={RightPanelContent}
+        layout="productivity"
+      >
       <View style={{
         flex: 1,
-        maxWidth: 600,
         width: '100%',
         alignSelf: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: colors.surface,
       }}>
-        {/* Header */}
-        <Header currentDate={currentDate} streak={totalStreak} colors={colors} />
+        {isDesktop ? (
+          <DashboardGrid 
+            loops={allDisplayLoops}
+            onCreateLoop={openCreateLoopModal}
+            onLoopPress={onLoopPress}
+            onLoopEdit={startEditLoop}
+            forcedColumns={1}
+            title={getGridTitle()}
+            activeFilter={selectedFilter}
+          />
+        ) : (
+          <View style={{ flex: 1 }}>
+            {/* Header - Mobile Only */}
+            <Header currentDate={currentDate} streak={totalStreak} colors={colors} />
 
-        {/* Filter Tabs */}
-        <View style={{
-          backgroundColor: colors.surface,
-          paddingHorizontal: 20,
-          paddingVertical: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-        }}>
-          <Text style={{
-            fontSize: 18,
-            fontWeight: 'bold',
-            color: colors.text,
-            marginBottom: 16,
-          }}>
-            Your Loops
-          </Text>
+            {/* Pending Invitations */}
+            <PendingInvitations onInvitationHandled={loadData} />
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {[
-              { id: 'all' as FilterType, label: 'All', icon: '⭐' },
-              { id: 'manual' as FilterType, label: 'Checklists', icon: '✓' },
-              { id: 'daily' as FilterType, label: 'Daily', icon: '☀️' },
-              { id: 'weekly' as FilterType, label: 'Weekly', icon: '🎯' },
-            ].map((tab) => (
-              <TouchableOpacity
-                key={tab.id}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  borderRadius: 20,
-                  borderWidth: 2,
-                  borderColor: selectedFilter === tab.id ? colors.primary : colors.border,
-                  backgroundColor: selectedFilter === tab.id ? `${colors.primary}20` : 'transparent',
-                }}
-                onPress={() => setSelectedFilter(tab.id)}
-              >
-                <Text style={{
-                  fontSize: 16,
-                  fontWeight: selectedFilter === tab.id ? 'bold' : 'normal',
-                  color: selectedFilter === tab.id ? colors.primary : colors.textSecondary,
-                }}>
-                  {tab.icon} {tab.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Loops */}
-        <ScrollView
-          style={{ flex: 1 }}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-        >
-        <View style={{ padding: 20 }}>
-          {/* Today's Loop Section */}
-          {todayLoops.length > 0 && (
-            <View style={{ marginBottom: 24 }}>
-              <Text style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: '#64748b',
-                marginBottom: 12,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}>
-                Today's Loop
-              </Text>
-              {todayLoops.map((loop) => (
-                <LoopCard
-                  key={loop.id}
-                  loop={loop}
-                  onPress={handleLoopPress}
-                  onEdit={startEditLoop}
-                  onDelete={confirmDeleteLoop}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Upcoming Section */}
-          {upcomingLoops.length > 0 && (
-            <View style={{ marginTop: 8 }}>
-              {todayLoops.length > 0 && (
-                <View style={{
-                  height: 1,
-                  backgroundColor: '#E5E7EB',
-                  borderStyle: 'dashed',
-                  borderWidth: 1,
-                  borderRadius: 1,
-                  marginVertical: 24,
-                  opacity: 0.5,
-                }} />
-              )}
-              
-              <Text style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: '#64748b',
-                marginBottom: 12,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-              }}>
-                Upcoming One-Time Tasks
-              </Text>
-              {upcomingLoops.map((loop) => (
-                <LoopCard
-                  key={loop.id}
-                  loop={loop}
-                  isUpcoming={true}
-                  onPress={handleLoopPress}
-                  onEdit={startEditLoop}
-                  onDelete={confirmDeleteLoop}
-                />
-              ))}
-            </View>
-          )}
-
-          {todayLoops.length === 0 && upcomingLoops.length === 0 && (
+            {/* Filter Tabs - Mobile Only */}
             <View style={{
-              alignItems: 'center',
-              paddingVertical: 40,
+              backgroundColor: colors.background, // White background for tabs bar
+              paddingHorizontal: 20,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border,
             }}>
               <Text style={{
-                fontSize: 16,
-                color: colors.textSecondary,
-                textAlign: 'center',
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: colors.text,
                 marginBottom: 16,
               }}>
-                {selectedFilter === 'all'
-                  ? 'No loops yet. Create your first loop to get started!'
-                  : `No ${selectedFilter === 'manual' ? 'checklists' : selectedFilter === 'daily' ? 'daily routines' : 'weekly goals'} yet.`}
+                Your Loops
               </Text>
-              {selectedFilter !== 'all' && (
-                <TouchableOpacity
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    borderWidth: 2,
-                    borderColor: colors.primary,
-                  }}
-                  onPress={() => setSelectedFilter('all')}
-                >
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}
+              >
+                {[
+                  { id: 'all' as FilterType, label: 'All', icon: '⭐' },
+                  { id: 'manual' as FilterType, label: 'Checklists', icon: '✓' },
+                  { id: 'daily' as FilterType, label: 'Daily', icon: '☀️' },
+                  { id: 'weekly' as FilterType, label: 'Weekly', icon: '🎯' },
+                ].map((tab) => {
+                  // UNIFIED GOLD BRAND - all tabs use gold
+                  const activeColor = colors.primary; // #FEC00F
+                  const isActive = selectedFilter === tab.id;
+                  
+                  return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      borderWidth: 2,
+                      borderColor: isActive ? activeColor : colors.border,
+                      backgroundColor: isActive ? `${activeColor}20` : 'transparent',
+                    }}
+                    onPress={() => setSelectedFilter(tab.id)}
+                  >
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: isActive ? 'bold' : 'normal',
+                      color: isActive ? activeColor : colors.textSecondary,
+                    }}>
+                      {tab.icon} {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Loops List - Mobile Style */}
+            <ScrollView
+              style={{ flex: 1 }}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+            >
+            <View style={{ padding: 20 }}>
+              {/* Today's Loop Section */}
+              {todayLoops.length > 0 && (
+                <View style={{ marginBottom: 24 }}>
                   <Text style={{
                     fontSize: 14,
-                    fontWeight: 'bold',
-                    color: colors.primary,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    marginBottom: 12,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
                   }}>
-                    View All Loops
+                    Today's Loop
+                  </Text>
+                  {todayLoops.map((loop) => (
+                    <LoopCard
+                      key={loop.id}
+                      loop={loop}
+                      onPress={onLoopPress}
+                      onEdit={startEditLoop}
+                      onDelete={confirmDeleteLoop}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {/* Upcoming Section */}
+              {upcomingLoops.length > 0 && (
+                <View style={{ marginTop: 8 }}>
+                  {todayLoops.length > 0 && (
+                    <View style={{
+                      height: 1,
+                      backgroundColor: colors.border,
+                      borderStyle: 'dashed',
+                      borderWidth: 1,
+                      borderRadius: 1,
+                      marginVertical: 24,
+                      opacity: 0.5,
+                    }} />
+                  )}
+                  
+                  <Text style={{
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    marginBottom: 12,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                    Upcoming One-Time Tasks
+                  </Text>
+                  {upcomingLoops.map((loop) => (
+                    <LoopCard
+                      key={loop.id}
+                      loop={loop}
+                      isUpcoming={true}
+                      onPress={onLoopPress}
+                      onEdit={startEditLoop}
+                      onDelete={confirmDeleteLoop}
+                    />
+                  ))}
+                </View>
+              )}
+
+              {todayLoops.length === 0 && upcomingLoops.length === 0 && (
+                <View style={{
+                  alignItems: 'center',
+                  paddingVertical: 40,
+                }}>
+                  <Text style={{
+                    fontSize: 16,
+                    color: colors.textSecondary,
+                    textAlign: 'center',
+                    marginBottom: 16,
+                  }}>
+                    {selectedFilter === 'all'
+                      ? 'No loops yet. Create your first loop to get started!'
+                      : `No ${selectedFilter === 'manual' ? 'checklists' : selectedFilter === 'daily' ? 'daily routines' : 'weekly goals'} yet.`}
+                  </Text>
+                  {selectedFilter !== 'all' && (
+                    <TouchableOpacity
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        borderWidth: 2,
+                        borderColor: colors.primary,
+                      }}
+                      onPress={() => setSelectedFilter('all')}
+                    >
+                      <Text style={{
+                        fontSize: 14,
+                        fontWeight: 'bold',
+                        color: colors.primary,
+                      }}>
+                        View All Loops
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
+              {/* Loop Library Section - Mobile Only */}
+              <View style={{ marginTop: 32 }}>
+                <Text style={{
+                  fontSize: 18,
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  marginBottom: 16,
+                  marginTop: 24
+                }}>
+                  Discover Loops
+                </Text>
+
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: colors.structure, // Midnight Navy
+                    padding: 20,
+                    borderRadius: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    elevation: 4,
+                    marginBottom: 16
+                  }}
+                  onPress={() => navigation.navigate('TemplateLibrary')}
+                >
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}>
+                    <Text style={{ fontSize: 28, marginRight: 12 }}>📚</Text>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: 'bold',
+                      color: '#fff',
+                      flex: 1,
+                    }}>
+                      Loop Library
+                    </Text>
+                    <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
+                  </View>
+                  <Text style={{
+                    fontSize: 14,
+                    color: '#fff',
+                    opacity: 0.9,
+                    lineHeight: 20,
+                  }}>
+                    Explore loops inspired by top teachers, coaches, and business leaders
                   </Text>
                 </TouchableOpacity>
-              )}
+
+                {/* AI Loop Recommender */}
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: colors.primary, // Bumblebee
+                    padding: 20,
+                    borderRadius: 16,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  onPress={() => navigation.navigate('LoopSommelier')}
+                >
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 8,
+                  }}>
+                    <Text style={{ fontSize: 28, marginRight: 12 }}>✨</Text>
+                    <Text style={{
+                      fontSize: 20,
+                      fontWeight: 'bold',
+                      color: colors.text,
+                      flex: 1,
+                    }}>
+                      AI Loop Recommender
+                    </Text>
+                    <Text style={{ fontSize: 20, color: colors.text }}>→</Text>
+                  </View>
+                  <Text style={{
+                    fontSize: 14,
+                    color: colors.text,
+                    opacity: 0.85,
+                    lineHeight: 20,
+                  }}>
+                    Describe what you want to achieve and get personalized loop recommendations
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          )}
-
-          {/* Loop Library Section */}
-          <View style={{ marginTop: 32 }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: colors.text,
-              marginBottom: 16,
-            }}>
-              Discover Loops
-            </Text>
-
+            </ScrollView>
+            
+            {/* Sign Out Button (temporary) - Mobile Only */}
             <TouchableOpacity
               style={{
-                backgroundColor: '#667eea',
-                padding: 20,
-                borderRadius: 16,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-                elevation: 4,
+                position: 'absolute',
+                top: 60,
+                right: 20,
+                padding: 8,
               }}
-              onPress={() => navigation.navigate('TemplateLibrary')}
+              onPress={handleSignOut}
             >
-              <View style={{
-                flexDirection: 'row',
+              <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
+            </TouchableOpacity>
+
+            {/* FAB - Floating Action Button */}
+            <TouchableOpacity
+              style={{
+                position: 'absolute',
+                bottom: 24,
+                right: 24,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                backgroundColor: colors.primary,
                 alignItems: 'center',
-                marginBottom: 8,
-              }}>
-                <Text style={{ fontSize: 28, marginRight: 12 }}>📚</Text>
-                <Text style={{
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  flex: 1,
-                }}>
-                  Loop Library
-                </Text>
-                <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
-              </View>
-              <Text style={{
-                fontSize: 14,
-                color: '#fff',
-                opacity: 0.9,
-                lineHeight: 20,
-              }}>
-                Explore loops inspired by top teachers, coaches, and business leaders
-              </Text>
+                justifyContent: 'center',
+                elevation: 8,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.25,
+                shadowRadius: 4,
+              }}
+              onPress={openCreateLoopModal}
+            >
+              <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
             </TouchableOpacity>
           </View>
-        </View>
-        </ScrollView>
-
-        {/* Sign Out Button (temporary) */}
-        <TouchableOpacity
-          style={{
-            position: 'absolute',
-            top: 60,
-            right: 20,
-            padding: 8,
-          }}
-          onPress={handleSignOut}
-        >
-          <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
-        </TouchableOpacity>
-
-        {/* FAB - Floating Action Button */}
-        <TouchableOpacity
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            right: 24,
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            elevation: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-          }}
-          onPress={openCreateLoopModal}
-        >
-          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
-        </TouchableOpacity>
+        )}
       </View>
+      </ResponsiveContainer>
 
       <CreateLoopModal
         visible={modalVisible}

@@ -22,6 +22,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import LoopTypeToggle from './LoopTypeToggle';
 import { CustomDaySelector } from './CustomDaySelector';
+import { TimePicker } from './TimePicker';
+import { DayOfWeekPicker } from './DayOfWeekPicker';
 import { ResetRule, RESET_RULE_DESCRIPTIONS } from '../../types/loop';
 
 interface CreateLoopModalProps {
@@ -34,6 +36,8 @@ interface CreateLoopModalProps {
     type: ResetRule;
     custom_days?: number[];
     due_date?: string;
+    reset_time?: string;
+    reset_day_of_week?: number;
   }) => void;
   initialData?: {
     name: string;
@@ -61,6 +65,8 @@ export default function CreateLoopModal({
   const [timeEstimate, setTimeEstimate] = useState('');
   const [type, setType] = useState<ResetRule>('daily');
   const [customDays, setCustomDays] = useState<number[]>([]);
+  const [resetTime, setResetTime] = useState('04:00'); // Default 4am
+  const [resetDayOfWeek, setResetDayOfWeek] = useState(1); // Default Monday
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
@@ -70,6 +76,36 @@ export default function CreateLoopModal({
   };
 
   const themeColors = getThemeColors(type);
+
+  // Format time for display (convert 24-hour to 12-hour with am/pm)
+  const formatTimeDisplay = (time24: string) => {
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'pm' : 'am';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${minutes.toString().padStart(2, '0')}${period}`;
+  };
+
+  // Get dynamic reset description
+  const getResetDescription = () => {
+    const timeLabel = formatTimeDisplay(resetTime);
+    const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dayLabel = dayLabels[resetDayOfWeek];
+    
+    switch (type) {
+      case 'daily':
+        return `Resets every day at ${timeLabel}`;
+      case 'weekdays':
+        return `Monday - Friday at ${timeLabel}`;
+      case 'weekly':
+        return `Resets every ${dayLabel} at ${timeLabel}`;
+      case 'custom':
+        return 'Resets on selected days';
+      case 'manual':
+        return 'One-time checklist (no reset)';
+      default:
+        return '';
+    }
+  };
 
   useEffect(() => {
     if (visible && initialData) {
@@ -98,6 +134,8 @@ export default function CreateLoopModal({
       type,
       custom_days: type === 'custom' ? customDays : undefined,
       due_date: type === 'manual' ? (dueDate || new Date().toISOString()) : undefined,
+      reset_time: resetTime,
+      reset_day_of_week: type === 'weekly' ? resetDayOfWeek : undefined,
     });
   };
 
@@ -148,8 +186,47 @@ export default function CreateLoopModal({
                       onChange={(newType) => setType(newType)}
                     />
                     <Text style={[styles.hintText, { marginTop: 8, fontSize: 12, color: '#94a3b8' }]}>
-                      {RESET_RULE_DESCRIPTIONS[type]}
+                      {getResetDescription()}
                     </Text>
+                    
+                    {/* Time and Day Pickers */}
+                    {(type === 'daily' || type === 'weekdays' || type === 'weekly') && (
+                      <Animated.View
+                        entering={FadeIn}
+                        layout={Layout.springify()}
+                        style={styles.timePickerSection}
+                      >
+                        <View style={styles.timePickerRow}>
+                          {type === 'weekly' ? (
+                            <>
+                              <Text style={styles.timeLabel}>Resets every</Text>
+                              <DayOfWeekPicker
+                                value={resetDayOfWeek}
+                                onChange={setResetDayOfWeek}
+                                accentColor={themeColors.strong}
+                              />
+                              <Text style={styles.timeLabel}>at</Text>
+                              <TimePicker
+                                value={resetTime}
+                                onChange={setResetTime}
+                                accentColor={themeColors.strong}
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <Text style={styles.timeLabel}>
+                                {type === 'daily' ? 'Resets every day at' : 'Resets weekdays at'}
+                              </Text>
+                              <TimePicker
+                                value={resetTime}
+                                onChange={setResetTime}
+                                accentColor={themeColors.strong}
+                              />
+                            </>
+                          )}
+                        </View>
+                      </Animated.View>
+                    )}
                     
                     {/* Custom Day Selector */}
                     {type === 'custom' && (
@@ -423,6 +500,20 @@ const styles = StyleSheet.create({
   },
   inputGroup: {
     gap: 6,
+  },
+  timePickerSection: {
+    marginTop: 16,
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  timeLabel: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '500',
   },
   subLabel: {
     fontSize: 13,
