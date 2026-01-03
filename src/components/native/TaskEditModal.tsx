@@ -19,9 +19,10 @@ import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AssigneeDot } from '../ui/AssigneeDot';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS } from '../../types/loop';
+import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS } from '../../types/loop';
 import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
+import { CustomDaySelector } from './CustomDaySelector';
 
 // Conditionally import DateTimePicker only for native platforms
 let DateTimePicker: any;
@@ -57,7 +58,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [notes, setNotes] = useState('');
   const [priority, setPriority] = useState<TaskPriority>('none');
   const [assignedTo, setAssignedTo] = useState<string | null>(null);
-  const [isOneTime, setIsOneTime] = useState(false);
+  const [resetRule, setResetRule] = useState<ResetRule>('daily');
+  const [customDays, setCustomDays] = useState<number[]>([]); // For custom recurrence
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
   const [timeEstimate, setTimeEstimate] = useState('');
@@ -82,7 +84,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       setNotes(task.notes || '');
       setPriority(task.priority || 'none');
       setAssignedTo(task.assigned_user_id || null);
-      setIsOneTime(task.is_one_time ?? false);
+      // Map legacy is_one_time to resetRule
+      setResetRule(task.is_one_time ? 'manual' : 'daily');
       setDueDate(task.due_date ? new Date(task.due_date) : undefined);
       setReminderDate(task.reminder_at ? new Date(task.reminder_at) : undefined);
       setTimeEstimate(task.time_estimate_minutes?.toString() || '');
@@ -97,7 +100,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setNotes('');
     setPriority('none');
     setAssignedTo(null);
-    setIsOneTime(false);
+    setResetRule('daily');
+    setCustomDays([]);
     setDueDate(undefined);
     setReminderDate(undefined);
     setTimeEstimate('');
@@ -148,7 +152,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         notes: notes.trim() || undefined,
         priority,
         assigned_to: assignedTo,
-        is_one_time: isOneTime,
+        // Map resetRule to legacy is_one_time for now (will be fully migrated later)
+        is_one_time: resetRule === 'manual',
         due_date: dueDate?.toISOString(),
         reminder_at: reminderDate?.toISOString(),
         time_estimate_minutes: timeEstimate ? parseInt(timeEstimate) : undefined,
@@ -185,9 +190,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   };
 
-  // Determine accent color based on task type
-  const accentColor = isOneTime ? '#D4AF37' : '#EA580C'; // Gold for Task, Orange for Loop
-  const accentBg = isOneTime ? '#FBF5E6' : '#FFF0D4'; 
+  // Unified accent color for all recurrence options
+  const accentColor = '#FEC00F'; // Gold
+  const accentBg = '#FFF9E6'; // Light gold tint 
 
   return (
     <Modal
@@ -228,12 +233,31 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                   contentContainerStyle={styles.scrollContent}
                   style={{ maxHeight: Platform.OS === 'web' ? '85%' : 600 }}
                 >
-                  {/* Task Type Toggle at Top */}
+                  {/* Loop Recurrence Toggle */}
                   <View style={styles.section}>
+                    <Text style={styles.label}>Loop Recurrence</Text>
                     <LoopTypeToggle
-                      activeTab={isOneTime ? 'manual' : 'daily'}
-                      onChange={(type) => setIsOneTime(type === 'manual')}
+                      activeTab={resetRule}
+                      onChange={setResetRule}
                     />
+                    <Text style={[styles.hintText, { marginTop: 8 }]}>
+                      {RESET_RULE_DESCRIPTIONS[resetRule]}
+                    </Text>
+                    
+                    {/* Custom Day Selector - shows when 'custom' is selected */}
+                    {resetRule === 'custom' && (
+                      <Animated.View 
+                        entering={FadeIn}
+                        layout={Layout.springify()}
+                      >
+                        <CustomDaySelector
+                          selectedDays={customDays}
+                          onChange={setCustomDays}
+                          accentColor={accentColor}
+                          accentBg={accentBg}
+                        />
+                      </Animated.View>
+                    )}
                   </View>
 
                   {/* Primary Input - Task */}

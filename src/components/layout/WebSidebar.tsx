@@ -43,17 +43,12 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
     return false;
   };
 
-  // Helper to get color for item
+  // Helper to get color for item - UNIFIED GOLD BRAND
   const getItemColor = (id: SidebarItem) => {
-    // We need to cast carefully or check existence
-    // FOLDER_COLORS keys: personal, work, daily, shared, manual, weekly, goals
-    if (id === 'all') return colors.primary;
-    if (id === 'library') return colors.text; // Library uses neutral
-    if (id === 'sommelier') return colors.primary;
-    
-    // Check if id is a key in FOLDER_COLORS
-    // We know 'daily', 'weekly', 'manual' are valid keys
-    return FOLDER_COLORS[id as any] || colors.primary;
+    // Library uses neutral text color
+    if (id === 'library') return colors.text;
+    // All other items use gold
+    return colors.primary; // #FEC00F
   };
 
   const NavItem = ({ 
@@ -128,17 +123,31 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
-        {/* Navigation */}
+        {/* ===== SECTION 1: MY LOOPS ===== */}
         <View style={styles.navSection}>
-            <NavItem id="all" label="My Loops" iconName="home-outline" count={counts.all} />
-            <NavItem id="daily" label="Daily Routine" iconName="sunny-outline" count={counts.daily} />
-            <NavItem id="weekly" label="Weekly Goals" iconName="calendar-outline" count={counts.weekly} />
-            <NavItem id="manual" label="Checklists" iconName="checkbox-outline" count={counts.manual} />
-            
-            <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12, opacity: 0.5 }} />
-            
-            <NavItem id="library" label="Loop Library" iconName="book-outline" />
-            <NavItem id="sommelier" label="AI Recommender" iconName="sparkles-outline" />
+          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY LOOPS</Text>
+          
+          <NavItem id="all" label="All Loops" iconName="apps-outline" count={counts.all} />
+          <NavItem id="daily" label="My Day" iconName="sunny-outline" count={counts.daily} />
+          <NavItem id="weekly" label="Important" iconName="flag-outline" />
+          <NavItem id="manual" label="Planned" iconName="calendar-outline" count={counts.manual} />
+        </View>
+
+        {/* Section Divider */}
+        <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16, opacity: 0.3 }} />
+
+        {/* ===== SECTION 2: LOOP LIBRARY ===== */}
+        <View style={styles.navSection}>
+          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LOOP LIBRARY</Text>
+          
+          <NavItem id="library" label="My Templates" iconName="bookmark-outline" />
+          <NavItem id="library" label="Community" iconName="people-outline" />
+          <NavItem id="library" label="Shared Libraries" iconName="share-social-outline" />
+          <NavItem id="library" label="Premium" iconName="diamond-outline" />
+          
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8, opacity: 0.2 }} />
+          
+          <NavItem id="sommelier" label="AI Loop Recommender" iconName="sparkles-outline" />
         </View>
 
         {/* Create Action */}
@@ -205,6 +214,15 @@ const styles = StyleSheet.create({
   } as any, 
   navSection: {
     gap: 4,
+  },
+  sectionHeader: {
+    fontSize: 11,
+    fontWeight: '600', // Reduced from 700 for lighter appearance
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    marginTop: 4,
+    paddingHorizontal: 12,
+    textTransform: 'uppercase',
   },
   navItem: {
     flexDirection: 'row',

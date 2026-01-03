@@ -2,9 +2,12 @@
  * Supabase Database Types - Core data structures for DoLoop
  */
 
-export type ResetRule = 'manual' | 'daily' | 'weekly';
+export type ResetRule = 'manual' | 'daily' | 'weekdays' | 'weekly' | 'custom';
+export type LoopRole = 'creator' | 'collaborator' | 'assigned' | 'viewer';
 export type TaskStatus = 'pending' | 'done';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
+
+export type FilterType = 'all' | 'manual' | 'daily' | 'weekly';
 
 // Database Tables
 export interface User {
@@ -22,6 +25,7 @@ export interface Loop {
   affiliate_link?: string; // Link to order book/training
   category?: LoopType;
   reset_rule?: ResetRule;
+  custom_days?: number[]; // For custom recurrence: 0=Sun, 1=Mon, etc.
   next_reset_at?: string; // ISO date string
   due_date?: string; // ISO date string для manual loops
   is_favorite?: boolean;
@@ -47,6 +51,21 @@ export interface Loop {
   status?: string;
   last_reset?: string;
   completionHistory?: any[];
+  members?: LoopMember[];
+}
+
+export interface LoopMember {
+  id: string;
+  loop_id: string;
+  user_id: string;
+  role: LoopRole;
+  joined_at: string;
+  // Optional expanded user details handled by joins
+  user?: {
+    email: string;
+    full_name?: string; // or name/username
+    avatar_url?: string;
+  };
 }
 
 export interface Task {
@@ -57,6 +76,7 @@ export interface Task {
   completed: boolean;
   completed_at?: string; // When task was completed
   is_one_time: boolean;
+  is_critical?: boolean; // Must be completed before Loop can be marked done
   order_index?: number;
   created_at: string;
   updated_at: string;
@@ -67,6 +87,7 @@ export interface Task {
   tags?: string[]; // Array of tag IDs
   time_estimate_minutes?: number; // Estimated time in minutes
   reminder_at?: string; // ISO date string for reminder
+  assigned_to?: string | null; // UUID of assigned loop member
   
   // Legacy aliases
   isRecurring?: boolean; // alias for !is_one_time
@@ -82,7 +103,8 @@ export interface Subtask {
   id: string;
   task_id: string;
   description: string;
-  status: 'pending' | 'done';
+  completed: boolean;
+  order_index?: number;
   created_at?: string;
 }
 
@@ -167,6 +189,7 @@ export interface TemplateTask {
   id: string;
   template_id: string;
   description: string;
+  hint?: string; // Detailed explanation of this step
   is_recurring: boolean;
   is_one_time: boolean;
   display_order: number;
@@ -238,6 +261,7 @@ export interface MomentumData {
 
 export interface TaskWithDetails extends Task {
   // Extended properties are now part of the base Task interface
+  assigned_user_id?: string;
 }
 
 export interface LoopWithTasks extends Loop {
@@ -266,23 +290,23 @@ export const FOLDER_ICONS: Record<LoopType, string> = {
   goals: '🏆',
 };
 
-// Folder colors - Brand Kit
+// Folder colors - UNIFIED GOLD BRAND
 export const FOLDER_COLORS: Record<LoopType, string> = {
-  personal: '#FF1E88', // Hot pink
-  work: '#2EC4B6',     // Turquoise
-  daily: '#FFA500',    // Amber (Daily)
-  shared: '#B8860B',   // Dark Goldenrod
-  manual: '#FFD700',   // Bright Gold (Checklist)
-  weekly: '#B8860B',   // Dark Goldenrod (Weekly)
-  goals: '#8B4513',    // Saddle Brown (Goals)
+  personal: '#FEC00F', // Gold
+  work: '#FEC00F',     // Gold
+  daily: '#FEC00F',    // Gold
+  shared: '#FEC00F',   // Gold
+  manual: '#FEC00F',   // Gold
+  weekly: '#FEC00F',   // Gold
+  goals: '#FEC00F',    // Gold
 };
 
-// Explicit Color Mapping (from Design System)
+// Loop type colors - UNIFIED GOLD BRAND
 export const LOOP_TYPE_COLORS = {
-  CHECKLIST: '#FFD700', // Bright Gold
-  DAILY: '#FFA500',     // Amber
-  WEEKLY: '#B8860B',    // Dark Goldenrod
-  GOALS: '#8B4513',     // Saddle Brown/Bronze
+  CHECKLIST: '#FEC00F', // Gold
+  DAILY: '#FEC00F',     // Gold
+  WEEKLY: '#FEC00F',    // Gold
+  GOALS: '#FEC00F',     // Gold
 };
 
 // Priority colors
@@ -302,4 +326,66 @@ export const PRIORITY_LABELS: Record<TaskPriority, string> = {
   high: 'High',
   urgent: 'Urgent',
 };
+
+// Loop Recurrence labels
+export const RESET_RULE_LABELS: Record<ResetRule, string> = {
+  manual: 'Manual',
+  daily: 'Daily',
+  weekdays: 'Weekdays',
+  weekly: 'Weekly',
+  custom: 'Custom',
+};
+
+// Loop Recurrence descriptions
+export const RESET_RULE_DESCRIPTIONS: Record<ResetRule, string> = {
+  manual: 'One-time use, reset manually',
+  daily: 'Resets every morning at 4am',
+  weekdays: 'Monday - Friday at 4am',
+  weekly: 'Resets every Monday at 4am',
+  custom: 'Select specific days',
+};
+
+/**
+ * AI Loop Sommelier Types
+ */
+
+export type LoopCourse = 'starter' | 'main' | 'side' | 'dessert';
+
+export const COURSE_CONFIG: Record<LoopCourse, { emoji: string; name: string; description: string }> = {
+  starter: { emoji: '🥗', name: 'Starter', description: 'Quick wins and warmup routines' },
+  main: { emoji: '🍽️', name: 'Main Course', description: 'Core activities that address your goal' },
+  side: { emoji: '🥙', name: 'Side Dish', description: 'Supporting habits for success' },
+  dessert: { emoji: '🍰', name: 'Dessert', description: 'Rewards and reflection' },
+};
+
+export interface LoopRecommendation {
+  course: LoopCourse;
+  courseEmoji: string;
+  courseName: string;
+  template_id?: string;
+  loop: {
+    name: string;
+    description: string;
+    color: string;
+    resetRule: ResetRule;
+    tasks: Array<{ description: string; notes?: string }>;
+    // Data fields for experts
+    expertName?: string;
+    expertTitle?: string;
+    bookOrCourse?: string;
+    affiliateLink?: string;
+    needsAffiliateSetup?: boolean;
+  };
+  explanation: string;
+  isTemplate: boolean;
+}
+
+export interface RecommendationSession {
+  id: string;
+  user_id: string;
+  prompt: string;
+  parsed_goal: string;
+  recommendations: LoopRecommendation[];
+  created_at: string;
+}
 

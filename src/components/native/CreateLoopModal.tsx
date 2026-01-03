@@ -21,6 +21,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import LoopTypeToggle from './LoopTypeToggle';
+import { CustomDaySelector } from './CustomDaySelector';
+import { ResetRule, RESET_RULE_DESCRIPTIONS } from '../../types/loop';
 
 interface CreateLoopModalProps {
   visible: boolean;
@@ -56,18 +58,14 @@ export default function CreateLoopModal({
   const [priority, setPriority] = useState('Medium');
   const [dueDate, setDueDate] = useState('');
   const [timeEstimate, setTimeEstimate] = useState('');
-  const [type, setType] = useState<'manual' | 'daily' | 'weekly' | 'goals'>('manual');
+  const [type, setType] = useState<ResetRule>('daily');
+  const [customDays, setCustomDays] = useState<number[]>([]);
   const [showDetails, setShowDetails] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
 
   const getThemeColors = (tabId: string) => {
-    switch (tabId) {
-      case 'manual': return { strong: '#D4AF37', tint: '#FBF5E6' };
-      case 'daily': return { strong: '#EA580C', tint: '#FFF0D4' };
-      case 'weekly': return { strong: '#B8860B', tint: '#F0E6D2' };
-      case 'goals': return { strong: '#8B4513', tint: '#F5DEB3' };
-      default: return { strong: '#EA580C', tint: '#FFF0D4' };
-    }
+    // UNIFIED GOLD BRAND - all types use same gold color
+    return { strong: '#FEC00F', tint: '#FFF9E6' }; // Gold / Light gold tint
   };
 
   const themeColors = getThemeColors(type);
@@ -142,10 +140,29 @@ export default function CreateLoopModal({
                 >
                   {/* Loop Type Toggle at Top */}
                   <View style={styles.section}>
+                    <Text style={styles.label}>Loop Recurrence</Text>
                     <LoopTypeToggle
                       activeTab={type}
                       onChange={(newType) => setType(newType)}
                     />
+                    <Text style={[styles.hintText, { marginTop: 8, fontSize: 12, color: '#94a3b8' }]}>
+                      {RESET_RULE_DESCRIPTIONS[type]}
+                    </Text>
+                    
+                    {/* Custom Day Selector */}
+                    {type === 'custom' && (
+                      <Animated.View 
+                        entering={FadeIn}
+                        layout={Layout.springify()}
+                      >
+                        <CustomDaySelector
+                          selectedDays={customDays}
+                          onChange={setCustomDays}
+                          accentColor={themeColors.strong}
+                          accentBg={themeColors.tint}
+                        />
+                      </Animated.View>
+                    )}
                   </View>
 
                   {/* Primary Input - Task */}
@@ -392,7 +409,7 @@ const styles = StyleSheet.create({
   detailsToggleText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFB800',
+    color: '#FEC00F',
   },
   detailsContainer: {
     gap: 16,

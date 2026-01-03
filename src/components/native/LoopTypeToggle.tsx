@@ -12,21 +12,24 @@ import Animated, {
   withSpring,
   interpolate,
 } from 'react-native-reanimated';
+import { ResetRule, RESET_RULE_LABELS } from '../../types/loop';
 
 interface LoopTypeToggleProps {
-  activeTab: 'manual' | 'daily' | 'weekly' | 'goals';
-  onChange: (type: 'manual' | 'daily' | 'weekly' | 'goals') => void;
+  activeTab: ResetRule;
+  onChange: (type: ResetRule) => void;
+  showDescriptions?: boolean;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CONTAINER_WIDTH = Math.min(SCREEN_WIDTH - 40, 460);
 
-export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeToggleProps) {
-  const tabs = [
-    { id: 'manual', label: 'Task' },
-    { id: 'daily', label: 'Loop' },
-    { id: 'weekly', label: 'Weekly' },
-    { id: 'goals', label: 'Goal' },
+export default function LoopTypeToggle({ activeTab, onChange, showDescriptions = false }: LoopTypeToggleProps) {
+  const tabs: Array<{ id: ResetRule; label: string }> = [
+    { id: 'daily', label: RESET_RULE_LABELS.daily },
+    { id: 'weekdays', label: RESET_RULE_LABELS.weekdays },
+    { id: 'weekly', label: RESET_RULE_LABELS.weekly },
+    { id: 'custom', label: RESET_RULE_LABELS.custom },
+    { id: 'manual', label: RESET_RULE_LABELS.manual },
   ];
 
   const activeIndex = tabs.findIndex(tab => tab.id === activeTab);
@@ -48,14 +51,9 @@ export default function LoopTypeToggle({ activeTab, onChange }: LoopTypeTogglePr
     };
   });
 
-  const getTabColors = (tabId: string) => {
-    switch (tabId) {
-      case 'manual': return { bg: '#FBF5E6', text: '#D4AF37' }; // Champagne / Gold
-      case 'daily': return { bg: '#FFF0D4', text: '#EA580C' }; // Pale Honey / Dark Orange
-      case 'weekly': return { bg: '#F0E6D2', text: '#B8860B' }; // Pale Bronze / Dark Goldenrod
-      case 'goals': return { bg: '#F5DEB3', text: '#8B4513' }; // Wheat / SaddleBrown
-      default: return { bg: '#FFF0D4', text: '#EA580C' };
-    }
+  const getTabColors = (tabId: ResetRule) => {
+    // Unified gold color for all recurrence options
+    return { bg: '#FFF9E6', text: '#FEC00F' }; // Light gold tint / Gold
   };
 
   const activeColors = getTabColors(activeTab);
@@ -112,7 +110,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0', // Very subtle border, definitely nog blue
+    borderColor: 'transparent', // No border as requested
   },
   activeBackground: {
     position: 'absolute',
