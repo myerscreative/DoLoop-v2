@@ -17,6 +17,74 @@ interface SubtaskListProps {
   editable?: boolean;
 }
 
+const SubtaskItem = ({ 
+  item, 
+  onToggle, 
+  onDelete, 
+  editable 
+}: { 
+  item: Subtask; 
+  onToggle: (id: string, val: boolean) => void;
+  onDelete: (id: string) => void;
+  editable: boolean;
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <View style={styles.subtaskItemContainer}>
+      <View style={styles.subtaskRow}>
+        <TouchableOpacity
+          style={styles.checkbox}
+          onPress={() => onToggle(item.id, item.status !== 'done')}
+        >
+          <View
+            style={[
+              styles.checkboxInner,
+              item.status === 'done' && styles.checkboxChecked,
+            ]}
+          >
+            {item.status === 'done' && <Text style={styles.checkmark}>✓</Text>}
+          </View>
+        </TouchableOpacity>
+        <Text
+          style={[
+            styles.subtaskText,
+            item.status === 'done' && styles.subtaskTextCompleted,
+          ]}
+        >
+          {item.description}
+        </Text>
+        
+        {(item as any).notes && (
+          <TouchableOpacity
+            style={styles.infoButton}
+            onPress={() => setIsExpanded(!isExpanded)}
+          >
+            <Text style={[styles.infoIcon, { color: isExpanded ? '#FEC00F' : '#9CA3AF' }]}>
+              ⓘ
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {editable && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(item.id)}
+          >
+            <Text style={styles.deleteButtonText}>×</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {(item as any).notes && isExpanded && (
+        <View style={styles.notesContainer}>
+          <Text style={styles.notesText}>{ (item as any).notes }</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 export default function SubtaskList({
   subtasks,
   onToggleSubtask,
@@ -33,65 +101,17 @@ export default function SubtaskList({
     }
   };
 
-  const completedCount = subtasks.filter((s) => s.completed).length;
+  const completedCount = subtasks.filter((s) => s.status === 'done').length;
   const totalCount = subtasks.length;
 
-    const [isExpanded, setIsExpanded] = useState(false);
-
-    return (
-      <View style={styles.subtaskItemContainer}>
-        <View style={styles.subtaskRow}>
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={() => onToggleSubtask(item.id, !item.completed)}
-          >
-            <View
-              style={[
-                styles.checkboxInner,
-                item.completed && styles.checkboxChecked,
-              ]}
-            >
-              {item.completed && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-          </TouchableOpacity>
-          <Text
-            style={[
-              styles.subtaskText,
-              item.completed && styles.subtaskTextCompleted,
-            ]}
-          >
-            {item.description}
-          </Text>
-          
-          {(item as any).notes && (
-            <TouchableOpacity
-              style={styles.infoButton}
-              onPress={() => setIsExpanded(!isExpanded)}
-            >
-              <Text style={[styles.infoIcon, { color: isExpanded ? '#FEC00F' : '#9CA3AF' }]}>
-                ⓘ
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {editable && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => onDeleteSubtask(item.id)}
-            >
-              <Text style={styles.deleteButtonText}>×</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {(item as any).notes && isExpanded && (
-          <View style={styles.notesContainer}>
-            <Text style={styles.notesText}>{ (item as any).notes }</Text>
-          </View>
-        )}
-      </View>
-    );
-  };
+  const renderSubtask = ({ item }: { item: Subtask }) => (
+    <SubtaskItem
+      item={item}
+      onToggle={onToggleSubtask}
+      onDelete={onDeleteSubtask}
+      editable={editable}
+    />
+  );
 
   if (subtasks.length === 0 && !editable) {
     return null;
@@ -105,7 +125,7 @@ export default function SubtaskList({
         </Text>
       )}
       <FlatList
-        data={subtasks.sort((a, b) => (a.order_index || 0) - (b.order_index || 0))}
+        data={subtasks.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))}
         renderItem={renderSubtask}
         keyExtractor={(item) => item.id}
         scrollEnabled={false}

@@ -33,10 +33,17 @@ export async function getUserTags(userId: string): Promise<Tag[]> {
       .eq('user_id', userId)
       .order('name');
 
-    if (error) throw error;
+    if (error) {
+      // Handle missing table or other schema errors gracefully
+      if (error.code === 'PGRST205' || error.code === '406') {
+        return [];
+      }
+      throw error;
+    }
     return data || [];
   } catch (error) {
-    console.error('Error fetching tags:', error);
+    // Silent fail for tags to avoid noise
+    // console.error('Error fetching tags:', error);
     return [];
   }
 }
@@ -105,10 +112,10 @@ export async function createSubtask(
     const { data, error } = await supabase
       .from('subtasks')
       .insert({
-        parent_task_id: parentTaskId,
+        task_id: parentTaskId,
         description: description.trim(),
-        status: 'pending',
-        sort_order: sortOrder,
+        completed: false,
+        order_index: sortOrder,
       })
       .select()
       .single();
@@ -121,12 +128,11 @@ export async function createSubtask(
   }
 }
 
-export async function toggleSubtask(subtaskId: string, currentStatus: 'pending' | 'done'): Promise<boolean> {
+export async function toggleSubtask(subtaskId: string, currentCompleted: boolean): Promise<boolean> {
   try {
-    const newStatus = currentStatus === 'done' ? 'pending' : 'done';
     const { error } = await supabase
       .from('subtasks')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ completed: !currentCompleted })
       .eq('id', subtaskId);
 
     if (error) throw error;
@@ -157,8 +163,8 @@ export async function getTaskSubtasks(taskId: string): Promise<Subtask[]> {
     const { data, error } = await supabase
       .from('subtasks')
       .select('*')
-      .eq('parent_task_id', taskId)
-      .order('sort_order');
+      .eq('task_id', taskId)
+      .order('order_index');
 
     if (error) throw error;
     return data || [];

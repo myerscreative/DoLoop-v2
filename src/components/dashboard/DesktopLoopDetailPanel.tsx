@@ -148,7 +148,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           .from('user_streaks')
           .select('current_streak')
           .eq('user_id', user?.id)
-          .single()
+          .maybeSingle()
       ]);
       setLoopMembers(members);
       if (streakData.data) {
@@ -374,8 +374,6 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
               width={10}
               fill={currentProgress}
               tintColor="#FEC00F"
-              backgroundColor="#F0F0F0"
-              rotation={0}
               lineCap="round"
             >
               <Text style={styles.progressPercent}>{Math.round(currentProgress)}%</Text>

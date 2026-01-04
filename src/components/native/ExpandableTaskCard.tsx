@@ -32,9 +32,16 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [localSubtasks, setLocalSubtasks] = useState<Subtask[]>(task.subtasks || []);
+  
+  // Sync with parent task updates
+  React.useEffect(() => {
+    if (task.subtasks) {
+        setLocalSubtasks(task.subtasks);
+    }
+  }, [task.subtasks]);
 
   const hasSubtasks = localSubtasks.length > 0;
-  const completedSubtasks = localSubtasks.filter(st => st.status === 'done').length;
+  const completedSubtasks = localSubtasks.filter(st => st.completed).length;
   const totalSubtasks = localSubtasks.length;
   const taskStatus = task.completed ? 'done' : 'pending';
 
@@ -88,10 +95,10 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
   const handleToggleSubtask = async (subtask: Subtask) => {
     try {
-      const success = await toggleSubtask(subtask.id, subtask.status);
+      const success = await toggleSubtask(subtask.id, subtask.completed);
       if (success) {
         setLocalSubtasks(localSubtasks.map(st =>
-          st.id === subtask.id ? { ...st, status: st.status === 'done' ? 'pending' : 'done' } : st
+          st.id === subtask.id ? { ...st, completed: !st.completed } : st
         ));
         onSubtaskChange?.();
       }
@@ -186,9 +193,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
             {hasReminder && (
               <Ionicons name="alarm-outline" size={14} color="#9ca3af" />
             )}
-            {hasSubtasks && (
-              <Ionicons name="chevron-down-outline" size={14} color="#9ca3af" />
-            )}
           </View>
         </TouchableOpacity>
 
@@ -215,7 +219,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         >
           {/* Subtask List */}
           {localSubtasks.map((subtask) => {
-            const isDone = subtask.status === 'done';
+            const isDone = subtask.completed;
             return (
               <View key={subtask.id} style={styles.subtaskRow}>
                 <TouchableOpacity
@@ -319,19 +323,16 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
   },
   mainRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    padding: 16,
+    alignItems: 'center', // Center vertically
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    minHeight: 56,
   },
   checkbox: {
     width: 24,
@@ -341,18 +342,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-    marginTop: 2,
   },
   content: {
     flex: 1,
+    flexDirection: 'row', // Horizontal layout for desktop-like feel or compact mobile
+    alignItems: 'center',
+    flexWrap: 'wrap', // Allow wrapping if very narrow
   },
   titleRow: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
+    alignItems: 'center',
+    marginRight: 8,
   },
   description: {
-    flex: 1,
     fontSize: 16,
     fontWeight: '500',
     marginRight: 8,
@@ -361,20 +364,16 @@ const styles = StyleSheet.create({
   iconsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginTop: 2,
+    gap: 12,
   },
   expandButton: {
-    padding: 4,
-    marginLeft: 8,
+    padding: 8,
+    marginLeft: 4,
   },
   subtasksSection: {
-    paddingHorizontal: 16,
+    paddingLeft: 52, // Align with text (16 padding + 24 checkbox + 12 gap)
     paddingBottom: 12,
-    marginLeft: 36,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    paddingTop: 12,
+    marginTop: -4,
   },
   subtaskRow: {
     flexDirection: 'row',
@@ -392,10 +391,11 @@ const styles = StyleSheet.create({
   },
   subtaskText: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
   },
   deleteButton: {
     padding: 4,
+    opacity: 0.5,
   },
   addSubtaskInputRow: {
     flexDirection: 'row',
@@ -405,48 +405,41 @@ const styles = StyleSheet.create({
   },
   subtaskInput: {
     flex: 1,
-    fontSize: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    fontSize: 15,
+    paddingVertical: 6,
+    paddingHorizontal: 0, // Inline feel
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    backgroundColor: 'transparent',
+    borderRadius: 0,
   },
   addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f1f5f9',
+    marginLeft: 8,
   },
   addStepButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
+    marginTop: 4,
     gap: 6,
   },
   addStepText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   quickAddButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    marginLeft: 36,
-    gap: 4,
+    display: 'none',
   },
   quickAddText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94a3b8',
+    fontWeight: '500',
   },
 });

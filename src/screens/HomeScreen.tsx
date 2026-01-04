@@ -176,10 +176,10 @@ export const HomeScreen: React.FC = () => {
         .from('user_streaks')
         .select('current_streak')
         .eq('user_id', user.id)
-        .single();
+        .limit(1);
 
-      if (!streaksError && streakData) {
-        setTotalStreak(streakData.current_streak || 0);
+      if (!streaksError && streakData && streakData.length > 0) {
+        setTotalStreak(streakData[0].current_streak || 0);
       } else {
         setTotalStreak(0);
       }
@@ -241,8 +241,8 @@ export const HomeScreen: React.FC = () => {
           owner_id: user?.id,
           description: data.description,
           affiliate_link: data.affiliate_link,
-          color: FOLDER_COLORS[data.type as LoopType] || FOLDER_COLORS.personal,
-          category: category,
+          color: data.color || FOLDER_COLORS[data.type as LoopType] || FOLDER_COLORS.personal,
+          loop_type: category, // DB column is loop_type
           reset_rule: dbResetRule,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
@@ -300,7 +300,8 @@ export const HomeScreen: React.FC = () => {
           name: data.name,
           description: data.description,
           affiliate_link: data.affiliate_link,
-          category: category,
+          color: data.color,
+          loop_type: category, // DB column is loop_type
           reset_rule: dbResetRule,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,

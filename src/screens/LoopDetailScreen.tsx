@@ -17,25 +17,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
-import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
+
 import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
+import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
+import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
-=======
-import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag } from '../lib/taskHelpers';
->>>>>>> origin/claude/debug-metro-bundler-mJLzf
+import { LoopType, FOLDER_COLORS } from '../types/loop';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -57,10 +57,59 @@ export const LoopDetailScreen: React.FC = () => {
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [showThemePrompt, setShowThemePrompt] = useState(false);
   const [showResetMenu, setShowResetMenu] = useState(false);
-  const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [loopMembers, setLoopMembers] = useState<LoopMemberProfile[]>([]);
   const [showMemberList, setShowMemberList] = useState(false);
+  const [isEditingLoop, setEditingLoop] = useState(false);
+  const [savingLoop, setSavingLoop] = useState(false);
+
+  const handleUpdateLoop = async (data: any) => {
+    if (!loopData) return;
+    setSavingLoop(true);
+
+    try {
+      const isGoal = data.type === 'goals';
+      const category = data.type as LoopType;
+      const dbResetRule = isGoal ? 'manual' : data.type;
+
+      let nextResetAt: string | null = loopData.next_reset_at || null;
+
+      if (dbResetRule === 'manual') {
+        nextResetAt = null;
+      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
+        // If type changed or next_reset_at missing, recalculate
+        if (loopData.reset_rule !== dbResetRule || !loopData.next_reset_at) {
+          const days = data.type === 'weekly' ? 7 : 1;
+          nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('loops')
+        .update({
+          name: data.name,
+          description: data.description,
+          affiliate_link: data.affiliate_link,
+          color: data.color,
+          loop_type: category,
+          reset_rule: dbResetRule,
+          custom_days: data.custom_days || null,
+          next_reset_at: nextResetAt,
+          due_date: data.due_date,
+        })
+        .eq('id', loopId);
+
+      if (error) throw error;
+
+      await loadLoopData();
+      setEditingLoop(false);
+    } catch (error: any) {
+      console.error('Error updating loop:', error);
+      Alert.alert('Error', `Failed to update loop: ${error?.message}`);
+    } finally {
+      setSavingLoop(false);
+    }
+  };
 
   const formatNextReset = (nextResetAt: string | null) => {
     if (!nextResetAt) return 'Not scheduled';
@@ -166,9 +215,7 @@ export const LoopDetailScreen: React.FC = () => {
           };
         })
       );
-          };
-        })
-      );
+
 
       const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
       const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
@@ -191,6 +238,8 @@ export const LoopDetailScreen: React.FC = () => {
       console.error('Error loading loop data:', error);
       Alert.alert('Error', 'Failed to load loop data');
       return null;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -285,20 +334,16 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<TaskWithDetails>) => {
+  const handleSaveTask = async (taskData: Partial<TaskWithDetails>, pendingSubtasks?: Subtask[]): Promise<string | null> => {
     try {
       // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
       let finalAssignedTo = taskData.assigned_to;
       if (finalAssignedTo) {
-         // The modal sends userId. We need to ensure they are a loop member.
          const memberId = await ensureLoopMember(finalAssignedTo, loopId);
-         if (memberId) {
-             finalAssignedTo = memberId;
-         } else {
-             console.warn('Could not ensure loop member for assignment');
-             finalAssignedTo = null; 
-         }
+         finalAssignedTo = memberId || null;
       }
+
+      let savedTaskId: string | null = null;
 
       if (editingTask) {
         // Update existing task
@@ -306,9 +351,10 @@ export const LoopDetailScreen: React.FC = () => {
             ...taskData,
             assigned_to: finalAssignedTo
         });
+        savedTaskId = editingTask.id;
       } else {
-        // Create new task - set defaults for required fields
-        const { error } = await supabase.from('tasks').insert({
+        // Create new task
+        const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
           is_one_time: taskData.is_one_time ?? false,
@@ -319,35 +365,50 @@ export const LoopDetailScreen: React.FC = () => {
           notes: taskData.notes,
           time_estimate_minutes: taskData.time_estimate_minutes,
           reminder_at: taskData.reminder_at,
-        });
+        })
+        .select('id')
+        .single();
 
         if (error) throw error;
-
-        // If tags were selected, we need to get the task ID and add tags
-        if (taskData.tags && taskData.tags.length > 0) {
-          const { data: newTask } = await supabase
-            .from('tasks')
-            .select('id')
-            .eq('loop_id', loopId)
-            .eq('description', taskData.description)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-
-          if (newTask) {
-            await updateTaskExtended(newTask.id, { tags: taskData.tags });
-          }
+        
+        if (newTask) {
+            savedTaskId = newTask.id;
+            if (taskData.tags && taskData.tags.length > 0) {
+                await updateTaskExtended(newTask.id, { tags: taskData.tags });
+            }
         }
       }
 
-      console.log('[LoopDetail] Task added successfully');
+      // Save pending subtasks
+      if (savedTaskId && pendingSubtasks && pendingSubtasks.length > 0) {
+          console.log(`[LoopDetail] Saving ${pendingSubtasks.length} pending subtasks for task ${savedTaskId}`);
+          for (const sub of pendingSubtasks) {
+              await createSubtask(savedTaskId, sub.description, sub.order_index);
+          }
+      }
+
+      console.log('[LoopDetail] Task and subtasks saved successfully');
       await loadLoopData();
+      
       setModalVisible(false);
       setEditingTask(null);
+      
+      return savedTaskId;
     } catch (error) {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');
+      return null;
     }
+  };
+
+  const handleCreateTag = async (name: string, color: string) => {
+    if (!user) throw new Error('User not logged in');
+    const tag = await createTag(user.id, name, color);
+    if (!tag) {
+        throw new Error('Failed to create tag');
+    }
+    setAvailableTags(prev => [...prev, tag]); // Use functional update
+    return tag;
   };
 
   const openAddTaskModal = () => {
@@ -364,7 +425,7 @@ export const LoopDetailScreen: React.FC = () => {
           text: 'Edit',
           onPress: () => {
             setEditingTask(task);
-            setShowAddTaskModal(true);
+            setModalVisible(true);
           },
         },
         {
@@ -475,11 +536,13 @@ export const LoopDetailScreen: React.FC = () => {
         if (allDailyLoopsComplete) {
           const today = new Date().toISOString().split('T')[0];
           
-          const { data: currentStreak } = await supabase
+          const { data: streakData } = await supabase
             .from('user_streaks')
             .select('*')
             .eq('user_id', user?.id)
-            .single();
+            .limit(1);
+
+          const currentStreak = streakData?.[0] || null;
 
           let newStreak = 1;
           let longestStreak = 1;
@@ -557,18 +620,22 @@ export const LoopDetailScreen: React.FC = () => {
     setTimeout(() => setShowResetMenu(false), 3000);
   };
 
-  if (!loopData) {
+  // Derived state
+  const recurringTasks = loopData?.tasks?.filter(t => !t.is_one_time) || [];
+  const oneTimeTasks = loopData?.tasks?.filter(t => t.is_one_time) || [];
+  const currentProgress = loopData?.totalCount && loopData.totalCount > 0 
+    ? Math.round((loopData.completedCount / loopData.totalCount) * 100) 
+    : 0;
+
+  if (loading || !loopData) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: colors.text }}>Loading...</Text>
-      </SafeAreaView>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
+        <LoopIcon size={48} color={colors.primary} />
+      </View>
     );
   }
 
-  const currentProgress = loopData.totalCount > 0 ? (loopData.completedCount / loopData.totalCount) * 100 : 0;
-  const recurringTasks = loopData.tasks.filter(task => !task.is_one_time);
-  const oneTimeTasks = loopData.tasks.filter(task => task.is_one_time);
-
+  
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
       <View style={{
@@ -609,46 +676,64 @@ export const LoopDetailScreen: React.FC = () => {
 
         <ScrollView
           style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 180 }}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-        {/* Header with Progress Ring */}
-        <View style={{
-          alignItems: 'center',
-          paddingVertical: 20,
-          paddingHorizontal: 20,
-        }}>
-          <AnimatedCircularProgress
-            size={90}
-            width={8}
-            fill={currentProgress}
-            tintColor="#FEC00F"
-            backgroundColor={colors.border}
-          >
+          {/* Header with Icon and Name */}
+          <View style={{
+            alignItems: 'center',
+            paddingVertical: 20,
+            paddingHorizontal: 20,
+          }}>
+            {/* Loop Icon - Custom SVG */}
+            <LoopIcon 
+              size={64} 
+              color={loopData.color || '#FEC00F'} 
+            />
+            <View style={{ height: 16 }} />
+
+            {/* Loop Name */}
             <Text style={{
-              fontSize: 16,
+              fontSize: 28,
               fontWeight: 'bold',
               color: colors.text,
               textAlign: 'center',
-              paddingHorizontal: 4,
+              marginBottom: 4,
             }}>
               {loopData.name}
-              {loopData.is_favorite && ' ⭐'}
             </Text>
-          </AnimatedCircularProgress>
+            
+            {loopData.is_favorite && (
+              <Text style={{ fontSize: 16, marginTop: 4 }}>⭐</Text>
+            )}
 
-          {/* Reset Info */}
-          <Text style={{
-            fontSize: 14,
-            color: colors.textSecondary,
-            marginTop: 12,
-            textAlign: 'center',
-          }}>
-            {loopData.reset_rule === 'manual'
-              ? 'Manual checklist • Complete when ready'
-              : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`}
-          </Text>
+          {/* Clickable Reset Info */}
+          <TouchableOpacity 
+            onPress={() => setEditingLoop(true)}
+            activeOpacity={0.6}
+            style={{
+              marginTop: 12,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: 'transparent',
+            }}
+          >
+            <Text style={{
+              fontSize: 14,
+              color: colors.textSecondary,
+              textAlign: 'center',
+              textDecorationLine: 'underline',
+            }}>
+              {loopData.reset_rule === 'manual'
+                ? 'Manual checklist • Complete when ready'
+                : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`}
+            </Text>
+          </TouchableOpacity>
 
           {/* Member Avatars - Show collaborators */}
           {loopMembers.length > 0 && (
@@ -665,25 +750,23 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Invite Button - Only for loop owners */}
+          {/* Compact Invite Button - Only for loop owners */}
           {loopData.owner_id === user?.id && (
-            <TouchableOpacity
+             <TouchableOpacity
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#FFF9E5',
-                paddingHorizontal: 16,
-                paddingVertical: 10,
-                borderRadius: 20,
                 marginTop: 12,
-                gap: 6,
-                borderWidth: 1,
-                borderColor: '#FEC00F',
               }}
               onPress={() => setShowInviteModal(true)}
             >
-              <Ionicons name="person-add" size={16} color="#8A2BE2" />
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#8A2BE2' }}>
+              <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
+               <Text style={{ 
+                fontSize: 14, 
+                fontWeight: '600', 
+                color: colors.primary, // Using primary color ("Invite Collaborator" purple/gold depending on theme, using primary for now) or specific purple from before
+                marginLeft: 6
+              }}>
                 Invite Collaborator
               </Text>
             </TouchableOpacity>
@@ -808,51 +891,50 @@ export const LoopDetailScreen: React.FC = () => {
               Tasks ({loopData.completedCount}/{loopData.totalCount})
             </Text>
 
-            {recurringTasks.map((task) => (
-              <ExpandableTaskCard
-                key={task.id}
-                task={task as TaskWithDetails}
-                onPress={() => handleEditTask(task as TaskWithDetails)}
-                onToggle={() => toggleTask(task)}
-                onSubtaskChange={loadLoopData}
-              />
-            ))}
+            <View style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: '#e2e8f0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 2,
+            }}>
+                {recurringTasks.map((task, index) => (
+                <View key={task.id}>
+                    <ExpandableTaskCard
+                        task={task as TaskWithDetails}
+                        onPress={() => handleEditTask(task as TaskWithDetails)}
+                        onToggle={() => toggleTask(task)}
+                        onSubtaskChange={loadLoopData}
+                    />
+                </View>
+                ))}
+            </View>
 
             {/* Add Task Button */}
             <TouchableOpacity
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: 'transparent',
+                justifyContent: 'center',
                 padding: 16,
-                borderRadius: 8,
-                marginBottom: 8,
-                borderWidth: 2,
-                borderColor: colors.primary,
-                borderStyle: 'dashed',
+                marginTop: 12,
               }}
               onPress={openAddTaskModal}
               activeOpacity={0.7}
             >
-              <View style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: colors.primary,
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              }}>
-                <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>+</Text>
-              </View>
-
+              <Ionicons name="add" size={20} color={colors.primary} />
               <Text style={{
-                flex: 1,
                 fontSize: 16,
-                color: colors.primary,
+                color: colors.textSecondary,
                 fontWeight: '500',
+                marginLeft: 8,
               }}>
-                Add Task
+                Add Step
               </Text>
             </TouchableOpacity>
           </View>
@@ -870,57 +952,83 @@ export const LoopDetailScreen: React.FC = () => {
               One-time Tasks
             </Text>
 
-            {oneTimeTasks.map((task) => (
-              <ExpandableTaskCard
-                key={task.id}
-                task={task as TaskWithDetails}
-                onPress={() => handleEditTask(task as TaskWithDetails)}
-                onToggle={() => toggleTask(task)}
-                onSubtaskChange={loadLoopData}
-              />
-            ))}
+            <View style={{
+                backgroundColor: '#ffffff',
+                borderRadius: 16,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: '#e2e8f0',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 2,
+            }}>
+                {oneTimeTasks.map((task) => (
+                <ExpandableTaskCard
+                    key={task.id}
+                    task={task as TaskWithDetails}
+                    onPress={() => handleEditTask(task as TaskWithDetails)}
+                    onToggle={() => toggleTask(task)}
+                    onSubtaskChange={loadLoopData}
+                />
+                ))}
+            </View>
           </View>
         )}
         </ScrollView>
 
         {/* Reloop Button */}
-        <View style={{
-          position: 'absolute',
-          bottom: 100,
-          left: 20,
-          right: 20,
-        }}>
-          {(() => {
-            const isManual = loopData?.reset_rule === 'manual';
-            const canReset = isManual ? currentProgress >= 100 : (currentProgress >= 100 || showResetMenu);
-            const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : 'Reloop');
+        {recurringTasks.length > 0 && (
+          <View style={{
+            position: 'absolute',
+            bottom: 40,
+            left: 20,
+            right: 20,
+          }}>
+            {(() => {
+              const isManual = loopData?.reset_rule === 'manual';
+              const canReset = isManual ? currentProgress >= 100 : (currentProgress >= 100 || showResetMenu);
+              const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : 'Reloop');
+              
+              const buttonBg = showResetMenu 
+                ? colors.error 
+                : (canReset ? loopData.color : '#e2e8f0'); // Use explicit grey for disabled bg
 
-            return (
-              <TouchableOpacity
-                style={{
-                  backgroundColor: showResetMenu ? colors.error : (canReset ? loopData.color : colors.border),
-                  paddingVertical: 16,
-                  paddingHorizontal: 24,
-                  borderRadius: 25,
-                  alignItems: 'center',
-                  opacity: canReset ? 1 : 0.5,
-                }}
-                onPress={handleReloop}
-                onLongPress={longPressReloop}
-                delayLongPress={500}
-                disabled={!canReset}
-              >
-                <Text style={{
-                  color: 'white',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                }}>
-                  {buttonText}
-                </Text>
-              </TouchableOpacity>
-            );
-          })()}
-        </View>
+              const buttonTextColor = canReset ? 'white' : '#94a3b8'; // Darker grey text for disabled
+
+              return (
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: buttonBg,
+                    paddingVertical: 16,
+                    paddingHorizontal: 24,
+                    borderRadius: 25,
+                    alignItems: 'center',
+                    opacity: 1, // Remove opacity, use explicit colors
+                    elevation: canReset ? 4 : 0,
+                    shadowColor: canReset ? '#000' : 'transparent',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.25,
+                    shadowRadius: 4,
+                  }}
+                  onPress={handleReloop}
+                  onLongPress={longPressReloop}
+                  delayLongPress={500}
+                  disabled={!canReset}
+                >
+                  <Text style={{
+                    color: buttonTextColor,
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                    {buttonText}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
+          </View>
+        )}
 
         {/* Theme Customization Prompt Modal */}
         <Modal
@@ -975,46 +1083,43 @@ export const LoopDetailScreen: React.FC = () => {
           </View>
         </Modal>
 
-      {/* FAB */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          bottom: 24,
-          right: 24,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: colors.primary,
-          alignItems: 'center',
-          justifyContent: 'center',
-          elevation: 8,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 4,
-        }}
-        onPress={handleAddTask}
-      >
-        <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
-      </TouchableOpacity>
+      {/* FAB - Only show if tasks exist (otherwise Empty State + button is shown) */}
+      {recurringTasks.length > 0 && (
+        <TouchableOpacity
+          style={{
+            position: 'absolute',
+            bottom: 110, // Moved up to sit above the Complete Checklist button
+            right: 24,
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.primary,
+            alignItems: 'center',
+            justifyContent: 'center',
+            elevation: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 4,
+          }}
+          onPress={handleAddTask}
+        >
+          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Task Edit Modal */}
       <TaskEditModal
         visible={modalVisible}
         onClose={() => {
-          setModalVisible(false);
-          setEditingTask(null);
+            setModalVisible(false);
+            setEditingTask(null);
         }}
         onSave={handleSaveTask}
         task={editingTask}
+        user={user}
+        onCreateTag={handleCreateTag}
         availableTags={availableTags}
-        onCreateTag={async (name, color) => {
-          if (!user) throw new Error('User not logged in');
-          const tag = await createTag(user.id, name, color);
-          if (!tag) throw new Error('Failed to create tag');
-          setAvailableTags([...availableTags, tag]);
-          return tag;
-        }}
       />
 
       {/* Invite Modal */}
@@ -1035,6 +1140,21 @@ export const LoopDetailScreen: React.FC = () => {
         onClose={() => setShowMemberList(false)}
         members={loopMembers}
         loopName={loopData?.name || 'Loop'}
+      />
+      <CreateLoopModal 
+        visible={isEditingLoop}
+        onClose={() => setEditingLoop(false)}
+        onSave={handleUpdateLoop}
+        initialData={loopData ? {
+          name: loopData.name || '',
+          description: loopData.description || '',
+          affiliate_link: loopData.affiliate_link || '',
+          reset_rule: loopData.reset_rule || 'manual',
+          color: loopData.color,
+          due_date: loopData.due_date,
+        } : null}
+        loading={savingLoop}
+        isEditing={true}
       />
       </View>
     </SafeAreaView>
