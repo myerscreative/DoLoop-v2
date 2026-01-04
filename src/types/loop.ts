@@ -112,10 +112,21 @@ export interface Subtask {
 export interface Attachment {
   id: string;
   task_id: string;
-  name: string;
-  url: string;
-  type: string;
+  file_name: string;
+  file_url: string;
+  file_type: string;
+  file_size: number;
+  uploaded_by: string;
   created_at?: string;
+}
+
+// Pending attachment from picker (before upload)
+export interface PendingAttachment {
+  uri: string;
+  name: string;
+  type: 'image' | 'file';
+  mimeType?: string;
+  size?: number;
 }
 
 export interface TaskReminder {

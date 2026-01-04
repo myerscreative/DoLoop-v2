@@ -178,23 +178,40 @@ export async function uploadAttachment(
   userId: string
 ): Promise<Attachment | null> {
   try {
-    // Note: You'll need to implement actual file upload to Supabase Storage
-    // This is a placeholder structure
-    const fileName = `${Date.now()}_${file.name}`;
-    const filePath = `attachments/${taskId}/${fileName}`;
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const filePath = `${userId}/${taskId}/${fileName}`;
 
-    // TODO: Upload file to Supabase Storage
-    // const { data: uploadData, error: uploadError } = await supabase.storage
-    //   .from('task-attachments')
-    //   .upload(filePath, file);
+    // Fetch file from URI and convert to blob for upload
+    const response = await fetch(file.uri);
+    const blob = await response.blob();
 
-    // For now, just create the database record
+    // Upload file to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('task-attachments')
+      .upload(filePath, blob, {
+        contentType: file.type,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('Storage upload error:', uploadError);
+      throw uploadError;
+    }
+
+    // Get the public URL for the uploaded file
+    const { data: urlData } = supabase.storage
+      .from('task-attachments')
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData?.publicUrl || filePath;
+
+    // Create the database record
     const { data, error } = await supabase
       .from('attachments')
       .insert({
         task_id: taskId,
         file_name: file.name,
-        file_url: filePath, // Would be the public URL from storage
+        file_url: publicUrl,
         file_type: file.type,
         file_size: file.size,
         uploaded_by: userId,

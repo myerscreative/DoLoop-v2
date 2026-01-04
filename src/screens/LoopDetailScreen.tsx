@@ -23,12 +23,12 @@ import { RootStackParamList } from '../../App';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
+import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment } from '../types/loop';
 import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, uploadAttachment } from '../lib/taskHelpers';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -255,14 +255,17 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<TaskWithDetails>) => {
+  const handleSaveTask = async (taskData: Partial<TaskWithDetails>, pendingAttachments?: PendingAttachment[]) => {
     try {
+      let taskId: string | undefined;
+
       if (editingTask) {
         // Update existing task
         await updateTaskExtended(editingTask.id, taskData);
+        taskId = editingTask.id;
       } else {
         // Create new task - set defaults for required fields
-        const { error } = await supabase.from('tasks').insert({
+        const { data: newTaskData, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
           is_one_time: taskData.is_one_time ?? false,
@@ -273,28 +276,44 @@ export const LoopDetailScreen: React.FC = () => {
           notes: taskData.notes,
           time_estimate_minutes: taskData.time_estimate_minutes,
           reminder_at: taskData.reminder_at,
-        });
+        }).select('id').single();
 
         if (error) throw error;
+        taskId = newTaskData?.id;
 
-        // If tags were selected, we need to get the task ID and add tags
-        if (taskData.tags && taskData.tags.length > 0) {
-          const { data: newTask } = await supabase
-            .from('tasks')
-            .select('id')
-            .eq('loop_id', loopId)
-            .eq('description', taskData.description)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        // If tags were selected, add them to the task
+        if (taskId && taskData.tags && taskData.tags.length > 0) {
+          await updateTaskExtended(taskId, { tags: taskData.tags });
+        }
+      }
 
-          if (newTask) {
-            await updateTaskExtended(newTask.id, { tags: taskData.tags });
+      // Upload any pending attachments
+      if (taskId && pendingAttachments && pendingAttachments.length > 0 && user) {
+        console.log('[LoopDetail] Uploading', pendingAttachments.length, 'attachments...');
+        for (const attachment of pendingAttachments) {
+          try {
+            const result = await uploadAttachment(
+              taskId,
+              {
+                name: attachment.name,
+                type: attachment.mimeType || (attachment.type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+                size: attachment.size || 0,
+                uri: attachment.uri,
+              },
+              user.id
+            );
+            if (result) {
+              console.log('[LoopDetail] Attachment uploaded:', result.file_name);
+            } else {
+              console.warn('[LoopDetail] Failed to upload attachment:', attachment.name);
+            }
+          } catch (attachError) {
+            console.error('[LoopDetail] Error uploading attachment:', attachError);
           }
         }
       }
 
-      console.log('[LoopDetail] Task added successfully');
+      console.log('[LoopDetail] Task saved successfully');
       await loadLoopData();
       setModalVisible(false);
       setEditingTask(null);

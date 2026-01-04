@@ -22,7 +22,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AssigneeDot } from '../ui/AssigneeDot';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment } from '../../types/loop';
+import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment, PendingAttachment } from '../../types/loop';
 import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
 import { CustomDaySelector } from './CustomDaySelector';
@@ -36,7 +36,7 @@ if (Platform.OS !== 'web') {
 interface TaskEditModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (taskData: Partial<TaskWithDetails>) => Promise<void>;
+  onSave: (taskData: Partial<TaskWithDetails>, pendingAttachments?: PendingAttachment[]) => Promise<void>;
   task?: TaskWithDetails | null;
   availableTags: Tag[];
   onCreateTag?: (name: string, color: string) => Promise<Tag>;
@@ -231,8 +231,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         tags: selectedTags.map(t => t.id),
       };
 
-      await onSave(taskData);
-      
+      // Pass pending attachments to be uploaded after task is created
+      await onSave(taskData, pendingAttachments.length > 0 ? pendingAttachments : undefined);
+
       if (closeModal) {
         onClose();
         resetForm();
