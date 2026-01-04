@@ -6,6 +6,8 @@ import {
   TextInput,
   StyleSheet,
   Alert,
+  Image,
+  Linking,
 } from 'react-native';
 import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -260,6 +262,38 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
             );
           })}
 
+          {/* Attachments Section */}
+          {task.attachments && task.attachments.length > 0 && (
+            <View style={styles.attachmentsSection}>
+              {task.attachments.map((att) => (
+                <View key={att.id} style={styles.attachmentRow}>
+                  <Ionicons 
+                    name={att.file_type?.startsWith('image/') ? 'image-outline' : 'document-outline'} 
+                    size={16} 
+                    color="#64748b" 
+                  />
+                  <TouchableOpacity onPress={() => Linking.openURL(att.file_url)} style={{ flex: 1 }}>
+                    <Text style={styles.attachmentName} numberOfLines={1}>
+                      {att.file_name}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              
+              {/* Image Preview Strip */}
+              <View style={styles.imagePreviewStrip}>
+                {task.attachments
+                  .filter(att => att.file_type?.startsWith('image/'))
+                  .map(att => (
+                    <TouchableOpacity key={att.id} onPress={() => Linking.openURL(att.file_url)}>
+                      <Image source={{ uri: att.file_url }} style={styles.previewImage} />
+                    </TouchableOpacity>
+                  ))
+                }
+              </View>
+            </View>
+          )}
+
           {/* Add Subtask Input */}
           {showAddSubtask ? (
             <View style={styles.addSubtaskInputRow}>
@@ -441,5 +475,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94a3b8',
     fontWeight: '500',
+  },
+  attachmentsSection: {
+    marginTop: 8,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    paddingTop: 8,
+  },
+  attachmentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  attachmentName: {
+    fontSize: 14,
+    color: '#64748b',
+    textDecorationLine: 'underline',
+  },
+  imagePreviewStrip: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  previewImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
   },
 });

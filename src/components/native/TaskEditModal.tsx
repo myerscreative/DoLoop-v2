@@ -35,7 +35,16 @@ if (Platform.OS !== 'web') {
 interface TaskEditModalProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (task: Partial<TaskWithDetails>, pendingSubtasks?: Subtask[]) => Promise<string | null>; // Return ID
+  onSave: (
+    task: Partial<TaskWithDetails>, 
+    pendingSubtasks?: Subtask[], 
+    pendingAttachments?: {
+      uri: string;
+      name: string;
+      type: 'image' | 'file';
+      mimeType?: string;
+    }[]
+  ) => Promise<string | null>; // Return ID
   task?: TaskWithDetails | null;
   user: any;
   onCreateTag?: (name: string, color: string) => Promise<Tag | null>;
@@ -73,6 +82,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [timeEstimate, setTimeEstimate] = useState('');
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
 
   // Attachment state
   const [pendingAttachments, setPendingAttachments] = useState<{
@@ -111,6 +121,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         setSelectedTags(task.tag_details || []);
         // Ensure subtasks is an array
         setSubtasks(Array.isArray(task.subtasks) ? task.subtasks : []);
+        setExistingAttachments(task.attachments || []);
       } else {
         resetForm();
       }
@@ -129,6 +140,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setTimeEstimate('');
     setSelectedTags([]);
     setPendingAttachments([]);
+    setExistingAttachments([]);
     setSubtasks([]);
     setShowDetails(false);
     setShowPriorityPicker(false);
@@ -197,6 +209,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setPendingAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleDeleteExistingAttachment = async (id: string) => {
+    try {
+        const { deleteAttachment } = await import('../../lib/taskHelpers');
+        const success = await deleteAttachment(id);
+        if (success) {
+            setExistingAttachments(prev => prev.filter(a => a.id !== id));
+        } else {
+            Alert.alert('Error', 'Failed to delete attachment');
+        }
+    } catch (error) {
+        console.error('Error deleting attachment:', error);
+        Alert.alert('Error', 'Could not delete attachment');
+    }
+  };
+
   const toggleTag = (tag: Tag) => {
     setSelectedTags(prev =>
       prev.find(t => t.id === tag.id)
@@ -245,7 +272,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
       // Pass pending subtasks (only temp ones, as existing ones are already saved)
       const pendingSubtasks = subtasks.filter(s => s.id.startsWith('temp_'));
-      await onSave(taskData, pendingSubtasks);
+      await onSave(taskData, pendingSubtasks, pendingAttachments);
       
       if (closeModal) {
         onClose();
@@ -602,25 +629,67 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             <OptionRow
                 icon="attach-outline"
                 label="Attach File"
-                value={pendingAttachments.filter(a => a.type === 'file').length > 0 ? `${pendingAttachments.filter(a => a.type === 'file').length} files` : null}
+                value={(existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length) > 0 
+                  ? `${existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length} files` 
+                  : null}
                 onPress={handlePickDocument}
                 isBlue
             />
+            {/* Existing Files List */}
+            {existingAttachments.filter(a => !a.file_type?.startsWith('image/')).map(att => (
+               <View key={att.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
+                  <Ionicons name="document-outline" size={16} color="#64748b" />
+                  <Text style={{ flex: 1, fontSize: 13, color: '#64748b' }} numberOfLines={1}>{att.file_name}</Text>
+                  <TouchableOpacity onPress={() => handleDeleteExistingAttachment(att.id)}>
+                    <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                  </TouchableOpacity>
+               </View>
+            ))}
+            {/* Pending Files List */}
+            {pendingAttachments.filter(a => a.type === 'file').map((att, i) => (
+               <View key={`pending-file-${i}`} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
+                  <Ionicons name="document-outline" size={16} color="#94a3b8" />
+                  <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }} numberOfLines={1}>{att.name}</Text>
+                  <TouchableOpacity onPress={() => removeAttachment(i)}>
+                    <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                  </TouchableOpacity>
+               </View>
+            ))}
             <View style={styles.separator} />
 
             {/* Attach Image */}
             <OptionRow
                 icon="image-outline"
                 label="Attach image"
-                // If images exist, show count or something?
-                value={pendingAttachments.filter(a => a.type === 'image').length > 0 ? `${pendingAttachments.filter(a => a.type === 'image').length} images` : null}
+                value={(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length) > 0 
+                  ? `${existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length} images` 
+                  : null}
                 onPress={handlePickImage}
             />
-             {/* Pending Images Strip */}
-             {pendingAttachments.filter(a => a.type === 'image').length > 0 && (
-                <View style={{ flexDirection: 'row', paddingHorizontal: 20, paddingBottom: 10, gap: 8 }}>
+             {/* Combined Images Strip */}
+             {(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length > 0 || pendingAttachments.filter(a => a.type === 'image').length > 0) && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingBottom: 10, gap: 8 }}>
+                    {existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(att => (
+                        <View key={att.id} style={{ position: 'relative' }}>
+                            <Image source={{ uri: att.file_url }} style={{ width: 45, height: 45, borderRadius: 6 }} />
+                            <TouchableOpacity 
+                              onPress={() => handleDeleteExistingAttachment(att.id)}
+                              style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                            >
+                                <Ionicons name="close-circle" size={18} color="#ef4444" />
+                            </TouchableOpacity>
+                        </View>
+                    ))}
                     {pendingAttachments.filter(a => a.type === 'image').map((att, i) => (
-                        <Image key={i} source={{ uri: att.uri }} style={{ width: 40, height: 40, borderRadius: 4 }} />
+                        <View key={`pending-${i}`} style={{ position: 'relative' }}>
+                            <Image source={{ uri: att.uri }} style={{ width: 45, height: 45, borderRadius: 6, opacity: 0.7 }} />
+                            <TouchableOpacity 
+                              onPress={() => removeAttachment(i)}
+                              style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                            >
+                                <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                            </TouchableOpacity>
+                        </View>
                     ))}
                 </View>
              )}

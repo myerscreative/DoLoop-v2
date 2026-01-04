@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Animated, Image, Linking } from 'react-native';
 import { TaskWithDetails } from '../../types/loop';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -209,6 +209,33 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
               </Text>
             </View>
           )}
+
+          {/* Attachments (Expanded) */}
+          {isExpanded && task.attachments && task.attachments.length > 0 && (
+            <View style={styles.attachmentsContainer}>
+              <View style={styles.imageGrid}>
+                {task.attachments
+                  .filter(att => att.file_type?.startsWith('image/'))
+                  .map(att => (
+                    <TouchableOpacity key={att.id} onPress={() => Linking.openURL(att.file_url)}>
+                      <Image source={{ uri: att.file_url }} style={styles.gridImage} />
+                    </TouchableOpacity>
+                  ))
+                }
+              </View>
+              <View style={styles.fileList}>
+                {task.attachments.map(att => (
+                  <TouchableOpacity 
+                    key={att.id} 
+                    onPress={() => Linking.openURL(att.file_url)}
+                    style={styles.fileItem}
+                  >
+                    <Text style={styles.fileText}>📎 {att.file_name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -309,5 +336,33 @@ const styles = StyleSheet.create({
   },
   lightbulb: {
     fontSize: 14,
+  },
+  attachmentsContainer: {
+    marginTop: 12,
+    gap: 12,
+  },
+  imageGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  gridImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  fileList: {
+    gap: 4,
+  },
+  fileItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  fileText: {
+    fontSize: 13,
+    color: '#64748b',
+    textDecorationLine: 'underline',
   },
 });

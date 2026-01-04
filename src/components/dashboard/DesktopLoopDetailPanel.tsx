@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Platform,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
@@ -25,7 +26,16 @@ import { TaskEditModal } from '../native/TaskEditModal';
 import { InviteModal } from '../native/InviteModal';
 import { MemberAvatars } from '../native/MemberAvatars';
 import { BeeIcon } from '../native/BeeIcon';
-import { getUserTags, getTaskTags, updateTaskExtended, ensureLoopMember } from '../../lib/taskHelpers';
+import { 
+  getUserTags, 
+  getTaskTags, 
+  getTaskSubtasks, 
+  getTaskAttachments, 
+  updateTaskExtended, 
+  ensureLoopMember, 
+  uploadAttachment, 
+  createSubtask 
+} from '../../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../../lib/profileHelpers';
 import { useSharedMomentum } from '../../hooks/useSharedMomentum';
 
@@ -55,6 +65,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const [loopMembers, setLoopMembers] = useState<LoopMemberProfile[]>([]);
   const [showResetMenu, setShowResetMenu] = useState(false);
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [streak, setStreak] = useState(0);
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
 
@@ -120,23 +131,29 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
       if (tasksError) throw tasksError;
 
-      const tasksWithTags = await Promise.all(
+      const tasksWithDetails = await Promise.all(
         (tasks || []).map(async (task: any) => {
-          const tags = await getTaskTags(task.id);
+          const [tags, subtasks, attachments] = await Promise.all([
+            getTaskTags(task.id),
+            getTaskSubtasks(task.id),
+            getTaskAttachments(task.id),
+          ]);
           return {
             ...task,
             tag_details: tags,
+            subtasks,
+            attachments,
             assigned_user_id: task.assigned_member?.user_id
           };
         })
       );
 
-      const completedCount = tasksWithTags?.filter(task => task.completed && !task.is_one_time).length || 0;
-      const totalCount = tasksWithTags?.filter(task => !task.is_one_time).length || 0;
+      const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
+      const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
 
       const loopWithTasks: LoopWithTasks = {
         ...loop,
-        tasks: tasksWithTags || [],
+        tasks: tasksWithDetails || [],
         completedCount,
         totalCount,
       };
@@ -227,8 +244,13 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     setModalVisible(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<TaskWithDetails>) => {
+  const handleSaveTask = async (
+    taskData: Partial<TaskWithDetails>,
+    pendingSubtasks?: Subtask[],
+    pendingAttachments?: any[]
+  ) => {
     try {
+      setSaving(true);
       let finalAssignedTo = taskData.assigned_to;
       if (finalAssignedTo) {
          const memberId = await ensureLoopMember(finalAssignedTo, loopId);
@@ -236,10 +258,13 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
          else finalAssignedTo = null; 
       }
 
+      let savedTaskId: string | null = null;
+
       if (editingTask) {
         await updateTaskExtended(editingTask.id, { ...taskData, assigned_to: finalAssignedTo });
+        savedTaskId = editingTask.id;
       } else {
-        const { error } = await supabase.from('tasks').insert({
+        const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
           is_one_time: taskData.is_one_time ?? false,
@@ -250,22 +275,28 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           notes: taskData.notes,
           time_estimate_minutes: taskData.time_estimate_minutes,
           reminder_at: taskData.reminder_at,
-        });
+        }).select('id').single();
+        
         if (error) throw error;
+        if (newTask) savedTaskId = newTask.id;
 
-        if (taskData.tags && taskData.tags.length > 0) {
-            // Very simplified tag handling for now
-             const { data: newTask } = await supabase
-            .from('tasks')
-            .select('id')
-            .eq('loop_id', loopId)
-            .eq('description', taskData.description)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        if (savedTaskId && taskData.tags && taskData.tags.length > 0) {
+            await updateTaskExtended(savedTaskId, { tags: taskData.tags });
+        }
+      }
 
-            if (newTask) {
-                await updateTaskExtended(newTask.id, { tags: taskData.tags });
+      if (savedTaskId) {
+        // Save pending subtasks
+        if (pendingSubtasks && pendingSubtasks.length > 0) {
+            for (const sub of pendingSubtasks) {
+                await createSubtask(savedTaskId, sub.description, sub.order_index);
+            }
+        }
+
+        // Save pending attachments
+        if (pendingAttachments && pendingAttachments.length > 0 && user) {
+            for (const att of pendingAttachments) {
+                await uploadAttachment(savedTaskId, att, user.id);
             }
         }
       }
@@ -276,6 +307,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     } catch (error) {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -327,6 +360,27 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
       }
   };
 
+  const handleCreateTag = async (name: string) => {
+    if (!name.trim() || !user) return;
+    try {
+      const { data, error } = await supabase
+        .from('tags')
+        .insert({
+          user_id: user.id,
+          name: name.trim(),
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setAvailableTags(prev => [...prev, data]);
+      return data;
+    } catch (err) {
+      console.error('Error creating tag:', err);
+      Alert.alert('Error', 'Failed to create tag');
+    }
+  };
+
   if (!loopData) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -374,9 +428,10 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
               width={10}
               fill={currentProgress}
               tintColor="#FEC00F"
-              lineCap="round"
             >
+             <View style={styles.progressCircle}>
               <Text style={styles.progressPercent}>{Math.round(currentProgress)}%</Text>
+            </View>
             </AnimatedCircularProgress>
             
             <View style={styles.progressTextContainer}>
@@ -392,50 +447,24 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
         {/* TASKS SECTION */}
         <View style={styles.tasksSection}>
-          <Text style={styles.sectionTitle}>Tasks</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+             <Text style={styles.sectionTitle}>Tasks</Text>
+             {saving && (
+               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                 <ActivityIndicator size="small" color="#FEC00F" />
+                 <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Saving...</Text>
+               </View>
+             )}
+          </View>
+          
           {recurringTasks.map((task) => (
-            <View key={task.id} style={styles.taskContainer}>
-              <TouchableOpacity 
-                style={styles.taskItem}
-                onPress={() => toggleTask(task)}
-              >
-                <View style={[
-                  styles.checkbox,
-                  task.completed && styles.checkboxChecked
-                ]}>
-                  {task.completed && <Ionicons name="checkmark" size={16} color="#ffffff" />}
-                </View>
-                <Text style={[
-                  styles.taskDescription,
-                  task.completed && styles.taskDescriptionCompleted
-                ]}>
-                  {task.description}
-                </Text>
-                {task.notes && (
-                  <TouchableOpacity
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      const newHints = new Set(expandedHints);
-                      if (newHints.has(task.id)) newHints.delete(task.id);
-                      else newHints.add(task.id);
-                      setExpandedHints(newHints);
-                    }}
-                    style={styles.infoButton}
-                  >
-                    <Ionicons 
-                      name="information-circle-outline" 
-                      size={20} 
-                      color={expandedHints.has(task.id) ? '#FEC00F' : '#9CA3AF'} 
-                    />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-              {task.notes && expandedHints.has(task.id) && (
-                <View style={styles.hintContainer}>
-                  <Text style={styles.hintText}>💡 {task.notes}</Text>
-                </View>
-              )}
-            </View>
+            <EnhancedTaskCard
+              key={task.id}
+              task={task}
+              onToggle={() => toggleTask(task)}
+              onPress={() => handleEditTask(task)}
+              user={user}
+            />
           ))}
           
           <TouchableOpacity 
@@ -450,11 +479,15 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
       <TaskEditModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
+        onClose={() => {
+            setModalVisible(false);
+            setEditingTask(null);
+        }}
         onSave={handleSaveTask}
-        initialData={editingTask}
+        task={editingTask}
+        user={user}
         availableTags={availableTags}
-        loopMembers={loopMembers}
+        onCreateTag={handleCreateTag}
       />
 
       <InviteModal

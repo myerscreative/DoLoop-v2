@@ -1,3 +1,4 @@
+import { Platform, Alert } from 'react-native';
 import { supabase } from './supabase';
 import { Tag, Subtask, Attachment, TaskReminder, TaskWithDetails } from '../types/loop';
 
@@ -180,29 +181,58 @@ export async function getTaskSubtasks(taskId: string): Promise<Subtask[]> {
 
 export async function uploadAttachment(
   taskId: string,
-  file: { name: string; type: string; size: number; uri: string },
+  file: { name: string; type: string; uri: string; mimeType?: string },
   userId: string
 ): Promise<Attachment | null> {
   try {
-    // Note: You'll need to implement actual file upload to Supabase Storage
-    // This is a placeholder structure
-    const fileName = `${Date.now()}_${file.name}`;
-    const filePath = `attachments/${taskId}/${fileName}`;
+    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+    const filePath = `${taskId}/${fileName}`;
 
-    // TODO: Upload file to Supabase Storage
-    // const { data: uploadData, error: uploadError } = await supabase.storage
-    //   .from('task-attachments')
-    //   .upload(filePath, file);
+    let fileBody: any;
 
-    // For now, just create the database record
+    if (Platform.OS === 'web') {
+      // On web, uri is usually a base64 string or a blob URL
+      if (file.uri.startsWith('data:')) {
+        const response = await fetch(file.uri);
+        fileBody = await response.blob();
+      } else {
+        const response = await fetch(file.uri);
+        fileBody = await response.blob();
+      }
+    } else {
+      // On native, we might need to handle this differently, but for now let's assume fetch works
+      const response = await fetch(file.uri);
+      fileBody = await response.blob();
+    }
+
+    // 1. Upload file to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('task-attachments')
+      .upload(filePath, fileBody, {
+        contentType: file.mimeType || file.type,
+        upsert: true
+      });
+
+    if (uploadError) throw uploadError;
+
+    // 2. Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('task-attachments')
+      .getPublicUrl(filePath);
+
+    // 3. Create the database record
+    let finalMimeType = file.mimeType || file.type || 'application/octet-stream';
+    if (finalMimeType === 'image') finalMimeType = 'image/jpeg';
+    if (finalMimeType === 'file') finalMimeType = 'application/octet-stream';
+
     const { data, error } = await supabase
       .from('attachments')
       .insert({
         task_id: taskId,
         file_name: file.name,
-        file_url: filePath, // Would be the public URL from storage
-        file_type: file.type,
-        file_size: file.size,
+        file_url: publicUrl,
+        file_type: finalMimeType,
+        file_size: fileBody.size || 0,
         uploaded_by: userId,
       })
       .select()
@@ -210,8 +240,9 @@ export async function uploadAttachment(
 
     if (error) throw error;
     return data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading attachment:', error);
+    Alert.alert('Upload Error', `Failed to save attachment: ${error.message || 'Unknown error'}`);
     return null;
   }
 }

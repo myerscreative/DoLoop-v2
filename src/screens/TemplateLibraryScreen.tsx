@@ -517,229 +517,220 @@ export function TemplateLibraryScreen({ navigation }: Props) {
 
   return (
     <ResponsiveContainer
-        layout="productivity"
-        sidebar={
-          <WebSidebar 
-            activeItem="library"
-            selectedFilter='all'
-            onCreatePress={() => {}}
-            counts={{ all: 0, daily: 0, weekly: 0, manual: 0 }}
-            onSelectFilter={(filter) => {
-               navigation.navigate('Home', { screen: 'Home', params: { initialFilter: filter } } as any);
-            }}
-            onNavigateToLibrary={() => {}}
-            onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
-          />
-        }
-        rightPanel={
-          <LoopDetailView 
-            template={selectedTemplate}
-            onAdd={() => selectedTemplate && handleAddToMyLoops(selectedTemplate)}
-          />
-        }
-      >
+      layout="productivity"
+      sidebar={
+        <WebSidebar
+          activeItem="library"
+          selectedFilter="all"
+          onCreatePress={() => {}}
+          counts={{ all: 0, daily: 0, weekly: 0, manual: 0 }}
+          onSelectFilter={(filter) => {
+            navigation.navigate('Home', { screen: 'Home', params: { initialFilter: filter } } as any);
+          }}
+          onNavigateToLibrary={() => {}}
+          onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
+        />
+      }
+      rightPanel={
+        <LoopDetailView
+          template={selectedTemplate}
+          onAdd={() => selectedTemplate && handleAddToMyLoops(selectedTemplate)}
+        />
+      }
+    >
       <SafeAreaView style={styles.container}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={{
-        flex: 1,
-        width: '100%',
-        alignSelf: 'center',
-        backgroundColor: '#ffffff',
-      }}>
-
-        {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              if (Platform.OS !== 'web') {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              } else {
-                // Fallback to Home if there's no back stack
-                navigation.navigate('Home' as any);
-              }
-            }}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.pageTitle}>Loop Library</Text>
-            <Text style={styles.pageSubtitle}>Discover loops from the best</Text>
-          </View>
-        </View>
-
-        {/* Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tabsContainer}
-          style={styles.tabsScroll}
-        >
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.id}
-              style={styles.tab}
-              onPress={() => handleTabPress(tab.id)}
-            >
-              <Text style={styles.tabIcon}>{tab.icon}</Text>
-              <Text
-                style={[
-                  styles.tabLabel,
-                  activeTab === tab.id && styles.tabLabelActive,
-                ]}
-              >
-                {tab.label}
-              </Text>
-              {activeTab === tab.id && (
-                <LinearGradient
-                  colors={[colors.accentYellow, '#FFA500']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.tabIndicator}
-                />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Search */}
-      <View style={[styles.searchSection, { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }]}>
-        <View style={styles.searchBar}>
-          <Ionicons
-            name="search"
-            size={20}
-            color="#999"
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search templates, creators, books..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        </View>
-      </View>
-
-      {/* Filters */}
-      <View style={styles.filtersSection}>
-        <View style={styles.filtersContent}>
-          {categories
-            .filter((filter) => {
-              if (isFiltersExpanded) return true;
-              // When collapsed, show "All" and the currently selected category
-              // If no category is selected, show the first 3-4 options
-              if (filter.id === null || filter.id === selectedCategory) return true;
-              if (!selectedCategory && categories.indexOf(filter) < 4) return true;
-              return false;
-            })
-            .map((filter) => (
+        <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+        <View style={{ flex: 1, width: '100%', alignSelf: 'center', backgroundColor: '#ffffff' }}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerTop}>
               <TouchableOpacity
-                key={filter.id || 'all'}
+                style={styles.backButton}
                 onPress={() => {
                   if (Platform.OS !== 'web') {
-                    Haptics.selectionAsync();
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                   }
-                  setSelectedCategory(filter.id);
+                  if (navigation.canGoBack()) {
+                    navigation.goBack();
+                  } else {
+                    navigation.navigate('Home' as any);
+                  }
                 }}
-                style={{ marginBottom: 4 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                {selectedCategory === filter.id ? (
-                  <LinearGradient
-                    colors={[colors.accentYellow, '#FFA500']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.filterChipActive}
-                  >
-                    <Text style={styles.filterChipTextActive}>
-                      {filter.icon} {filter.label} ({categoryCounts[filter.id!] || 0})
-                    </Text>
-                  </LinearGradient>
-                ) : (
-                  <View style={styles.filterChip}>
-                    <Text style={styles.filterChipText}>
-                      {filter.icon} {filter.label} ({filter.id === null ? templates.length : (categoryCounts[filter.id] || 0)})
-                    </Text>
-                  </View>
-                )}
+                <Ionicons name="arrow-back" size={24} color="#000" />
               </TouchableOpacity>
-            ))}
-          
-          <TouchableOpacity 
-            onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
-            style={styles.seeAllButton}
-          >
-            <Text style={styles.seeAllText}>
-              {isFiltersExpanded ? 'Show less' : 'See all'}
-            </Text>
-            <Ionicons 
-              name={isFiltersExpanded ? "chevron-up" : "chevron-down"} 
-              size={14} 
-              color="#666" 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+              <View style={styles.headerContent}>
+                <Text style={styles.pageTitle}>Loop Library</Text>
+                <Text style={styles.pageSubtitle}>Discover loops from the best</Text>
+              </View>
+            </View>
 
-      {/* Templates List */}
-      {loading ? (
-        <View style={styles.content}>
-          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
-        </View>
-      ) : filteredTemplates.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>
-            {activeTab === 'mylibrary' ? '📖' : activeTab === 'favorites' ? '💜' : '🔍'}
-          </Text>
-          <Text style={styles.emptyText}>
-            {activeTab === 'mylibrary'
-              ? 'No templates yet'
-              : activeTab === 'favorites'
-              ? 'No favorites yet'
-              : 'No templates found'}
-          </Text>
-          <Text style={styles.emptySubtext}>
-            {activeTab === 'mylibrary'
-              ? 'Browse templates and add them to your library'
-              : activeTab === 'favorites'
-              ? 'Tap the heart to save your favorites'
-              : searchQuery
-              ? 'Try a different search term'
-              : 'Check back soon for new templates'}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredTemplates}
-          renderItem={({ item }) => (
-            <CompactLoopItem 
-              emoji={getCategoryIcon(item.category)}
-              name={`${item.title} (${item.category})`}
-              description={loopDescriptions[item.title] || item.description}
-              isSelected={selectedTemplateId === item.id}
-              onPress={() => {
-                if (Platform.OS !== 'web') {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  navigation.navigate('TemplateDetail', { templateId: item.id });
-                } else {
-                  setSelectedTemplateId(item.id);
-                }
-              }}
+            {/* Tabs */}
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.tabsContainer}
+              style={styles.tabsScroll}
+            >
+              {tabs.map((tab) => (
+                <TouchableOpacity
+                  key={tab.id}
+                  style={styles.tab}
+                  onPress={() => handleTabPress(tab.id)}
+                >
+                  <Text style={styles.tabIcon}>{tab.icon}</Text>
+                  <Text
+                    style={[
+                      styles.tabLabel,
+                      activeTab === tab.id && styles.tabLabelActive,
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                  {activeTab === tab.id && (
+                    <LinearGradient
+                      colors={[colors.accentYellow, '#FFA500']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.tabIndicator}
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Search */}
+          <View style={[styles.searchSection, { borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }]}>
+            <View style={styles.searchBar}>
+              <Ionicons
+                name="search"
+                size={20}
+                color="#999"
+                style={styles.searchIcon}
+              />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search templates, creators, books..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#999"
+              />
+            </View>
+          </View>
+
+          {/* Filters */}
+          <View style={styles.filtersSection}>
+            <View style={styles.filtersContent}>
+              {categories
+                .filter((filter) => {
+                  if (isFiltersExpanded) return true;
+                  if (filter.id === null || filter.id === selectedCategory) return true;
+                  if (!selectedCategory && categories.indexOf(filter) < 4) return true;
+                  return false;
+                })
+                .map((filter) => (
+                  <TouchableOpacity
+                    key={filter.id || 'all'}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') {
+                        Haptics.selectionAsync();
+                      }
+                      setSelectedCategory(filter.id);
+                    }}
+                    style={{ marginBottom: 4 }}
+                  >
+                    {selectedCategory === filter.id ? (
+                      <LinearGradient
+                        colors={[colors.accentYellow, '#FFA500']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.filterChipActive}
+                      >
+                        <Text style={styles.filterChipTextActive}>
+                          {filter.icon} {filter.label} ({categoryCounts[filter.id!] || 0})
+                        </Text>
+                      </LinearGradient>
+                    ) : (
+                      <View style={styles.filterChip}>
+                        <Text style={styles.filterChipText}>
+                          {filter.icon} {filter.label} ({filter.id === null ? templates.length : (categoryCounts[filter.id] || 0)})
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+
+              <TouchableOpacity
+                onPress={() => setIsFiltersExpanded(!isFiltersExpanded)}
+                style={styles.seeAllButton}
+              >
+                <Text style={styles.seeAllText}>
+                  {isFiltersExpanded ? 'Show less' : 'See all'}
+                </Text>
+                <Ionicons
+                  name={isFiltersExpanded ? "chevron-up" : "chevron-down"}
+                  size={14}
+                  color="#666"
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Templates List */}
+          {loading ? (
+            <View style={styles.content}>
+              {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+            </View>
+          ) : filteredTemplates.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>
+                {activeTab === 'mylibrary' ? '📖' : activeTab === 'favorites' ? '💜' : '🔍'}
+              </Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'mylibrary'
+                  ? 'No templates yet'
+                  : activeTab === 'favorites'
+                  ? 'No favorites yet'
+                  : 'No templates found'}
+              </Text>
+              <Text style={styles.emptySubtext}>
+                {activeTab === 'mylibrary'
+                  ? 'Browse templates and add them to your library'
+                  : activeTab === 'favorites'
+                  ? 'Tap the heart to save your favorites'
+                  : searchQuery
+                  ? 'Try a different search term'
+                  : 'Check back soon for new templates'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredTemplates}
+              renderItem={({ item }) => (
+                <CompactLoopItem
+                  emoji={getCategoryIcon(item.category)}
+                  name={`${item.title} (${item.category})`}
+                  description={loopDescriptions[item.title] || item.description}
+                  isSelected={selectedTemplateId === item.id}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      navigation.navigate('TemplateDetail', { templateId: item.id });
+                    } else {
+                      setSelectedTemplateId(item.id);
+                    }
+                  }}
+                />
+              )}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.content}
+              showsVerticalScrollIndicator={false}
             />
           )}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.content}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-      </View>
-    </SafeAreaView>
+        </View>
+      </SafeAreaView>
     </ResponsiveContainer>
   );
 }

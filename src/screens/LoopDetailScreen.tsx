@@ -334,7 +334,11 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleSaveTask = async (taskData: Partial<TaskWithDetails>, pendingSubtasks?: Subtask[]): Promise<string | null> => {
+  const handleSaveTask = async (
+    taskData: Partial<TaskWithDetails>, 
+    pendingSubtasks?: Subtask[],
+    pendingAttachments?: any[]
+  ): Promise<string | null> => {
     try {
       // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
       let finalAssignedTo = taskData.assigned_to;
@@ -379,15 +383,25 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      // Save pending subtasks
-      if (savedTaskId && pendingSubtasks && pendingSubtasks.length > 0) {
-          console.log(`[LoopDetail] Saving ${pendingSubtasks.length} pending subtasks for task ${savedTaskId}`);
-          for (const sub of pendingSubtasks) {
-              await createSubtask(savedTaskId, sub.description, sub.order_index);
-          }
+      if (savedTaskId) {
+        // Save pending subtasks
+        if (pendingSubtasks && pendingSubtasks.length > 0) {
+            console.log(`[LoopDetail] Saving ${pendingSubtasks.length} pending subtasks for task ${savedTaskId}`);
+            for (const sub of pendingSubtasks) {
+                await createSubtask(savedTaskId, sub.description, sub.order_index);
+            }
+        }
+
+        // Save pending attachments
+        if (pendingAttachments && pendingAttachments.length > 0 && user) {
+            console.log(`[LoopDetail] Uploading ${pendingAttachments.length} attachments for task ${savedTaskId}`);
+            for (const att of pendingAttachments) {
+                await uploadAttachment(savedTaskId, att, user.id);
+            }
+        }
       }
 
-      console.log('[LoopDetail] Task and subtasks saved successfully');
+      console.log('[LoopDetail] Task and subtasks/attachments saved successfully');
       await loadLoopData();
       
       setModalVisible(false);
