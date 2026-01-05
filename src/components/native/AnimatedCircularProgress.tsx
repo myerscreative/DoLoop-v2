@@ -5,7 +5,7 @@ import Animated, {
   useSharedValue,
   useAnimatedProps,
   withTiming,
-  runOnJS,
+  Easing,
 } from 'react-native-reanimated';
 
 interface AnimatedCircularProgressProps {
@@ -32,7 +32,10 @@ export const AnimatedCircularProgress: React.FC<AnimatedCircularProgressProps> =
   const progressValue = useSharedValue(0);
 
   useEffect(() => {
-    progressValue.value = withTiming(fill / 100, { duration: 1000 });
+    progressValue.value = withTiming(fill / 100, { 
+      duration: 600,
+      easing: Easing.inOut(Easing.ease),
+    });
   }, [fill, progressValue]);
 
   const animatedProps = useAnimatedProps(() => {

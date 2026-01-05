@@ -409,8 +409,20 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}>
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.completeButton}>
-              <Text style={styles.completeButtonText}>Complete Loop</Text>
+            <TouchableOpacity 
+              style={[
+                styles.completeButton,
+                currentProgress < 100 && styles.completeButtonDisabled
+              ]}
+              onPress={resetLoop}
+              disabled={currentProgress < 100}
+            >
+              <Text style={[
+                styles.completeButtonText,
+                currentProgress < 100 && styles.completeButtonTextDisabled
+              ]}>
+                {currentProgress >= 100 ? 'Reloop' : 'Complete Loop'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -568,6 +580,12 @@ const styles = StyleSheet.create({
   completeButtonText: {
     fontWeight: '700',
     color: '#1a1a1a',
+  },
+  completeButtonDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  completeButtonTextDisabled: {
+    color: '#9CA3AF',
   },
   content: {
     flex: 1,
