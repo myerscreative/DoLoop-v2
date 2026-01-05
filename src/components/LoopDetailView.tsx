@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Activit
 import { Ionicons } from '@expo/vector-icons';
 import { LoopTemplateWithDetails } from '../types/loop';
 import { supabase } from '../lib/supabase';
+import { LoopProvenance } from './loops/LoopProvenance';
 
 interface LoopDetailViewProps {
   template: LoopTemplateWithDetails | null;
@@ -116,6 +117,16 @@ export const LoopDetailView: React.FC<LoopDetailViewProps> = ({ template, onAdd 
             )}
           </View>
         ))}
+
+        {/* PROVENANCE SECTION - Author & Source */}
+        <LoopProvenance
+          authorName={template.creator?.name}
+          authorBio={template.creator?.bio}
+          authorImageUrl={template.creator?.photo_url}
+          sourceTitle={template.book_course_title}
+          sourceLink={template.affiliate_link}
+          endGoalDescription={template.description}
+        />
       </ScrollView>
     </View>
   );
