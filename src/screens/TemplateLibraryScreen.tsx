@@ -649,7 +649,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
                         style={styles.filterChipActive}
                       >
                         <Text style={styles.filterChipTextActive}>
-                          {filter.icon} {filter.label} ({categoryCounts[filter.id!] || 0})
+                          {filter.icon} {filter.label} ({filter.id === null ? templates.length : (categoryCounts[filter.id!] || 0)})
                         </Text>
                       </LinearGradient>
                     ) : (
