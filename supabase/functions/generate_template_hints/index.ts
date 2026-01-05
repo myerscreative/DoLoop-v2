@@ -4,13 +4,17 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-my-custom-header",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 };
 
-interface HintRequest {
+interface TemplateTask {
+  id: string;
   template_id: string;
+  description: string;
+  hint?: string;
+  is_recurring: boolean;
+  display_order: number;
 }
 
 serve(async (req) => {
@@ -20,23 +24,25 @@ serve(async (req) => {
   }
 
   try {
-    // Get API keys from environment
+    // Get environment variables
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
     if (!openaiApiKey) {
       throw new Error("OpenAI API key not configured");
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error("Supabase environment variables not configured");
+      throw new Error("Supabase configuration missing");
     }
 
+    // Create Supabase client with service role
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body
-    const { template_id }: HintRequest = await req.json();
+    const body = await req.json();
+    const { template_id } = body;
 
     if (!template_id) {
       return new Response(
@@ -59,11 +65,13 @@ serve(async (req) => {
       .single();
 
     if (templateError || !template) {
-      throw new Error(templateError?.message || "Template not found");
+      throw new Error(`Template not found: ${templateError?.message || "Unknown error"}`);
     }
 
     // 2. Identify tasks missing hints
-    const tasksToProcess = template.tasks.filter(t => !t.hint || t.hint.trim() === '');
+    const tasksToProcess = template.tasks
+      .filter(t => !t.hint || t.hint.trim() === '')
+      .sort((a, b) => a.display_order - b.display_order);
     
     if (tasksToProcess.length === 0) {
       return new Response(
@@ -73,26 +81,32 @@ serve(async (req) => {
     }
 
     // 3. Generate hints via OpenAI
-    const systemPrompt = `You are an expert productivity coach and assistant. Your goal is to write concise, actionable "information hints" or "synopses" for specific steps in a productivity loop.
+    const systemPrompt = `You are an expert productivity coach helping users understand how to complete tasks effectively. 
+Your goal is to write concise, actionable information hints for specific steps in a productivity loop.
 
-Each hint should be 1-2 sentences long and provide context, a "why", or a "how-to" tip for the specific step, staying true to the teaching of the creator.
+Each hint should be:
+- 1-2 sentences max
+- Specific and practical
+- Motivational but not preachy
+- Focus on HOW to do the task well, staying true to the teaching of the creator if applicable.
 
 Template Info:
 - Title: ${template.title}
-- Creator: ${template.creator?.name}
-- Inspired by: ${template.book_course_title}
-- Overall Description: ${template.description}
+- Creator: ${template.creator?.name || "Unknown"}
+- Inspired by: ${template.book_course_title || "N/A"}
+- Overall Description: ${template.description || "N/A"}
 
-You will be given a list of task descriptions. Respond with a JSON array of objects, each containing the original description and the generated hint.
+Respond ONLY with valid JSON in this exact format:
+{
+  "hints": [
+    { "task_id": "uuid-here", "hint": "Your helpful hint here" },
+    ...
+  ]
+}`;
 
-Format:
-[
-  { "description": "...", "hint": "..." },
-  ...
-]`;
-
-    const userPrompt = `Generate hints for these steps:
-${tasksToProcess.map(t => `- ${t.description}`).join('\n')}`;
+    const taskListForPrompt = tasksToProcess
+      .map((t, i) => `${i + 1}. [ID: ${t.id}] ${t.description}`)
+      .join("\n");
 
     const openaiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -104,7 +118,7 @@ ${tasksToProcess.map(t => `- ${t.description}`).join('\n')}`;
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: `Generate hints for these tasks:\n\n${taskListForPrompt}` },
         ],
         temperature: 0.7,
         max_tokens: 1500,
@@ -114,28 +128,25 @@ ${tasksToProcess.map(t => `- ${t.description}`).join('\n')}`;
 
     if (!openaiResponse.ok) {
       const errorData = await openaiResponse.json();
+      console.error("OpenAI API error:", errorData);
       throw new Error(`OpenAI API error: ${errorData.error?.message || "Unknown error"}`);
     }
 
     const openaiData = await openaiResponse.json();
     const generatedContent = JSON.parse(openaiData.choices[0]?.message?.content);
-    
-    // The model might return the array inside a key or just the array.
-    // Given response_format json_object, we expect a root object.
-    const hintsList = Array.isArray(generatedContent) ? generatedContent : (generatedContent.hints || Object.values(generatedContent)[0]);
+    const hintsList = generatedContent.hints || [];
 
     if (!Array.isArray(hintsList)) {
       throw new Error("Invalid response format from AI");
     }
 
     // 4. Update the database
-    const updatePromises = tasksToProcess.map(task => {
-      const generated = hintsList.find(h => h.description === task.description);
-      if (generated && generated.hint) {
+    const updatePromises = hintsList.map(async (item) => {
+      if (item.task_id && item.hint) {
         return supabase
           .from('template_tasks')
-          .update({ hint: generated.hint })
-          .eq('id', task.id);
+          .update({ hint: item.hint })
+          .eq('id', item.task_id);
       }
       return Promise.resolve({ error: null });
     });
@@ -143,11 +154,15 @@ ${tasksToProcess.map(t => `- ${t.description}`).join('\n')}`;
     await Promise.all(updatePromises);
 
     // 5. Fetch updated tasks
-    const { data: updatedTasks } = await supabase
+    const { data: updatedTasks, error: fetchError } = await supabase
       .from('template_tasks')
       .select('*')
       .eq('template_id', template_id)
       .order('display_order', { ascending: true });
+
+    if (fetchError) {
+      throw new Error(`Failed to fetch updated tasks: ${fetchError.message}`);
+    }
 
     return new Response(
       JSON.stringify({
