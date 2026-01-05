@@ -1,5 +1,11 @@
-import React from 'react';
-import { View, Text, Image, StyleSheet, Linking, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, StyleSheet, Linking, TouchableOpacity, Platform, ActivityIndicator, LayoutAnimation, UIManager } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface LoopProvenanceProps {
   authorName?: string;
@@ -20,6 +26,8 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
   endGoalDescription,
   isGenerating = false,
 }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Don't render if no meaningful data
   if (!authorName && !sourceTitle && !endGoalDescription) {
     return null;
@@ -31,6 +39,11 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
     }
   };
 
+  const toggleExpanded = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(!isExpanded);
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -40,22 +53,25 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
       .slice(0, 2);
   };
 
+  // Check if we have a long bio worth expanding
+  const hasLongBio = authorBio && authorBio.length > 150;
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <View style={styles.headerRow}>
         <Text style={styles.header}>About this Recipe</Text>
         {isGenerating && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <ActivityIndicator size="small" color="#FEC00F" />
-            <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Generating...</Text>
+          <View style={styles.generatingBadge}>
+            <ActivityIndicator size="small" color="#FFB800" />
+            <Text style={styles.generatingText}>Generating...</Text>
           </View>
         )}
       </View>
 
-      {/* Author Row */}
+      {/* Subtitle: By Author • From Source */}
       {(authorName || sourceTitle) && (
-        <View style={styles.authorRow}>
+        <View style={styles.subtitleRow}>
           {/* Avatar */}
           {authorImageUrl ? (
             <Image source={{ uri: authorImageUrl }} style={styles.avatar} />
@@ -65,32 +81,49 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
             </View>
           ) : null}
 
-          {/* Author Info */}
-          <View style={styles.authorInfo}>
-            {authorName && (
-              <Text style={styles.authorName}>{authorName}</Text>
-            )}
-            {sourceTitle && (
-              <TouchableOpacity 
-                onPress={handleSourcePress} 
-                disabled={!sourceLink}
-                activeOpacity={sourceLink ? 0.7 : 1}
-              >
-                <Text style={[styles.sourceTitle, sourceLink && styles.sourceTitleLink]}>
-                  {sourceLink ? `📖 ${sourceTitle}` : `📖 ${sourceTitle}`}
-                </Text>
-              </TouchableOpacity>
-            )}
+          <View style={styles.subtitleTextContainer}>
+            <Text style={styles.subtitle}>
+              {authorName && <Text style={styles.authorName}>By {authorName}</Text>}
+              {authorName && sourceTitle && <Text style={styles.subtitleSeparator}> • </Text>}
+              {sourceTitle && (
+                <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
+                  <Text style={[styles.sourceText, sourceLink && styles.sourceLink]}>
+                    From "{sourceTitle}"
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </Text>
           </View>
         </View>
       )}
 
-      {/* Bio */}
-      {authorBio && (
-        <Text style={styles.bio}>{authorBio}</Text>
+      {/* Read the Story Toggle */}
+      {hasLongBio && (
+        <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
+          <Text style={styles.toggleText}>
+            {isExpanded ? 'Hide the Story' : 'Read the Story'}
+          </Text>
+          <Ionicons 
+            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+            size={16} 
+            color="#FFB800" 
+          />
+        </TouchableOpacity>
       )}
 
-      {/* End Goal */}
+      {/* Expandable Bio Section */}
+      {isExpanded && authorBio && (
+        <View style={styles.bioContainer}>
+          <Text style={styles.bioText}>{authorBio}</Text>
+        </View>
+      )}
+
+      {/* Short bio if not expandable */}
+      {!hasLongBio && authorBio && (
+        <Text style={styles.shortBio}>{authorBio}</Text>
+      )}
+
+      {/* End Goal - Always Visible */}
       {endGoalDescription && (
         <View style={styles.goalContainer}>
           <Text style={styles.goalLabel}>🎯 End Goal</Text>
@@ -112,55 +145,99 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     maxWidth: Platform.OS === 'web' ? 600 : undefined,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   header: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 16,
+    color: '#1F2937',
   },
-  authorRow: {
+  generatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  generatingText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  subtitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     marginRight: 12,
   },
   avatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#FEC00F',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFB800',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   avatarInitials: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1F2937',
   },
-  authorInfo: {
+  subtitleTextContainer: {
     flex: 1,
   },
-  authorName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  sourceTitle: {
+  subtitle: {
     fontSize: 14,
     color: '#6B7280',
+    flexWrap: 'wrap',
   },
-  sourceTitleLink: {
-    color: '#2563EB',
+  authorName: {
+    fontWeight: '600',
+    color: '#374151',
+  },
+  subtitleSeparator: {
+    color: '#9CA3AF',
+  },
+  sourceText: {
+    color: '#6B7280',
+  },
+  sourceLink: {
+    color: '#FFB800',
     textDecorationLine: 'underline',
   },
-  bio: {
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFB800',
+  },
+  bioContainer: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFB800',
+  },
+  bioText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#4B5563',
+    fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
+  },
+  shortBio: {
     fontSize: 14,
     lineHeight: 22,
     color: '#4B5563',
@@ -171,18 +248,18 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#8B4513',
   },
   goalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#92400E',
+    color: '#8B4513',
     marginBottom: 6,
   },
   goalText: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#78350F',
+    color: '#8B4513',
   },
 });
 
