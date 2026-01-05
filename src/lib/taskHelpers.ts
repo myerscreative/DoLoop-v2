@@ -185,8 +185,10 @@ export async function uploadAttachment(
   userId: string
 ): Promise<Attachment | null> {
   try {
-    const fileName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-    const filePath = `${taskId}/${fileName}`;
+    // Sanitize filename and create user-scoped path
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = `${Date.now()}_${sanitizedName}`;
+    const filePath = `${userId}/${taskId}/${fileName}`;
 
     let fileBody: any;
 
@@ -200,7 +202,7 @@ export async function uploadAttachment(
         fileBody = await response.blob();
       }
     } else {
-      // On native, we might need to handle this differently, but for now let's assume fetch works
+      // On native, use fetch to get blob
       const response = await fetch(file.uri);
       fileBody = await response.blob();
     }
@@ -210,10 +212,13 @@ export async function uploadAttachment(
       .from('task-attachments')
       .upload(filePath, fileBody, {
         contentType: file.mimeType || file.type,
-        upsert: true
+        upsert: false // Security: don't overwrite if collision
       });
 
-    if (uploadError) throw uploadError;
+    if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+    }
 
     // 2. Get public URL
     const { data: { publicUrl } } = supabase.storage
@@ -224,7 +229,6 @@ export async function uploadAttachment(
     let finalMimeType = file.mimeType || file.type || 'application/octet-stream';
     if (finalMimeType === 'image') finalMimeType = 'image/jpeg';
     if (finalMimeType === 'file') finalMimeType = 'application/octet-stream';
-
     const { data, error } = await supabase
       .from('attachments')
       .insert({
@@ -232,7 +236,7 @@ export async function uploadAttachment(
         file_name: file.name,
         file_url: publicUrl,
         file_type: finalMimeType,
-        file_size: fileBody.size || 0,
+        file_size: fileBody.size || file.size || 0,
         uploaded_by: userId,
       })
       .select()

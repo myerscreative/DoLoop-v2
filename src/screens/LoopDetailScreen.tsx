@@ -23,8 +23,8 @@ import { RootStackParamList } from '../../App';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Task, LoopWithTasks, TaskWithDetails, Tag } from '../types/loop';
-
+import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment } from '../types/loop';
+import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
 import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
@@ -32,7 +32,7 @@ import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask, uploadAttachment } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType, FOLDER_COLORS } from '../types/loop';
@@ -337,8 +337,8 @@ export const LoopDetailScreen: React.FC = () => {
   const handleSaveTask = async (
     taskData: Partial<TaskWithDetails>, 
     pendingSubtasks?: Subtask[],
-    pendingAttachments?: any[]
-  ): Promise<string | null> => {
+    pendingAttachments?: PendingAttachment[]
+  ): Promise<string | null | void> => {
     try {
       // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
       let finalAssignedTo = taskData.assigned_to;
@@ -396,7 +396,16 @@ export const LoopDetailScreen: React.FC = () => {
         if (pendingAttachments && pendingAttachments.length > 0 && user) {
             console.log(`[LoopDetail] Uploading ${pendingAttachments.length} attachments for task ${savedTaskId}`);
             for (const att of pendingAttachments) {
-                await uploadAttachment(savedTaskId, att, user.id);
+                try {
+                  await uploadAttachment(savedTaskId, {
+                      name: att.name,
+                      type: att.mimeType || (att.type === 'image' ? 'image/jpeg' : 'application/octet-stream'),
+                      uri: att.uri,
+                      size: att.size || 0,
+                  }, user.id);
+                } catch (attachError) {
+                  console.error('[LoopDetail] Error uploading attachment:', attachError);
+                }
             }
         }
       }

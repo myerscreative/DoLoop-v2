@@ -22,7 +22,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AssigneeDot } from '../ui/AssigneeDot';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment, Subtask } from '../../types/loop';
+import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment, Subtask, PendingAttachment } from '../../types/loop';
+import LoopTypeToggle from './LoopTypeToggle';
 import { TaskTag } from './TaskTag';
 import { createSubtask, deleteSubtask } from '../../lib/taskHelpers';
 
@@ -36,15 +37,10 @@ interface TaskEditModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (
-    task: Partial<TaskWithDetails>, 
+    taskData: Partial<TaskWithDetails>, 
     pendingSubtasks?: Subtask[], 
-    pendingAttachments?: {
-      uri: string;
-      name: string;
-      type: 'image' | 'file';
-      mimeType?: string;
-    }[]
-  ) => Promise<string | null>; // Return ID
+    pendingAttachments?: PendingAttachment[]
+  ) => Promise<string | null | void>; // Return ID
   task?: TaskWithDetails | null;
   user: any;
   onCreateTag?: (name: string, color: string) => Promise<Tag | null>;
@@ -272,8 +268,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
       // Pass pending subtasks (only temp ones, as existing ones are already saved)
       const pendingSubtasks = subtasks.filter(s => s.id.startsWith('temp_'));
-      await onSave(taskData, pendingSubtasks, pendingAttachments);
-      
+      // Pass pending attachments to be uploaded after task is created
+      await onSave(taskData, pendingSubtasks, pendingAttachments.length > 0 ? pendingAttachments : undefined);
       if (closeModal) {
         onClose();
         resetForm();
