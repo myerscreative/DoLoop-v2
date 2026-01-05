@@ -44,15 +44,6 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
     setIsExpanded(!isExpanded);
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
   // Check if we have a long bio worth expanding
   const hasLongBio = authorBio && authorBio.length > 150;
 
@@ -69,74 +60,57 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
         )}
       </View>
 
-      {/* 1. ABOUT THIS LOOP - End Goal */}
+      {/* Author & Source Row - Single Line */}
+      <View style={styles.metaRow}>
+        {authorName && (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Author:</Text>
+            <Text style={styles.metaValue}>{authorName}</Text>
+          </View>
+        )}
+        {sourceTitle && (
+          <View style={styles.metaItem}>
+            <Text style={styles.metaLabel}>Source:</Text>
+            <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
+              <Text style={[styles.metaValue, sourceLink && styles.sourceLink]}>
+                {sourceTitle}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* About this Loop - End Goal */}
       {endGoalDescription && (
         <View style={styles.goalContainer}>
-          <Text style={styles.sectionLabel}>🎯 About this Loop</Text>
           <Text style={styles.goalText}>{endGoalDescription}</Text>
         </View>
       )}
 
-      {/* 2. ABOUT THE SOURCE */}
-      {sourceTitle && (
-        <View style={styles.sourceContainer}>
-          <Text style={styles.sectionLabel}>📖 About the Source</Text>
-          <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
-            <Text style={[styles.sourceTitle, sourceLink && styles.sourceLink]}>
-              {sourceTitle}
-            </Text>
-          </TouchableOpacity>
-          {sourceLink && (
-            <Text style={styles.sourceLinkHint}>Tap to learn more</Text>
-          )}
+      {/* More about this loop Toggle */}
+      {hasLongBio && (
+        <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
+          <Text style={styles.toggleText}>
+            {isExpanded ? 'Less about this loop' : 'More about this loop'}
+          </Text>
+          <Ionicons 
+            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+            size={16} 
+            color="#FFB800" 
+          />
+        </TouchableOpacity>
+      )}
+
+      {/* Expandable Bio Section */}
+      {isExpanded && authorBio && (
+        <View style={styles.bioContainer}>
+          <Text style={styles.bioText}>{authorBio}</Text>
         </View>
       )}
 
-      {/* 3. ABOUT THE AUTHOR */}
-      {authorName && (
-        <View style={styles.authorSection}>
-          <Text style={styles.sectionLabel}>👤 About the Author</Text>
-          
-          <View style={styles.authorRow}>
-            {/* Avatar */}
-            {authorImageUrl ? (
-              <Image source={{ uri: authorImageUrl }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitials}>{getInitials(authorName)}</Text>
-              </View>
-            )}
-            <Text style={styles.authorName}>{authorName}</Text>
-          </View>
-
-          {/* Short bio preview or full short bio */}
-          {!hasLongBio && authorBio && (
-            <Text style={styles.shortBio}>{authorBio}</Text>
-          )}
-
-          {/* Read the Story Toggle for long bios */}
-          {hasLongBio && (
-            <>
-              <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
-                <Text style={styles.toggleText}>
-                  {isExpanded ? 'Hide the Story' : 'Read the Story'}
-                </Text>
-                <Ionicons 
-                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-                  size={16} 
-                  color="#FFB800" 
-                />
-              </TouchableOpacity>
-
-              {/* Expandable Bio Section */}
-              {isExpanded && (
-                <View style={styles.bioContainer}>
-                  <Text style={styles.bioText}>{authorBio}</Text>
-                </View>
-              )}
-            </>
-          )}
-        </View>
+      {/* Short bio if not expandable */}
+      {!hasLongBio && authorBio && (
+        <Text style={styles.shortBio}>{authorBio}</Text>
       )}
     </View>
   );
@@ -157,7 +131,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   header: {
     fontSize: 18,
@@ -173,13 +147,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
   },
-  sectionLabel: {
+  // Meta Row (Author & Source on one line)
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 24,
+    marginBottom: 16,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  metaValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6B7280',
-    marginBottom: 8,
+    color: '#374151',
   },
-  // 1. Goal Section
+  sourceLink: {
+    color: '#FFB800',
+    textDecorationLine: 'underline',
+  },
+  // Goal Section
   goalContainer: {
     backgroundColor: '#FFFBEB',
     borderRadius: 8,
@@ -193,66 +186,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#8B4513',
   },
-  // 2. Source Section
-  sourceContainer: {
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    marginBottom: 16,
-  },
-  sourceTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  sourceLink: {
-    color: '#FFB800',
-    textDecorationLine: 'underline',
-  },
-  sourceLinkHint: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 4,
-  },
-  // 3. Author Section
-  authorSection: {
-    paddingTop: 4,
-  },
-  authorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 12,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFB800',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarInitials: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  authorName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  shortBio: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#4B5563',
-  },
+  // Toggle
   toggleButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,6 +198,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFB800',
   },
+  // Bio
   bioContainer: {
     backgroundColor: '#FAFAFA',
     borderRadius: 8,
@@ -276,6 +211,11 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#4B5563',
     fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
+  },
+  shortBio: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#4B5563',
   },
 });
 
