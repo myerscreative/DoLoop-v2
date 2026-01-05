@@ -37,6 +37,8 @@ import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers'
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType, FOLDER_COLORS } from '../types/loop';
 import { LoopProvenance } from '../components/loops/LoopProvenance';
+import { StarRatingInput } from '../components/native/StarRatingInput';
+import { getUserRating, submitRating, getLoopRatingStats } from '../lib/ratingHelpers';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -63,6 +65,8 @@ export const LoopDetailScreen: React.FC = () => {
   const [showMemberList, setShowMemberList] = useState(false);
   const [isEditingLoop, setEditingLoop] = useState(false);
   const [savingLoop, setSavingLoop] = useState(false);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   const handleUpdateLoop = async (data: any) => {
     if (!loopData) return;
@@ -162,6 +166,7 @@ export const LoopDetailScreen: React.FC = () => {
   useEffect(() => {
     loadLoopData();
     loadTags();
+    loadUserRating();
   }, [loopId]);
 
   // Realtime subscription for "Shared Momentum"
@@ -174,6 +179,42 @@ export const LoopDetailScreen: React.FC = () => {
     if (!user) return;
     const tags = await getUserTags(user.id);
     setAvailableTags(tags);
+  };
+
+  const loadUserRating = async () => {
+    const rating = await getUserRating(loopId);
+    setUserRating(rating || 0);
+  };
+
+  const handleSubmitRating = async (score: number) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to rate loops.');
+      return;
+    }
+    
+    setIsSubmittingRating(true);
+    setUserRating(score); // Optimistic update
+    
+    const success = await submitRating(loopId, score);
+    
+    if (success) {
+      // Refresh loop data to get updated average
+      const stats = await getLoopRatingStats(loopId);
+      if (stats && loopData) {
+        setLoopData({
+          ...loopData,
+          average_rating: stats.average,
+          total_ratings: stats.total,
+        });
+      }
+    } else {
+      // Revert optimistic update
+      const originalRating = await getUserRating(loopId);
+      setUserRating(originalRating || 0);
+      Alert.alert('Error', 'Failed to submit rating. Please try again.');
+    }
+    
+    setIsSubmittingRating(false);
   };
 
   const loadLoopData = async () => {
@@ -221,11 +262,20 @@ export const LoopDetailScreen: React.FC = () => {
       const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
       const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
 
+      const { data: streaks } = await supabase
+        .from('loop_streaks')
+        .select('*')
+        .eq('loop_id', loopId)
+        .maybeSingle();
+
       const loopWithTasks: LoopWithTasks = {
         ...loop,
         tasks: tasksWithDetails || [],
         completedCount,
         totalCount,
+        currentStreak: streaks?.current_streak || 0,
+        longestStreak: streaks?.longest_streak || 0,
+        lastCompletedDate: streaks?.last_completed_date
       };
 
       setLoopData(loopWithTasks);
@@ -498,6 +548,16 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleReloop = async () => {
+    if (loopData?.function_type === 'practice') {
+       // Practice loops reset daily, no manual reloop needed unless forced
+       if (showResetMenu) {
+         await resetLoop();
+       } else {
+         Alert.alert('Habit Loop', 'Keep completing tasks to maintain your streak! This resets automatically at 4am.');
+       }
+       return;
+    }
+    
     if (loopData?.reset_rule === 'manual') {
       // For manual loops, always allow reset
       await resetLoop();
@@ -509,17 +569,17 @@ export const LoopDetailScreen: React.FC = () => {
       const now = new Date();
       const nextReset = new Date(loopData?.next_reset_at || '');
 
-      if (now >= nextReset) {
+      if (currentProgress >= 100 || now >= nextReset) {
         await resetLoop();
       } else {
         if (loopData) {
-        Alert.alert(
-          'Next Reset',
-          `This loop resets ${loopData.reset_rule} at ${nextReset.toLocaleTimeString()}`,
-          [{ text: 'OK' }]
-        );
+          Alert.alert(
+            'Next Reset',
+            `This loop resets ${loopData.reset_rule} at ${nextReset.toLocaleTimeString()}. Complete all tasks to reloop now.`,
+            [{ text: 'OK' }]
+          );
+        }
       }
-    }
   }
 };
 
@@ -527,13 +587,44 @@ export const LoopDetailScreen: React.FC = () => {
     try {
       await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
 
-      // === STREAK LOGIC: Update global user streak for daily loops ===
+      // === PER-LOOP STREAK LOGIC for Practice Loops ===
+      if (loopData && loopData.function_type === 'practice' && loopData.completedCount === loopData.totalCount) {
+          const today = new Date().toISOString().split('T')[0];
+          const lastDate = loopData.lastCompletedDate?.split('T')[0];
+          
+          let newStreak = 1;
+          if (lastDate) {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              const yesterdayStr = yesterday.toISOString().split('T')[0];
+              
+              if (lastDate === yesterdayStr) {
+                  newStreak = (loopData.currentStreak || 0) + 1;
+              } else if (lastDate === today) {
+                  newStreak = loopData.currentStreak || 0;
+              }
+          }
+          
+          const longestStreak = Math.max(newStreak, loopData.longestStreak || 0);
+
+          await supabase
+            .from('loop_streaks')
+            .upsert({
+              loop_id: loopId,
+              current_streak: newStreak,
+              longest_streak: longestStreak,
+              last_completed_date: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+      }
+
+      // === GLOBAL STREAK LOGIC: Update global user streak for daily loops ===
       if (loopData && loopData.reset_rule === 'daily' && loopData.completedCount === loopData.totalCount) {
         // Check if ALL daily loops are complete
         const { data: allDailyLoops } = await supabase
           .from('loops')
           .select('id')
-          .eq('owner', user?.id)
+          .eq('owner_id', user?.id)
           .eq('reset_rule', 'daily');
 
         let allDailyLoopsComplete = true;
@@ -713,10 +804,14 @@ export const LoopDetailScreen: React.FC = () => {
             paddingHorizontal: 20,
           }}>
             {/* Loop Icon - Custom SVG */}
-            <LoopIcon 
-              size={64} 
-              color={loopData.color || '#FEC00F'} 
-            />
+            {loopData.function_type === 'practice' ? (
+                <MomentumRing size={80} strokeWidth={8} streak={loopData.currentStreak || 0} />
+            ) : (
+                <LoopIcon 
+                size={64} 
+                color={loopData.color || '#FEC00F'} 
+                />
+            )}
             <View style={{ height: 16 }} />
 
             {/* Loop Name */}
@@ -730,6 +825,12 @@ export const LoopDetailScreen: React.FC = () => {
               {loopData.name}
             </Text>
             
+            {loopData.function_type === 'practice' && (
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFB800', marginBottom: 8 }}>
+                    🧘 PRACTICE MODE
+                </Text>
+            )}
+
             {loopData.is_favorite && (
               <Text style={{ fontSize: 16, marginTop: 4 }}>⭐</Text>
             )}
@@ -753,9 +854,11 @@ export const LoopDetailScreen: React.FC = () => {
               textAlign: 'center',
               textDecorationLine: 'underline',
             }}>
-              {loopData.reset_rule === 'manual'
-                ? 'Manual checklist • Complete when ready'
-                : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`}
+              {loopData.function_type === 'practice'
+                ? `Daily habit • ${loopData.currentStreak || 0} day streak`
+                : (loopData.reset_rule === 'manual'
+                    ? 'Manual checklist • Complete when ready'
+                    : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`)}
             </Text>
           </TouchableOpacity>
 
@@ -826,7 +929,6 @@ export const LoopDetailScreen: React.FC = () => {
             )
           )}
 
-          {/* Order Button (Affiliate Link) */}
           {loopData.affiliate_link && (
             <TouchableOpacity
               style={styles.orderButton}
@@ -846,6 +948,22 @@ export const LoopDetailScreen: React.FC = () => {
               </LinearGradient>
             </TouchableOpacity>
           )}
+
+          {/* Star Rating Section */}
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingLabel}>Rate this Loop</Text>
+            <StarRatingInput 
+              value={userRating}
+              onChange={handleSubmitRating}
+              disabled={isSubmittingRating}
+              size={32}
+            />
+            {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
+              <Text style={styles.ratingStats}>
+                Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
+              </Text>
+            )}
+          </View>
         </View>
 
         {/* Recurring Tasks or Empty State */}
@@ -1022,7 +1140,11 @@ export const LoopDetailScreen: React.FC = () => {
           }}>
             {(() => {
               const isManual = loopData?.reset_rule === 'manual';
-              const canReset = isManual ? currentProgress >= 100 : (currentProgress >= 100 || showResetMenu);
+              const isPractice = loopData?.function_type === 'practice';
+              const canReset = isPractice ? false : (isManual ? currentProgress >= 100 : (currentProgress >= 100 || showResetMenu));
+              
+              if (isPractice) return null; // No Reloop button for practice loops (handled auto)
+
               const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : 'Reloop');
               
               const buttonBg = showResetMenu 
@@ -1336,5 +1458,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#000',
+  },
+  ratingSection: {
+    marginTop: 24,
+    padding: 20,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  ratingLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  ratingStats: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 12,
   },
 });

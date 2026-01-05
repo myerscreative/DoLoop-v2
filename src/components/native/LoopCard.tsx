@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ProgressRing } from './ProgressRing';
+import { MomentumRing } from './MomentumRing';
+import { StarRating } from './StarRating';
 import { Loop } from '../../types/loop';
 import { Colors } from '../../constants/Colors';
 
@@ -49,7 +51,8 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     }
   };
   
-  const getBadgeLabel = (rule: string, category?: string) => {
+  const getBadgeLabel = (rule: string, category?: string, functionType?: string) => {
+    if (functionType === 'practice') return 'Practice';
     if (category === 'goals') return 'Goal';
     switch (rule) {
       case 'daily': return 'Daily';
@@ -94,10 +97,17 @@ export const LoopCard: React.FC<LoopCardProps> = ({
                {loop.due_date ? `Due ${new Date(loop.due_date).toLocaleDateString()}` : 'Future Task'}
              </Text>
           ) : (
-            <View style={[styles.badge, { backgroundColor: badgeBg }]}>
-              <Text style={[styles.badgeText, { color: badgeText }]}>
-                {getBadgeLabel(loop.reset_rule || 'daily', loop.category)}
-              </Text>
+            <View>
+              <View style={[styles.badge, { backgroundColor: loop.function_type === 'practice' ? '#FFB800' : badgeBg }]}>
+                <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? '#000000' : badgeText }]}>
+                  {getBadgeLabel(loop.reset_rule || 'daily', loop.category, loop.function_type)}
+                </Text>
+              </View>
+              {loop.average_rating !== undefined && loop.total_ratings !== undefined && loop.total_ratings > 0 && (
+                <View style={styles.ratingRow}>
+                  <StarRating rating={loop.average_rating} count={loop.total_ratings} size={14} />
+                </View>
+              )}
             </View>
           )}
         </View>
@@ -183,6 +193,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+  },
+  ratingRow: {
+    marginTop: 6,
   },
   upcomingTitle: {
     color: '#64748b',

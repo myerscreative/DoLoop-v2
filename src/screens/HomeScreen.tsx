@@ -143,10 +143,10 @@ export const HomeScreen: React.FC = () => {
     if (!user) return;
 
     try {
-      // Get all loops for the user
+      // Get all loops for the user with their individual streaks
       const { data: userLoops, error: loopsError } = await supabase
         .from('loops')
-        .select('*')
+        .select('*, loop_streaks(*)')
         .eq('owner_id', user.id);
 
       if (loopsError) throw loopsError;
@@ -163,10 +163,17 @@ export const HomeScreen: React.FC = () => {
           const loopTasks = allTasks.filter(t => t.loop_id === loop.id && !t.is_one_time);
           const completedCount = loopTasks.filter(t => t.completed).length;
           const totalCount = loopTasks.length;
+          
+          // Map joined loop_streak data to top-level properties
+          const streakInfo = loop.loop_streaks?.[0] || loop.loop_streaks || null;
+
           return {
             ...loop,
             completedCount,
-            totalCount
+            totalCount,
+            currentStreak: streakInfo?.current_streak || 0,
+            longestStreak: streakInfo?.longest_streak || 0,
+            lastCompletedDate: streakInfo?.last_completed_date
           };
         });
       }

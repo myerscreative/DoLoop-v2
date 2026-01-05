@@ -3,6 +3,7 @@
  */
 
 export type ResetRule = 'manual' | 'daily' | 'weekdays' | 'weekly' | 'custom';
+export type FunctionType = 'execution' | 'practice';
 export type LoopRole = 'creator' | 'collaborator' | 'assigned' | 'viewer';
 export type TaskStatus = 'pending' | 'done';
 export type TaskPriority = 'none' | 'low' | 'medium' | 'high' | 'urgent';
@@ -32,6 +33,10 @@ export interface Loop {
   created_at?: string;
   updated_at?: string;
 
+  // --- Star Rating System ---
+  average_rating?: number;
+  total_ratings?: number;
+
   // --- Recipe Provenance (Author & Source) ---
   author_name?: string;           // The creator/expert behind the loop
   author_bio?: string;            // Brief background of the author
@@ -53,6 +58,8 @@ export interface Loop {
   lastCompletedAt?: string | Date;
   currentStreak?: number;
   longestStreak?: number;
+  lastCompletedDate?: string;
+  function_type?: FunctionType;
   
   // Other potential fields
   type?: string;

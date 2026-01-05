@@ -42,6 +42,7 @@ interface CreateLoopModalProps {
     color: string;
     priority?: string;
     time_estimate?: string;
+    function_type?: string;
   }) => void;
   initialData?: {
     name: string;
@@ -52,6 +53,7 @@ interface CreateLoopModalProps {
     priority?: string;
     due_date?: string;
     time_estimate?: string;
+    function_type?: string;
   } | null;
   loading: boolean;
   isEditing: boolean;
@@ -78,6 +80,7 @@ export default function CreateLoopModal({
   const [resetDayOfWeek, setResetDayOfWeek] = useState(1); // Default Monday
   const [showDetails, setShowDetails] = useState(true); // Default open for now, can be toggled
   const [isFocused, setIsFocused] = useState(false);
+  const [functionType, setFunctionType] = useState<'execution' | 'practice'>('execution');
 
   // Optional Field Toggles
   const [hasPriority, setHasPriority] = useState(false);
@@ -157,6 +160,7 @@ export default function CreateLoopModal({
       setDescription(initialData.description || '');
       setAffiliateLink(initialData.affiliate_link || '');
       setType((initialData.reset_rule as any) || 'manual');
+      setFunctionType((initialData.function_type as any) || 'execution');
       
       // Initialize optional flags
       if (initialData.priority) {
@@ -181,6 +185,7 @@ export default function CreateLoopModal({
       setDueDate(new Date().toISOString());
       setTimeEstimate('');
       setType('manual');
+      setFunctionType('execution');
       setShowDetails(false);
       
       // Reset optional flags
@@ -204,6 +209,7 @@ export default function CreateLoopModal({
       color: selectedColor,
       priority: hasPriority ? priority : undefined,
       time_estimate: hasTimeEstimate ? timeEstimate : undefined,
+      function_type: functionType,
     });
   };
 
@@ -324,6 +330,55 @@ export default function CreateLoopModal({
                     <Text style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
                       {getResetDescription()}
                     </Text>
+
+                    {/* Function Type Toggle */}
+                    <View style={{ marginTop: 24 }}>
+                        <Text style={styles.label}>Loop Style</Text>
+                        <View style={{ flexDirection: 'row', backgroundColor: '#f1f5f9', borderRadius: 12, padding: 4 }}>
+                            <TouchableOpacity 
+                                onPress={() => setFunctionType('execution')}
+                                style={{ 
+                                    flex: 1, 
+                                    paddingVertical: 8, 
+                                    alignItems: 'center', 
+                                    backgroundColor: functionType === 'execution' ? '#fff' : 'transparent',
+                                    borderRadius: 10,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: functionType === 'execution' ? 0.1 : 0,
+                                    shadowRadius: 2,
+                                    elevation: functionType === 'execution' ? 1 : 0
+                                }}
+                            >
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: functionType === 'execution' ? themeColors.strong : '#64748b' }}>Checklist</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                onPress={() => {
+                                    setFunctionType('practice');
+                                    setType('daily'); // Practice loops are daily habits
+                                }}
+                                style={{ 
+                                    flex: 1, 
+                                    paddingVertical: 8, 
+                                    alignItems: 'center', 
+                                    backgroundColor: functionType === 'practice' ? '#fff' : 'transparent',
+                                    borderRadius: 10,
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: functionType === 'practice' ? 0.1 : 0,
+                                    shadowRadius: 2,
+                                    elevation: functionType === 'practice' ? 1 : 0
+                                }}
+                            >
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: functionType === 'practice' ? '#FFB800' : '#64748b' }}>Habit/Principle</Text>
+                            </TouchableOpacity>
+                        </View>
+                        <Text style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
+                            {functionType === 'execution' 
+                                ? 'Execution: Complete items to reach 100% and manually reloop.' 
+                                : 'Practice: Tracks daily momentum streaks. Tasks reset automatically.'}
+                        </Text>
+                    </View>
                     
                     {/* Time and Day Pickers */}
                     {(type === 'daily' || type === 'weekdays' || type === 'weekly') && (

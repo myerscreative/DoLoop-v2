@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { LoopWithTasks } from '../../types/loop';
 import { Colors } from '../../constants/Colors';
+import { StarRating } from '../native/StarRating';
+import { MomentumRing } from '../native/MomentumRing';
 
 interface GridLoopCardProps {
   loop: LoopWithTasks;
@@ -38,11 +40,15 @@ export const GridLoopCard: React.FC<GridLoopCardProps> = ({ loop, onPress, onEdi
       {/* Top Row: Icon and Menu */}
       <View style={styles.topRow}>
         <View style={[styles.iconContainer, { backgroundColor: c.backgroundSecondary }]}>
-          <Ionicons 
-            name={isComplete ? "checkmark-circle" : "play"} 
-            size={24} 
-            color={c.primary} 
-          />
+          {loop.function_type === 'practice' ? (
+            <MomentumRing size={32} strokeWidth={4} streak={loop.currentStreak || 0} />
+          ) : (
+            <Ionicons 
+                name={isComplete ? "checkmark-circle" : "play"} 
+                size={24}   
+                color={c.primary} 
+            />
+          )}
         </View>
         
         {onEdit && (
@@ -64,16 +70,25 @@ export const GridLoopCard: React.FC<GridLoopCardProps> = ({ loop, onPress, onEdi
       </Text>
 
       {/* Category Badge */}
-      <View style={[styles.badgeContainer, { backgroundColor: badgeBg }]}>
-        <Text style={[styles.badgeText, { color: badgeText }]}>
-          {loop.reset_rule === 'manual' ? 'Checklist' : (loop.reset_rule || 'Daily')}
+      <View style={[styles.badgeContainer, { backgroundColor: loop.function_type === 'practice' ? '#FFB800' : badgeBg }]}>
+        <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? '#000' : badgeText }]}>
+          {loop.function_type === 'practice' ? 'Practice' : (loop.reset_rule === 'manual' ? 'Checklist' : (loop.reset_rule || 'Daily'))}
         </Text>
       </View>
+
+      {/* Rating Display */}
+      {loop.average_rating !== undefined && loop.total_ratings !== undefined && loop.total_ratings > 0 && (
+        <View style={styles.ratingContainer}>
+          <StarRating rating={loop.average_rating} count={loop.total_ratings} size={12} />
+        </View>
+      )}
 
       {/* Bottom Row: Progress */}
       <View style={styles.bottomRow}>
         <Text style={styles.progressText}>
-          {Math.round(progress)}% Done
+            {loop.function_type === 'practice' 
+                ? `🔥 ${(loop.currentStreak || 0)} Day Streak`
+                : `${Math.round(progress)}% Done`}
         </Text>
         
         {/* Thicker Ring (8px stroke) */}
@@ -142,7 +157,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    marginBottom: 24,
+    marginBottom: 8,
+  },
+  ratingContainer: {
+    marginBottom: 16,
   },
   badgeText: {
     fontSize: 11,
