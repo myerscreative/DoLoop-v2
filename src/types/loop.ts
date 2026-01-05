@@ -32,6 +32,14 @@ export interface Loop {
   created_at?: string;
   updated_at?: string;
 
+  // --- Recipe Provenance (Author & Source) ---
+  author_name?: string;           // The creator/expert behind the loop
+  author_bio?: string;            // Brief background of the author
+  author_image_url?: string;      // Profile picture URL
+  source_title?: string;          // Book, Seminar, or Framework name
+  source_link?: string;           // Link to buy the book or training
+  end_goal_description?: string;  // The "Why" - what success looks like
+
   // Legacy aliases for utility functions
   title?: string; // alias for name
   items?: Task[]; // alias for tasks

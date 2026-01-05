@@ -36,6 +36,7 @@ import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTa
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType, FOLDER_COLORS } from '../types/loop';
+import { LoopProvenance } from '../components/loops/LoopProvenance';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -999,6 +1000,16 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           </View>
         )}
+
+        {/* PROVENANCE SECTION */}
+        <LoopProvenance
+          authorName={loopData.author_name}
+          authorBio={loopData.author_bio}
+          authorImageUrl={loopData.author_image_url}
+          sourceTitle={loopData.source_title}
+          sourceLink={loopData.source_link}
+          endGoalDescription={loopData.end_goal_description}
+        />
         </ScrollView>
 
         {/* Reloop Button */}

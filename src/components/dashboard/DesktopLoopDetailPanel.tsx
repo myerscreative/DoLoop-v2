@@ -38,6 +38,7 @@ import {
 } from '../../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../../lib/profileHelpers';
 import { useSharedMomentum } from '../../hooks/useSharedMomentum';
+import { LoopProvenance } from '../loops/LoopProvenance';
 
 // Props: accepts loopId directly
 interface DesktopLoopDetailPanelProps {
@@ -475,6 +476,16 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             <Text style={styles.addTaskText}>Add Step</Text>
           </TouchableOpacity>
         </View>
+
+        {/* PROVENANCE SECTION */}
+        <LoopProvenance
+          authorName={loopData.author_name}
+          authorBio={loopData.author_bio}
+          authorImageUrl={loopData.author_image_url}
+          sourceTitle={loopData.source_title}
+          sourceLink={loopData.source_link}
+          endGoalDescription={loopData.end_goal_description}
+        />
       </ScrollView>
 
       <TaskEditModal
