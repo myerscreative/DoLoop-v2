@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, Linking, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, Image, StyleSheet, Linking, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 
 interface LoopProvenanceProps {
   authorName?: string;
@@ -8,6 +8,7 @@ interface LoopProvenanceProps {
   sourceTitle?: string;
   sourceLink?: string;
   endGoalDescription?: string;
+  isGenerating?: boolean;
 }
 
 export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
@@ -17,6 +18,7 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
   sourceTitle,
   sourceLink,
   endGoalDescription,
+  isGenerating = false,
 }) => {
   // Don't render if no meaningful data
   if (!authorName && !sourceTitle && !endGoalDescription) {
@@ -41,7 +43,15 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Text style={styles.header}>About this Recipe</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <Text style={styles.header}>About this Recipe</Text>
+        {isGenerating && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <ActivityIndicator size="small" color="#FEC00F" />
+            <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Generating...</Text>
+          </View>
+        )}
+      </View>
 
       {/* Author Row */}
       {(authorName || sourceTitle) && (

@@ -14,12 +14,16 @@ export const LoopDetailView: React.FC<LoopDetailViewProps> = ({ template, onAdd 
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
   const [localTasks, setLocalTasks] = useState<any[]>(template?.tasks || []);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [extendedBio, setExtendedBio] = useState<string | null>(null);
+  const [isGeneratingProvenance, setIsGeneratingProvenance] = useState(false);
 
   useEffect(() => {
     setLocalTasks(template?.tasks || []);
     setExpandedHints(new Set());
+    setExtendedBio(template?.creator?.extended_bio || null);
 
     if (template) {
+      // Trigger hint generation if needed
       const needsHints = template.tasks.some(t => !t.hint || t.hint.trim() === '');
       if (needsHints) {
         console.log(`[LoopDetailView] Template "${template.title}" needs hints, triggering...`);
@@ -27,6 +31,14 @@ export const LoopDetailView: React.FC<LoopDetailViewProps> = ({ template, onAdd 
         triggerHintGeneration(template.id);
       } else {
         setIsGenerating(false);
+      }
+
+      // Trigger provenance generation if no extended bio
+      const hasExtendedBio = template.creator?.extended_bio && template.creator.extended_bio.length > 200;
+      if (!hasExtendedBio) {
+        console.log(`[LoopDetailView] Template "${template.title}" needs provenance, triggering...`);
+        setIsGeneratingProvenance(true);
+        triggerProvenanceGeneration(template.id);
       }
     }
   }, [template?.id]);
@@ -50,6 +62,25 @@ export const LoopDetailView: React.FC<LoopDetailViewProps> = ({ template, onAdd 
       console.warn('[LoopDetailView] Hint generation failed:', err);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const triggerProvenanceGeneration = async (id: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate_template_provenance', {
+        body: { template_id: id },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.extended_bio) {
+        console.log(`[LoopDetailView] Provenance generated for ${id}`);
+        setExtendedBio(data.extended_bio);
+      }
+    } catch (err) {
+      console.warn('[LoopDetailView] Provenance generation failed:', err);
+    } finally {
+      setIsGeneratingProvenance(false);
     }
   };
 
@@ -121,11 +152,12 @@ export const LoopDetailView: React.FC<LoopDetailViewProps> = ({ template, onAdd 
         {/* PROVENANCE SECTION - Author & Source */}
         <LoopProvenance
           authorName={template.creator?.name}
-          authorBio={template.creator?.bio}
+          authorBio={extendedBio || template.creator?.bio}
           authorImageUrl={template.creator?.photo_url}
           sourceTitle={template.book_course_title}
           sourceLink={template.affiliate_link}
           endGoalDescription={template.description}
+          isGenerating={isGeneratingProvenance}
         />
       </ScrollView>
     </View>
