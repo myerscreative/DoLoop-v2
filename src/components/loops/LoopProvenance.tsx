@@ -69,65 +69,73 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
         )}
       </View>
 
-      {/* Subtitle: By Author • From Source */}
-      {(authorName || sourceTitle) && (
-        <View style={styles.subtitleRow}>
-          {/* Avatar */}
-          {authorImageUrl ? (
-            <Image source={{ uri: authorImageUrl }} style={styles.avatar} />
-          ) : authorName ? (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarInitials}>{getInitials(authorName)}</Text>
-            </View>
-          ) : null}
-
-          <View style={styles.subtitleTextContainer}>
-            <Text style={styles.subtitle}>
-              {authorName && <Text style={styles.authorName}>By {authorName}</Text>}
-              {authorName && sourceTitle && <Text style={styles.subtitleSeparator}> • </Text>}
-              {sourceTitle && (
-                <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
-                  <Text style={[styles.sourceText, sourceLink && styles.sourceLink]}>
-                    From "{sourceTitle}"
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* Read the Story Toggle */}
-      {hasLongBio && (
-        <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
-          <Text style={styles.toggleText}>
-            {isExpanded ? 'Hide the Story' : 'Read the Story'}
-          </Text>
-          <Ionicons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={16} 
-            color="#FFB800" 
-          />
-        </TouchableOpacity>
-      )}
-
-      {/* Expandable Bio Section */}
-      {isExpanded && authorBio && (
-        <View style={styles.bioContainer}>
-          <Text style={styles.bioText}>{authorBio}</Text>
-        </View>
-      )}
-
-      {/* Short bio if not expandable */}
-      {!hasLongBio && authorBio && (
-        <Text style={styles.shortBio}>{authorBio}</Text>
-      )}
-
-      {/* End Goal - Always Visible */}
+      {/* 1. ABOUT THIS LOOP - End Goal */}
       {endGoalDescription && (
         <View style={styles.goalContainer}>
-          <Text style={styles.goalLabel}>🎯 End Goal</Text>
+          <Text style={styles.sectionLabel}>🎯 About this Loop</Text>
           <Text style={styles.goalText}>{endGoalDescription}</Text>
+        </View>
+      )}
+
+      {/* 2. ABOUT THE SOURCE */}
+      {sourceTitle && (
+        <View style={styles.sourceContainer}>
+          <Text style={styles.sectionLabel}>📖 About the Source</Text>
+          <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
+            <Text style={[styles.sourceTitle, sourceLink && styles.sourceLink]}>
+              {sourceTitle}
+            </Text>
+          </TouchableOpacity>
+          {sourceLink && (
+            <Text style={styles.sourceLinkHint}>Tap to learn more</Text>
+          )}
+        </View>
+      )}
+
+      {/* 3. ABOUT THE AUTHOR */}
+      {authorName && (
+        <View style={styles.authorSection}>
+          <Text style={styles.sectionLabel}>👤 About the Author</Text>
+          
+          <View style={styles.authorRow}>
+            {/* Avatar */}
+            {authorImageUrl ? (
+              <Image source={{ uri: authorImageUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarInitials}>{getInitials(authorName)}</Text>
+              </View>
+            )}
+            <Text style={styles.authorName}>{authorName}</Text>
+          </View>
+
+          {/* Short bio preview or full short bio */}
+          {!hasLongBio && authorBio && (
+            <Text style={styles.shortBio}>{authorBio}</Text>
+          )}
+
+          {/* Read the Story Toggle for long bios */}
+          {hasLongBio && (
+            <>
+              <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
+                <Text style={styles.toggleText}>
+                  {isExpanded ? 'Hide the Story' : 'Read the Story'}
+                </Text>
+                <Ionicons 
+                  name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                  size={16} 
+                  color="#FFB800" 
+                />
+              </TouchableOpacity>
+
+              {/* Expandable Bio Section */}
+              {isExpanded && (
+                <View style={styles.bioContainer}>
+                  <Text style={styles.bioText}>{authorBio}</Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
       )}
     </View>
@@ -149,7 +157,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   header: {
     fontSize: 18,
@@ -165,10 +173,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9CA3AF',
   },
-  subtitleRow: {
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  // 1. Goal Section
+  goalContainer: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#8B4513',
+    marginBottom: 16,
+  },
+  goalText: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#8B4513',
+  },
+  // 2. Source Section
+  sourceContainer: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  sourceTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  sourceLink: {
+    color: '#FFB800',
+    textDecorationLine: 'underline',
+  },
+  sourceLinkHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  // 3. Author Section
+  authorSection: {
+    paddingTop: 4,
+  },
+  authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   avatar: {
     width: 40,
@@ -190,27 +243,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1F2937',
   },
-  subtitleTextContainer: {
-    flex: 1,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    flexWrap: 'wrap',
-  },
   authorName: {
+    fontSize: 16,
     fontWeight: '600',
     color: '#374151',
   },
-  subtitleSeparator: {
-    color: '#9CA3AF',
-  },
-  sourceText: {
-    color: '#6B7280',
-  },
-  sourceLink: {
-    color: '#FFB800',
-    textDecorationLine: 'underline',
+  shortBio: {
+    fontSize: 14,
+    lineHeight: 22,
+    color: '#4B5563',
   },
   toggleButton: {
     flexDirection: 'row',
@@ -227,7 +268,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
     borderRadius: 8,
     padding: 16,
-    marginBottom: 16,
     borderLeftWidth: 3,
     borderLeftColor: '#FFB800',
   },
@@ -236,30 +276,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#4B5563',
     fontFamily: Platform.OS === 'web' ? 'system-ui, -apple-system, sans-serif' : undefined,
-  },
-  shortBio: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#4B5563',
-    marginBottom: 16,
-  },
-  goalContainer: {
-    backgroundColor: '#FFFBEB',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#8B4513',
-  },
-  goalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#8B4513',
-    marginBottom: 6,
-  },
-  goalText: {
-    fontSize: 14,
-    lineHeight: 22,
-    color: '#8B4513',
   },
 });
 
