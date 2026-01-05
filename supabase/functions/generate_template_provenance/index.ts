@@ -60,11 +60,15 @@ serve(async (req) => {
     // Generate rich provenance content via OpenAI
     const systemPrompt = `You are a knowledgeable expert on personal development, productivity, and self-help authors. Your task is to write a comprehensive "About this Recipe" section for a productivity loop app.
 
-Write approximately 300-400 words covering:
-1. **About the Author** (100-150 words): Background, expertise, notable achievements, and why they are a trusted voice in this field.
-2. **About the Source** (80-100 words): Context about the book, course, or framework this loop is based on. Why it's valuable.
-3. **About this Loop** (80-100 words): How following this specific routine can help the user achieve their goals. Be motivational but practical.
+Write approximately 300-400 words covering these sections IN THIS EXACT ORDER:
 
+1. **About this Loop** (80-100 words): How following this specific routine can help the user achieve their goals. Be motivational but practical. Explain the benefits and what success looks like.
+
+2. **About the Source** (80-100 words): Context about the book, course, or framework this loop is based on. Why it's valuable and respected in the field.
+
+3. **About the Author** (100-150 words): Background, expertise, notable achievements, and why they are a trusted voice in this field.
+
+IMPORTANT: Keep the sections in the exact order shown above (Loop first, Source second, Author third).
 Write in a warm, professional tone. Use specific details when possible. Format as flowing paragraphs, not bullet points.`;
 
     const userPrompt = `Generate the "About this Recipe" content for:
