@@ -91,7 +91,7 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
       {hasLongBio && (
         <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
           <Text style={styles.toggleText}>
-            {isExpanded ? 'Less about this loop' : 'More about this loop'}
+            {isExpanded ? 'Hide' : 'About this loop'}
           </Text>
           <Ionicons 
             name={isExpanded ? 'chevron-up' : 'chevron-down'} 
