@@ -65,7 +65,7 @@ const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
     secondary: vibeColor.accent,      // #FFD700 - Bright gold
     accent1: '#00CED1',               // Bright Teal (Weekly)
     accent2: '#8A2BE2',               // Blue Violet (Goals)
-    accentYellow: '#FEC00F',          // Vibrant Yellow (Daily)
+    accentYellow: '#FFB800',          // Vibrant Gold (Daily)
   };
 };
 

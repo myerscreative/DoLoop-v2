@@ -98,6 +98,7 @@ export const LoopDetailScreen: React.FC = () => {
           color: data.color,
           loop_type: category,
           reset_rule: dbResetRule,
+          function_type: data.function_type,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
@@ -548,40 +549,44 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleReloop = async () => {
-    if (loopData?.function_type === 'practice') {
-       // Practice loops reset daily, no manual reloop needed unless forced
-       if (showResetMenu) {
-         await resetLoop();
-       } else {
-         Alert.alert('Habit Loop', 'Keep completing tasks to maintain your streak! This resets automatically at 4am.');
-       }
-       return;
+    // If loop is incomplete, ask for confirmation
+    if (currentProgress < 100) {
+      Alert.alert(
+        'Reset Incomplete Loop?',
+        'You haven\'t finished all tasks. Do you want to reset anyway?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reset Loop', onPress: () => resetLoop() }
+        ]
+      );
+      return;
     }
-    
+
     if (loopData?.reset_rule === 'manual') {
-      // For manual loops, always allow reset
       await resetLoop();
     } else if (showResetMenu) {
-      // Manual reset override for scheduled loops
       await resetLoop();
     } else {
-      // Regular reloop - reset if scheduled
       const now = new Date();
-      const nextReset = new Date(loopData?.next_reset_at || '');
+      const nextResetAt = loopData?.next_reset_at;
+      const nextReset = nextResetAt ? new Date(nextResetAt) : null;
 
-      if (currentProgress >= 100 || now >= nextReset) {
+      if (!nextReset || now >= nextReset) {
         await resetLoop();
       } else {
         if (loopData) {
           Alert.alert(
             'Next Reset',
-            `This loop resets ${loopData.reset_rule} at ${nextReset.toLocaleTimeString()}. Complete all tasks to reloop now.`,
-            [{ text: 'OK' }]
+            `This loop resets ${loopData.reset_rule}${nextReset ? ' at ' + nextReset.toLocaleTimeString() : ''}. Do you want to reset it early?`,
+            [
+              { text: 'Later', style: 'cancel' },
+              { text: 'Reset Now', onPress: () => resetLoop() }
+            ]
           );
         }
       }
-  }
-};
+    }
+  };
 
   const resetLoop = async () => {
     try {
@@ -809,7 +814,7 @@ export const LoopDetailScreen: React.FC = () => {
             ) : (
                 <LoopIcon 
                 size={64} 
-                color={loopData.color || '#FEC00F'} 
+                color={loopData.color || '#FFB800'} 
                 />
             )}
             <View style={{ height: 16 }} />
@@ -949,6 +954,16 @@ export const LoopDetailScreen: React.FC = () => {
             </TouchableOpacity>
           )}
 
+          {/* PROVENANCE SECTION */}
+          <LoopProvenance
+            authorName={loopData.author_name}
+            authorBio={loopData.author_bio}
+            authorImageUrl={loopData.author_image_url}
+            sourceTitle={loopData.source_title}
+            sourceLink={loopData.source_link}
+            endGoalDescription={loopData.end_goal_description}
+          />
+
           {/* Star Rating Section */}
           <View style={styles.ratingSection}>
             <Text style={styles.ratingLabel}>Rate this Loop</Text>
@@ -1052,6 +1067,7 @@ export const LoopDetailScreen: React.FC = () => {
                         onPress={() => handleEditTask(task as TaskWithDetails)}
                         onToggle={() => toggleTask(task)}
                         onSubtaskChange={loadLoopData}
+                        isPracticeLoop={loopData.function_type === 'practice'}
                     />
                 </View>
                 ))}
@@ -1119,15 +1135,6 @@ export const LoopDetailScreen: React.FC = () => {
           </View>
         )}
 
-        {/* PROVENANCE SECTION */}
-        <LoopProvenance
-          authorName={loopData.author_name}
-          authorBio={loopData.author_bio}
-          authorImageUrl={loopData.author_image_url}
-          sourceTitle={loopData.source_title}
-          sourceLink={loopData.source_link}
-          endGoalDescription={loopData.end_goal_description}
-        />
         </ScrollView>
 
         {/* Reloop Button */}
@@ -1141,17 +1148,15 @@ export const LoopDetailScreen: React.FC = () => {
             {(() => {
               const isManual = loopData?.reset_rule === 'manual';
               const isPractice = loopData?.function_type === 'practice';
-              const canReset = isPractice ? false : (isManual ? currentProgress >= 100 : (currentProgress >= 100 || showResetMenu));
+              const canReset = true; // Always allow reset now
               
-              if (isPractice) return null; // No Reloop button for practice loops (handled auto)
-
-              const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : 'Reloop');
+              const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : (currentProgress >= 100 ? 'Reloop' : 'Reloop Early'));
               
               const buttonBg = showResetMenu 
                 ? colors.error 
-                : (canReset ? loopData.color : '#e2e8f0'); // Use explicit grey for disabled bg
+                : (canReset ? loopData.color : '#e2e8f0'); 
 
-              const buttonTextColor = canReset ? 'white' : '#94a3b8'; // Darker grey text for disabled
+              const buttonTextColor = 'white'; 
 
               return (
                 <TouchableOpacity
@@ -1308,6 +1313,7 @@ export const LoopDetailScreen: React.FC = () => {
           reset_rule: loopData.reset_rule || 'manual',
           color: loopData.color,
           due_date: loopData.due_date,
+          function_type: loopData.function_type,
         } : null}
         loading={savingLoop}
         isEditing={true}
@@ -1429,7 +1435,7 @@ const styles = StyleSheet.create({
   synopsisLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#FEC00F',
+    color: '#FFB800',
     letterSpacing: 1,
     marginBottom: 8,
   },

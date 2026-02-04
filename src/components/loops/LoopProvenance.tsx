@@ -28,10 +28,17 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Don't render if no meaningful data
-  if (!authorName && !sourceTitle && !endGoalDescription) {
+  // Determine if we have any data to show
+  const hasData = authorName || sourceTitle || endGoalDescription;
+
+  if (!hasData && !isGenerating) {
     return null;
   }
+
+  const toggleExpanded = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIsExpanded(!isExpanded);
+  };
 
   const handleSourcePress = () => {
     if (sourceLink) {
@@ -39,78 +46,67 @@ export const LoopProvenance: React.FC<LoopProvenanceProps> = ({
     }
   };
 
-  const toggleExpanded = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setIsExpanded(!isExpanded);
-  };
-
-  // Check if we have a long bio worth expanding
-  const hasLongBio = authorBio && authorBio.length > 150;
-
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>About this Recipe</Text>
-        {isGenerating && (
-          <View style={styles.generatingBadge}>
-            <ActivityIndicator size="small" color="#FFB800" />
-            <Text style={styles.generatingText}>Generating...</Text>
-          </View>
-        )}
-      </View>
-
-      {/* Author & Source Row - Single Line */}
-      <View style={styles.metaRow}>
-        {authorName && (
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Author:</Text>
-            <Text style={styles.metaValue}>{authorName}</Text>
-          </View>
-        )}
-        {sourceTitle && (
-          <View style={styles.metaItem}>
-            <Text style={styles.metaLabel}>Source:</Text>
-            <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
-              <Text style={[styles.metaValue, sourceLink && styles.sourceLink]}>
-                {sourceTitle}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* About this Loop - End Goal */}
-      {endGoalDescription && (
-        <View style={styles.goalContainer}>
-          <Text style={styles.goalText}>{endGoalDescription}</Text>
+      {/* Header - Clickable to toggle */}
+      <TouchableOpacity 
+        style={styles.headerRow} 
+        onPress={toggleExpanded}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.header}>About this Loop</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isGenerating && (
+                <View style={styles.generatingBadge}>
+                    <ActivityIndicator size="small" color="#FFB800" />
+                    <Text style={styles.generatingText}>Generating...</Text>
+                </View>
+            )}
+            <Ionicons 
+                name={isExpanded ? 'chevron-up' : 'chevron-down'} 
+                size={20} 
+                color="#64748b" 
+            />
         </View>
-      )}
+      </TouchableOpacity>
 
-      {/* More about this loop Toggle */}
-      {hasLongBio && (
-        <TouchableOpacity onPress={toggleExpanded} style={styles.toggleButton}>
-          <Text style={styles.toggleText}>
-            {isExpanded ? 'Hide' : 'About this loop'}
-          </Text>
-          <Ionicons 
-            name={isExpanded ? 'chevron-up' : 'chevron-down'} 
-            size={16} 
-            color="#FFB800" 
-          />
-        </TouchableOpacity>
-      )}
+      {/* Expanded Content */}
+      {isExpanded && (
+          <View style={styles.content}>
+            {/* Author & Source Row - Single Line */}
+            <View style={styles.metaRow}>
+                {authorName && (
+                <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Author:</Text>
+                    <Text style={styles.metaValue}>{authorName}</Text>
+                </View>
+                )}
+                {sourceTitle && (
+                <View style={styles.metaItem}>
+                    <Text style={styles.metaLabel}>Source:</Text>
+                    <TouchableOpacity onPress={handleSourcePress} disabled={!sourceLink}>
+                    <Text style={[styles.metaValue, sourceLink && styles.sourceLink]}>
+                        {sourceTitle}
+                    </Text>
+                    </TouchableOpacity>
+                </View>
+                )}
+            </View>
 
-      {/* Expandable Bio Section */}
-      {isExpanded && authorBio && (
-        <View style={styles.bioContainer}>
-          <Text style={styles.bioText}>{authorBio}</Text>
-        </View>
-      )}
+            {/* About this Loop - End Goal */}
+            {endGoalDescription && (
+                <View style={styles.goalContainer}>
+                <Text style={styles.goalText}>{endGoalDescription}</Text>
+                </View>
+            )}
 
-      {/* Short bio if not expandable */}
-      {!hasLongBio && authorBio && (
-        <Text style={styles.shortBio}>{authorBio}</Text>
+            {/* Bio */}
+            {authorBio && (
+                <View style={styles.bioContainer}>
+                <Text style={styles.bioText}>{authorBio}</Text>
+                </View>
+            )}
+          </View>
       )}
     </View>
   );
@@ -127,16 +123,19 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     maxWidth: Platform.OS === 'web' ? 600 : undefined,
   },
+  content: {
+    paddingTop: 8,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingVertical: 4,
   },
   header: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#0f172a',
   },
   generatingBadge: {
     flexDirection: 'row',

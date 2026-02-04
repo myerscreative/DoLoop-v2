@@ -380,6 +380,11 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const resetLoop = async () => {
     if (!loopData) return;
     try {
+      if (currentProgress < 100) {
+        const confirmed = window.confirm('This loop is incomplete. Reset anyway?');
+        if (!confirmed) return;
+      }
+      
       await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
 
       // === PER-LOOP STREAK LOGIC for Practice Loops ===
@@ -479,7 +484,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     );
   }
 
-  const currentProgress = loopData.totalCount > 0 ? (loopData.completedCount / loopData.totalCount) * 100 : 0;
+  const currentProgress = loopData.totalCount > 0 ? Math.round((loopData.completedCount / loopData.totalCount) * 100) : 0;
   const recurringTasks = loopData.tasks.filter(task => !task.is_one_time);
   const oneTimeTasks = loopData.tasks.filter(task => task.is_one_time);
 
@@ -500,18 +505,11 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[
-                styles.completeButton,
-                (loopData.function_type === 'practice' || currentProgress < 100) && styles.completeButtonDisabled
-              ]}
+              style={styles.completeButton}
               onPress={resetLoop}
-              disabled={loopData.function_type === 'practice' || currentProgress < 100}
             >
-              <Text style={[
-                styles.completeButtonText,
-                (loopData.function_type === 'practice' || currentProgress < 100) && styles.completeButtonTextDisabled
-              ]}>
-                {loopData.function_type === 'practice' ? 'Auto-Resets' : (currentProgress >= 100 ? 'Reloop' : 'Complete Loop')}
+              <Text style={styles.completeButtonText}>
+                {currentProgress >= 100 ? 'Reloop' : 'Reloop Early'}
               </Text>
             </TouchableOpacity>
           </View>

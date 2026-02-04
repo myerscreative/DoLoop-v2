@@ -99,6 +99,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
+  const [showSubtaskInput, setShowSubtaskInput] = useState(false);
 
   const isProcessingSubtask = useRef(false);
 
@@ -143,6 +144,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setShowDatePicker(false);
     setShowReminderPicker(false);
     setShowTagInput(false);
+    setShowSubtaskInput(false);
+    setNewSubtaskText('');
     setNewTagName('');
   };
 
@@ -415,9 +418,24 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         <View style={styles.modalContentWrapper}>
         {/* Header */}
         <View style={styles.header}>
-            <TouchableOpacity onPress={handleSaveAndClose} style={styles.backButton}>
-                <Ionicons name="chevron-back" size={28} color="white" />
-                <Text style={styles.headerTitle}>Loop Item/Step/Task</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Ionicons name="close" size={28} color="white" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerTitleContainer}>
+                <Text style={styles.headerTitle}>Task Details</Text>
+            </View>
+
+            <TouchableOpacity 
+                onPress={handleSaveAndClose} 
+                style={[styles.saveHeaderButton, !description.trim() && { opacity: 0.5 }]}
+                disabled={saving}
+            >
+                {saving ? (
+                    <ActivityIndicator size="small" color="white" />
+                ) : (
+                    <Text style={styles.saveHeaderText}>Save</Text>
+                )}
             </TouchableOpacity>
         </View>
 
@@ -429,7 +447,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 </TouchableOpacity>
                 <TextInput
                     style={styles.nameInput}
-                    placeholder="Step/Task Name"
+                    placeholder="Enter Step Name..."
                     value={description}
                     onChangeText={setDescription}
                     placeholderTextColor="#94a3b8"
@@ -437,34 +455,46 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 />
             </View>
 
-            {/* Subtasks */}
             <View style={styles.subtasksContainer}>
                 {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
                 
-                <View style={styles.addSubtaskRow}>
-                    <View style={styles.addSubtaskInputContainer}>
-                        <Ionicons name="add" size={20} color="#94a3b8" />
-                        <TextInput
-                            style={styles.addSubtaskInput}
-                            placeholder="Add Sub-Step/Sub-Task"
-                            value={newSubtaskText}
-                            onChangeText={setNewSubtaskText}
-                            onSubmitEditing={handleAddSubtask}
-                            blurOnSubmit={false} 
-                            placeholderTextColor="#94a3b8"
-                            onKeyPress={({ nativeEvent }) => {
-                                if (nativeEvent.key === 'Enter') {
-                                    handleAddSubtask();
-                                }
-                            }}
-                        />
+                {!showSubtaskInput ? (
+                    <TouchableOpacity 
+                        style={styles.addSubtaskLink} 
+                        onPress={() => setShowSubtaskInput(true)}
+                    >
+                        <Ionicons name="add" size={18} color="#64748b" />
+                        <Text style={styles.addSubtaskLinkText}>Add Sub-Step/Sub-Task</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <View style={styles.addSubtaskRow}>
+                        <View style={styles.addSubtaskInputContainer}>
+                            <TextInput
+                                style={styles.addSubtaskInput}
+                                placeholder="Sub-Step description..."
+                                value={newSubtaskText}
+                                onChangeText={setNewSubtaskText}
+                                onSubmitEditing={handleAddSubtask}
+                                blurOnSubmit={false} 
+                                autoFocus
+                                placeholderTextColor="#94a3b8"
+                                onKeyPress={({ nativeEvent }) => {
+                                    if (nativeEvent.key === 'Enter') {
+                                        handleAddSubtask();
+                                    }
+                                }}
+                            />
+                        </View>
+                        <TouchableOpacity onPress={() => setShowSubtaskInput(false)} style={styles.cancelSubtask}>
+                            <Ionicons name="close-circle" size={24} color="#94a3b8" />
+                        </TouchableOpacity>
+                        {newSubtaskText.length > 0 && (
+                                <TouchableOpacity onPress={handleAddSubtask} style={styles.addSubtaskConfirm}>
+                                    <Ionicons name="checkmark-circle" size={24} color="#FEC00F" />
+                                </TouchableOpacity>
+                        )}
                     </View>
-                    {newSubtaskText.length > 0 && (
-                            <TouchableOpacity onPress={handleAddSubtask} style={styles.addSubtaskConfirm}>
-                                <Ionicons name="checkmark-circle" size={24} color="#FEC00F" />
-                            </TouchableOpacity>
-                    )}
-                </View>
+                )}
             </View>
 
             <View style={styles.divider} />
@@ -714,6 +744,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
         </ScrollView>
 
+        {/* Bottom Save Button - for better visibility */}
+        <View style={styles.footer}>
+            <TouchableOpacity 
+                style={[styles.bottomSaveButton, (!description.trim() || saving) && styles.bottomSaveButtonDisabled]}
+                onPress={handleSaveAndClose}
+                disabled={!description.trim() || saving}
+            >
+                {saving ? (
+                    <ActivityIndicator size="small" color="#000" />
+                ) : (
+                    <Text style={styles.bottomSaveButtonText}>Save Changes</Text>
+                )}
+            </TouchableOpacity>
+        </View>
+
 
         </View>
       </View>
@@ -741,16 +786,32 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 60 : 20,
     paddingBottom: 20,
     paddingHorizontal: 16,
-  },
-  backButton: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  headerTitleContainer: {
+    flex: 1,
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '800',
     color: 'white',
-    marginLeft: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  saveHeaderButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  saveHeaderText: {
+    color: 'white',
+    fontSize: 17,
+    fontWeight: '700',
   },
   content: {
     flex: 1,
@@ -774,9 +835,15 @@ const styles = StyleSheet.create({
   },
   nameInput: {
       flex: 1,
-      fontSize: 18,
-      fontWeight: 'bold',
+      fontSize: 16,
       color: '#0f172a',
+      backgroundColor: '#f8fafc',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      minHeight: 48, // Ensure touch target
   },
   subtasksContainer: {
       paddingHorizontal: 20,
@@ -799,6 +866,34 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#334155',
+  },
+  footer: {
+      padding: 20,
+      borderTopWidth: 1,
+      borderTopColor: '#f1f5f9',
+      backgroundColor: 'white',
+  },
+  bottomSaveButton: {
+      backgroundColor: '#FEC00F',
+      borderRadius: 12,
+      paddingVertical: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#FEC00F',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 4,
+  },
+  bottomSaveButtonDisabled: {
+      backgroundColor: '#FDE68A',
+      shadowOpacity: 0,
+      elevation: 0,
+  },
+  bottomSaveButtonText: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: '#000',
   },
   addSubtaskButton: {
       flexDirection: 'row',
@@ -931,11 +1026,25 @@ const styles = StyleSheet.create({
   },
   addSubtaskInput: {
       flex: 1,
-      marginLeft: 8,
       fontSize: 15,
       color: '#0f172a',
-      paddingVertical: 10,
+      paddingVertical: 8,
       outlineStyle: 'none',
+  },
+  addSubtaskLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      gap: 6,
+  },
+  addSubtaskLinkText: {
+      fontSize: 14,
+      color: '#64748b',
+      fontWeight: '500',
+      textDecorationLine: 'underline',
+  },
+  cancelSubtask: {
+      padding: 4,
   },
   addSubtaskConfirm: {
       padding: 4,

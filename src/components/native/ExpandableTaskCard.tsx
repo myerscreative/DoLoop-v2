@@ -15,12 +15,17 @@ import { TaskWithDetails, Subtask } from '../../types/loop';
 import { useTheme } from '../../contexts/ThemeContext';
 import { PriorityBadge } from './PriorityBadge';
 import { createSubtask, toggleSubtask, deleteSubtask } from '../../lib/taskHelpers';
+import { ReflectionInput } from './ReflectionInput';
+import { getTodayReflection, saveReflection } from '../../lib/reflectionHelpers';
+import { useAuth } from '../../contexts/AuthContext';
+import { ReflectionHistoryModal } from './ReflectionHistoryModal';
 
 interface ExpandableTaskCardProps {
   task: TaskWithDetails;
   onPress: () => void;
   onToggle: () => void;
   onSubtaskChange?: () => void; // Callback to refresh parent data
+  isPracticeLoop?: boolean; // New prop for Practice Loop behavior
 }
 
 export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
@@ -28,13 +33,20 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   onPress,
   onToggle,
   onSubtaskChange,
+  isPracticeLoop = false,
 }) => {
   const { colors } = useTheme();
+  const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [localSubtasks, setLocalSubtasks] = useState<Subtask[]>(task.subtasks || []);
   
+  // Reflection state
+  const [reflectionText, setReflectionText] = useState<string>('');
+  const [loadingReflection, setLoadingReflection] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+
   // Sync with parent task updates
   React.useEffect(() => {
     if (task.subtasks) {
@@ -42,7 +54,29 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
     }
   }, [task.subtasks]);
 
+  // Load reflection if it's a practice loop and task is checked
+  React.useEffect(() => {
+    if (isPracticeLoop && task.completed && user) {
+      loadReflection();
+    }
+  }, [isPracticeLoop, task.completed, user, task.id]);
+
+  const loadReflection = async () => {
+    if (!user) return;
+    setLoadingReflection(true);
+    const text = await getTodayReflection(task.id, user.id);
+    if (text) setReflectionText(text);
+    setLoadingReflection(false);
+  };
+
+  const handleSaveReflection = async (text: string) => {
+    if (!user) return;
+    await saveReflection(task.id, user.id, text);
+    setReflectionText(text);
+  };
+
   const hasSubtasks = localSubtasks.length > 0;
+
   const completedSubtasks = localSubtasks.filter(st => st.completed).length;
   const totalSubtasks = localSubtasks.length;
   const taskStatus = task.completed ? 'done' : 'pending';
@@ -211,6 +245,36 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
           />
         </TouchableOpacity>
       </View>
+
+      {/* Reflection Input (Practice Mode) */}
+      {isPracticeLoop && task.completed && (
+        <Animated.View 
+          entering={FadeIn.duration(200)} 
+          style={{ paddingHorizontal: 16, paddingBottom: 8 }}
+        >
+          <ReflectionInput
+            taskId={task.id}
+            initialValue={reflectionText}
+            onSave={handleSaveReflection}
+          />
+          <TouchableOpacity 
+            onPress={() => setShowHistory(true)}
+            style={{ alignSelf: 'flex-end', marginTop: 4, marginRight: 8 }}
+          >
+            <Text style={{ fontSize: 13, color: '#64748b', textDecorationLine: 'underline' }}>
+                View History
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      {/* History Modal */}
+      <ReflectionHistoryModal
+        visible={showHistory}
+        onClose={() => setShowHistory(false)}
+        taskId={task.id}
+        taskTitle={task.description}
+      />
 
       {/* Expanded Subtasks Section */}
       {expanded && (

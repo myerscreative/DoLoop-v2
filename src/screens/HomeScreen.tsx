@@ -148,6 +148,8 @@ export const HomeScreen: React.FC = () => {
         .from('loops')
         .select('*, loop_streaks(*)')
         .eq('owner_id', user.id);
+      
+      console.log('DEBUG DASHBOARD LOOPS:', userLoops?.map(l => ({ name: l.name, author: l.author_name, type: l.function_type })));
 
       if (loopsError) throw loopsError;
 

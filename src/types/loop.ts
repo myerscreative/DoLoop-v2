@@ -26,6 +26,7 @@ export interface Loop {
   affiliate_link?: string; // Link to order book/training
   category?: LoopType;
   reset_rule?: ResetRule;
+  function_type?: FunctionType; // 'execution' | 'practice'
   custom_days?: number[]; // For custom recurrence: 0=Sun, 1=Mon, etc.
   next_reset_at?: string; // ISO date string
   due_date?: string; // ISO date string для manual loops
@@ -59,7 +60,6 @@ export interface Loop {
   currentStreak?: number;
   longestStreak?: number;
   lastCompletedDate?: string;
-  function_type?: FunctionType;
   
   // Other potential fields
   type?: string;
@@ -169,10 +169,18 @@ export interface ArchivedTask {
 }
 
 export interface UserStreak {
-  id: string;
   user_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_completed_date?: string;
+  updated_at: string;
+}
+
+export interface LoopStreak {
   loop_id: string;
   current_streak: number;
+  longest_streak: number;
+  last_completed_date?: string;
   updated_at: string;
 }
 
@@ -273,10 +281,20 @@ export interface LibraryFolder {
   filterType?: string;
 }
 
+export interface TaskReflection {
+  id: string;
+  task_id: string;
+  user_id: string;
+  reflection_date: string;
+  reflection_text: string;
+  created_at: string;
+}
+
 export interface CompletionRecord {
   date: string;
   completed: number;
   total: number;
+  reflection?: string; // Optional reflection for that day
 }
 
 export interface MomentumData {

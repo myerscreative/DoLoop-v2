@@ -69,6 +69,15 @@ export const GridLoopCard: React.FC<GridLoopCardProps> = ({ loop, onPress, onEdi
         {loop.name}
       </Text>
 
+      {(loop.author_name || loop.source_title) && (
+         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+             <Ionicons name="library" size={10} color="#FEC00F" style={{ marginRight: 4 }} />
+             <Text style={{ fontSize: 10, color: '#64748b', fontWeight: 'bold' }}>
+                EXPERT LOOP
+             </Text>
+         </View>
+      )}
+
       {/* Category Badge */}
       <View style={[styles.badgeContainer, { backgroundColor: loop.function_type === 'practice' ? '#FFB800' : badgeBg }]}>
         <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? '#000' : badgeText }]}>

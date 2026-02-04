@@ -60,7 +60,7 @@ const SubtaskItem = ({
             style={styles.infoButton}
             onPress={() => setIsExpanded(!isExpanded)}
           >
-            <Text style={[styles.infoIcon, { color: isExpanded ? '#FEC00F' : '#9CA3AF' }]}>
+            <Text style={[styles.infoIcon, { color: isExpanded ? '#FFB800' : '#9CA3AF' }]}>
               ⓘ
             </Text>
           </TouchableOpacity>
@@ -212,8 +212,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#FEC00F',
-    borderColor: '#FEC00F',
+    backgroundColor: '#FFB800',
+    borderColor: '#FFB800',
   },
   checkmark: {
     color: '#000000',
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#FEC00F',
+    backgroundColor: '#FFB800',
     justifyContent: 'center',
     alignItems: 'center',
   },

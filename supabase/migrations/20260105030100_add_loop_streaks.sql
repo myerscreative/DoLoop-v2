@@ -1,13 +1,11 @@
 -- Create loop_streaks table for tracking per-loop progress (especially for practice loops)
 DROP TABLE IF EXISTS public.loop_streaks;
 CREATE TABLE public.loop_streaks (
-    id UUID PRIMARY KEY DEFAULT extensions.uuid_generate_v4(),
-    loop_id UUID NOT NULL REFERENCES public.loops(id) ON DELETE CASCADE,
-    current_streak INTEGER DEFAULT 0,
-    longest_streak INTEGER DEFAULT 0,
+    loop_id UUID PRIMARY KEY REFERENCES public.loops(id) ON DELETE CASCADE,
+    current_streak INTEGER DEFAULT 0 NOT NULL,
+    longest_streak INTEGER DEFAULT 0 NOT NULL,
     last_completed_date TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(loop_id)
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() NOT NULL
 );
 
 -- Add RLS

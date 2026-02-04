@@ -92,6 +92,14 @@ export const LoopCard: React.FC<LoopCardProps> = ({
           <Text style={[styles.title, isUpcoming && styles.upcomingTitle]}>
             {loop.name || 'Unnamed Loop'}
           </Text>
+          {(loop.author_name || loop.source_title) && (
+             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                 <Ionicons name="library" size={12} color="#FEC00F" style={{ marginRight: 4 }} />
+                 <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>
+                    {loop.author_name ? 'Expert Loop' : 'From Library'}
+                 </Text>
+             </View>
+          )}
           {isUpcoming ? (
              <Text style={styles.dueDateText}>
                {loop.due_date ? `Due ${new Date(loop.due_date).toLocaleDateString()}` : 'Future Task'}
