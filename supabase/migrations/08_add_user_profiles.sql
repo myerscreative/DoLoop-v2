@@ -13,12 +13,15 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_id ON user_profiles(id);
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies: Users can only view/update their own profile
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
 CREATE POLICY "Users can view own profile" ON user_profiles
   FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can insert own profile" ON user_profiles;
 CREATE POLICY "Users can insert own profile" ON user_profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
 CREATE POLICY "Users can update own profile" ON user_profiles
   FOR UPDATE USING (auth.uid() = id);
 

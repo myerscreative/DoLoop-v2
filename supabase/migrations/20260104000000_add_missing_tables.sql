@@ -35,35 +35,45 @@ ALTER TABLE public.template_reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_streaks ENABLE ROW LEVEL SECURITY;
 
 -- Tags policies
+DROP POLICY IF EXISTS "Users can view their own tags" ON public.tags;
 CREATE POLICY "Users can view their own tags" ON public.tags
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own tags" ON public.tags;
 CREATE POLICY "Users can insert their own tags" ON public.tags
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own tags" ON public.tags;
 CREATE POLICY "Users can update their own tags" ON public.tags
     FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own tags" ON public.tags;
 CREATE POLICY "Users can delete their own tags" ON public.tags
     FOR DELETE USING (auth.uid() = user_id);
 
 -- Template reviews policies
+DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.template_reviews;
 CREATE POLICY "Reviews are viewable by everyone" ON public.template_reviews
     FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own reviews" ON public.template_reviews;
 CREATE POLICY "Users can insert their own reviews" ON public.template_reviews
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own reviews" ON public.template_reviews;
 CREATE POLICY "Users can update their own reviews" ON public.template_reviews
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- User streaks policies
+DROP POLICY IF EXISTS "Users can view their own streak" ON public.user_streaks;
 CREATE POLICY "Users can view their own streak" ON public.user_streaks
     FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own streak" ON public.user_streaks;
 CREATE POLICY "Users can update their own streak" ON public.user_streaks
     FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own streak" ON public.user_streaks;
 CREATE POLICY "Users can insert their own streak" ON public.user_streaks
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 

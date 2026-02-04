@@ -16,6 +16,7 @@ CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON public.task_tags(tag_id);
 
 -- Users can view task tags if they own the TAG (Personal tags)
 -- This assumes tags are private to the user.
+DROP POLICY IF EXISTS "Users can view task tags for their tags" ON public.task_tags;
 CREATE POLICY "Users can view task tags for their tags" ON public.task_tags
     FOR SELECT USING (
         EXISTS (
@@ -26,6 +27,7 @@ CREATE POLICY "Users can view task tags for their tags" ON public.task_tags
     );
 
 -- Users can insert task tags if they own the TAG (and implicitly have access to task via UI, but strictly checking tag ownership is key)
+DROP POLICY IF EXISTS "Users can insert task tags for their tags" ON public.task_tags;
 CREATE POLICY "Users can insert task tags for their tags" ON public.task_tags
     FOR INSERT WITH CHECK (
         EXISTS (
@@ -36,6 +38,7 @@ CREATE POLICY "Users can insert task tags for their tags" ON public.task_tags
     );
 
 -- Users can delete task tags if they own the TAG
+DROP POLICY IF EXISTS "Users can delete task tags for their tags" ON public.task_tags;
 CREATE POLICY "Users can delete task tags for their tags" ON public.task_tags
     FOR DELETE USING (
         EXISTS (

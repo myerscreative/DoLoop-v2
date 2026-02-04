@@ -14,6 +14,7 @@ DROP POLICY IF EXISTS "Users can view shared loops" ON loops;
 DROP POLICY IF EXISTS "Users can manage their own loops" ON loops;
 
 -- 2. Create simple, non-recursive policies for loops
+DROP POLICY IF EXISTS "Users can manage their own loops" ON loops;
 CREATE POLICY "Users can manage their own loops"
   ON loops
   FOR ALL
@@ -43,6 +44,7 @@ AS $$
 $$;
 
 -- Now create the policy using this function
+DROP POLICY IF EXISTS "Users can manage tasks in their loops" ON tasks;
 CREATE POLICY "Users can manage tasks in their loops"
   ON tasks
   FOR ALL
@@ -53,6 +55,7 @@ CREATE POLICY "Users can manage tasks in their loops"
 DROP POLICY IF EXISTS "Users can view archived tasks" ON archived_tasks;
 DROP POLICY IF EXISTS "Users can create archived tasks" ON archived_tasks;
 
+DROP POLICY IF EXISTS "Users can manage archived tasks" ON archived_tasks;
 CREATE POLICY "Users can manage archived tasks"
   ON archived_tasks
   FOR ALL
@@ -64,6 +67,7 @@ DROP POLICY IF EXISTS "Users can view their own streaks" ON user_streaks;
 DROP POLICY IF EXISTS "Users can update their own streaks" ON user_streaks;
 DROP POLICY IF EXISTS "Users can manage their own streaks" ON user_streaks;
 
+DROP POLICY IF EXISTS "Users can manage their own streaks" ON user_streaks;
 CREATE POLICY "Users can manage their own streaks"
   ON user_streaks
   FOR ALL
@@ -75,6 +79,7 @@ DROP POLICY IF EXISTS "Users can view loop members" ON loop_members;
 DROP POLICY IF EXISTS "Loop owners can manage members" ON loop_members;
 DROP POLICY IF EXISTS "Users can manage loop members" ON loop_members;
 
+DROP POLICY IF EXISTS "Users can manage loop members" ON loop_members;
 CREATE POLICY "Users can manage loop members"
   ON loop_members
   FOR ALL

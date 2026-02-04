@@ -1,6 +1,5 @@
 -- Create loop_streaks table for tracking per-loop progress (especially for practice loops)
-DROP TABLE IF EXISTS public.loop_streaks;
-CREATE TABLE public.loop_streaks (
+CREATE TABLE IF NOT EXISTS public.loop_streaks (
     loop_id UUID PRIMARY KEY REFERENCES public.loops(id) ON DELETE CASCADE,
     current_streak INTEGER DEFAULT 0 NOT NULL,
     longest_streak INTEGER DEFAULT 0 NOT NULL,
@@ -12,6 +11,7 @@ CREATE TABLE public.loop_streaks (
 ALTER TABLE public.loop_streaks ENABLE ROW LEVEL SECURITY;
 
 -- Allow users to view streaks for loops they have access to
+DROP POLICY IF EXISTS "Users can view streaks for loops they can access" ON public.loop_streaks;
 CREATE POLICY "Users can view streaks for loops they can access"
 ON public.loop_streaks FOR SELECT
 USING (
@@ -29,6 +29,7 @@ USING (
 );
 
 -- Allow users to upsert streaks for loops they own
+DROP POLICY IF EXISTS "Users can upsert streaks for loops they own" ON public.loop_streaks;
 CREATE POLICY "Users can upsert streaks for loops they own"
 ON public.loop_streaks FOR ALL
 USING (

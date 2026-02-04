@@ -11,6 +11,17 @@ CREATE TABLE IF NOT EXISTS public.subtasks (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+-- Ensure columns exist if table was already created (e.g. from partial run)
+DO $$
+BEGIN
+    ALTER TABLE public.subtasks ADD COLUMN IF NOT EXISTS task_id UUID REFERENCES public.tasks(id) ON DELETE CASCADE;
+    ALTER TABLE public.subtasks ADD COLUMN IF NOT EXISTS description TEXT;
+    ALTER TABLE public.subtasks ADD COLUMN IF NOT EXISTS completed BOOLEAN DEFAULT false;
+    ALTER TABLE public.subtasks ADD COLUMN IF NOT EXISTS order_index INTEGER DEFAULT 0;
+EXCEPTION
+    WHEN OTHERS THEN NULL;
+END $$;
+
 -- 2. Add critical task flag to tasks
 ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_critical BOOLEAN DEFAULT false;
 
@@ -18,6 +29,7 @@ ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_critical BOOLEAN DEFAULT fa
 ALTER TABLE public.subtasks ENABLE ROW LEVEL SECURITY;
 
 -- 4. RLS policies for subtasks (users can manage subtasks in their own loops)
+DROP POLICY IF EXISTS "Users can view subtasks" ON public.subtasks;
 CREATE POLICY "Users can view subtasks" ON public.subtasks
     FOR SELECT USING (
         task_id IN (
@@ -30,6 +42,7 @@ CREATE POLICY "Users can view subtasks" ON public.subtasks
         )
     );
 
+DROP POLICY IF EXISTS "Users can create subtasks" ON public.subtasks;
 CREATE POLICY "Users can create subtasks" ON public.subtasks
     FOR INSERT WITH CHECK (
         task_id IN (
@@ -42,6 +55,7 @@ CREATE POLICY "Users can create subtasks" ON public.subtasks
         )
     );
 
+DROP POLICY IF EXISTS "Users can update subtasks" ON public.subtasks;
 CREATE POLICY "Users can update subtasks" ON public.subtasks
     FOR UPDATE USING (
         task_id IN (
@@ -54,6 +68,7 @@ CREATE POLICY "Users can update subtasks" ON public.subtasks
         )
     );
 
+DROP POLICY IF EXISTS "Users can delete subtasks" ON public.subtasks;
 CREATE POLICY "Users can delete subtasks" ON public.subtasks
     FOR DELETE USING (
         task_id IN (

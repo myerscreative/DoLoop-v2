@@ -34,6 +34,7 @@ DROP POLICY IF EXISTS "Users can delete attachments" ON attachments;
 
 -- 3. Create NEW robust policies for attachments table
 -- Allow view/select for owner and members
+DROP POLICY IF EXISTS "attachments_select_policy" ON public.attachments;
 CREATE POLICY "attachments_select_policy" ON public.attachments
     FOR SELECT TO authenticated
     USING (
@@ -48,6 +49,7 @@ CREATE POLICY "attachments_select_policy" ON public.attachments
     );
 
 -- Allow insert for owner and members
+DROP POLICY IF EXISTS "attachments_insert_policy" ON public.attachments;
 CREATE POLICY "attachments_insert_policy" ON public.attachments
     FOR INSERT TO authenticated
     WITH CHECK (
@@ -62,6 +64,7 @@ CREATE POLICY "attachments_insert_policy" ON public.attachments
     );
 
 -- Allow delete for owner or the person who uploaded it
+DROP POLICY IF EXISTS "attachments_delete_policy" ON public.attachments;
 CREATE POLICY "attachments_delete_policy" ON public.attachments
     FOR DELETE TO authenticated
     USING (
@@ -86,6 +89,8 @@ DROP POLICY IF EXISTS "Authenticated users can update" ON storage.objects;
 DROP POLICY IF EXISTS "Users can delete own objects" ON storage.objects;
 DROP POLICY IF EXISTS "Public Access Policy" ON storage.objects;
 DROP POLICY IF EXISTS "Upload Policy" ON storage.objects;
+DROP POLICY IF EXISTS "Update Policy" ON storage.objects;
+DROP POLICY IF EXISTS "Delete Policy" ON storage.objects;
 
 -- Create Storage Policies
 CREATE POLICY "Public Access Policy"

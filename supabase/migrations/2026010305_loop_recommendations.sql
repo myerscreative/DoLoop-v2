@@ -4,7 +4,7 @@
 
 -- Track AI recommendation sessions for analytics
 CREATE TABLE IF NOT EXISTS loop_recommendation_sessions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   prompt TEXT NOT NULL,
   parsed_goal TEXT,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS loop_recommendation_sessions (
 
 -- Track which recommendations were adopted
 CREATE TABLE IF NOT EXISTS loop_recommendations_adopted (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   session_id UUID REFERENCES loop_recommendation_sessions(id) ON DELETE CASCADE,
   course TEXT NOT NULL,  -- starter, main, side, dessert
   template_id UUID REFERENCES loop_templates(id) ON DELETE SET NULL,
@@ -35,15 +35,18 @@ ALTER TABLE loop_recommendation_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE loop_recommendations_adopted ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies for recommendation sessions
+DROP POLICY IF EXISTS "Users can view own recommendation sessions" ON loop_recommendation_sessions;
 CREATE POLICY "Users can view own recommendation sessions" 
   ON loop_recommendation_sessions
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert own recommendation sessions" ON loop_recommendation_sessions;
 CREATE POLICY "Users can insert own recommendation sessions" 
   ON loop_recommendation_sessions
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- RLS policies for adopted recommendations
+DROP POLICY IF EXISTS "Users can view own adopted recommendations" ON loop_recommendations_adopted;
 CREATE POLICY "Users can view own adopted recommendations" 
   ON loop_recommendations_adopted
   FOR SELECT USING (
@@ -53,6 +56,7 @@ CREATE POLICY "Users can view own adopted recommendations"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert own adopted recommendations" ON loop_recommendations_adopted;
 CREATE POLICY "Users can insert own adopted recommendations" 
   ON loop_recommendations_adopted
   FOR INSERT WITH CHECK (

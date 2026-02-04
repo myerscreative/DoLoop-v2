@@ -38,7 +38,11 @@ INSERT INTO template_creators (id, name, bio, title, photo_url) VALUES
     'Advocate for social change and community engagement.',
     'Advocacy Strategist',
     'https://example.com/photos/community-leader.jpg'
-  );
+  ) ON CONFLICT (id) DO NOTHING;
+
+
+-- DELETE existing v2 tasks to prevent duplicates (idempotency)
+DELETE FROM template_tasks WHERE template_id::text LIKE '20000000-0000-0000-%';
 
 -- CATEGORY 1: Personal Development
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -74,7 +78,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#4fd1c5',
     'Personal Development',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Personal Development
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -86,7 +90,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0001-000000000002', 'Describe one challenge that taught you something', true, 3),
   ('20000000-0000-0000-0001-000000000003', 'Pause for 5 deep breaths', true, 1),
   ('20000000-0000-0000-0001-000000000003', 'Affirm your identity (e.g., "I am a builder")', true, 2),
-  ('20000000-0000-0000-0001-000000000003', 'Check habit tracker for today''s progress', true, 3);
+  ('20000000-0000-0000-0001-000000000003', 'Check habit tracker for today''s progress', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 2: Health & Wellness
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -122,7 +126,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#ed64a6',
     'Health & Wellness',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Health & Wellness
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -134,7 +138,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0002-000000000002', 'Read for 15-20 minutes in bed', true, 3),
   ('20000000-0000-0000-0002-000000000003', 'Include a serving of leafy greens with lunch', true, 1),
   ('20000000-0000-0000-0002-000000000003', 'Eat a savory breakfast (not sweet)', true, 2),
-  ('20000000-0000-0000-0002-000000000003', 'Take a 10-minute walk after your largest meal', true, 3);
+  ('20000000-0000-0000-0002-000000000003', 'Take a 10-minute walk after your largest meal', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 3: Productivity & Work
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -170,7 +174,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#e53e3e',
     'Productivity & Work',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Productivity & Work
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -182,7 +186,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0003-000000000002', 'Add follow-up items to Todo list', true, 3),
   ('20000000-0000-0000-0003-000000000003', 'Work for 25 minutes without distraction', true, 1),
   ('20000000-0000-0000-0003-000000000003', 'Rest for 5 minutes (away from screens)', true, 2),
-  ('20000000-0000-0000-0003-000000000003', 'Complete 4 sprints then take a long break', true, 3);
+  ('20000000-0000-0000-0003-000000000003', 'Complete 4 sprints then take a long break', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 4: Fitness & Sports
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -207,7 +211,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#dd6b20',
     'Fitness & Sports',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Fitness & Sports
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -216,7 +220,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0004-000000000001', 'Spinal rotations and shoulder stretches', true, 3),
   ('20000000-0000-0000-0004-000000000002', 'High intensity for 40 seconds', true, 1),
   ('20000000-0000-0000-0004-000000000002', 'Active recovery for 20 seconds', true, 2),
-  ('20000000-0000-0000-0004-000000000002', 'Repeat 8 times', true, 3);
+  ('20000000-0000-0000-0004-000000000002', 'Repeat 8 times', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 5: Travel & Adventure
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -241,7 +245,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#2c7a7b',
     'Travel & Adventure',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Travel & Adventure
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -250,7 +254,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0005-000000000001', 'Empty trash/refrigerator at home', true, 3),
   ('20000000-0000-0000-0005-000000000002', 'Verify Wi-Fi speed and backup connection', true, 1),
   ('20000000-0000-0000-0005-000000000002', 'Set up ergonomic accessories (stand, mouse)', true, 2),
-  ('20000000-0000-0000-0005-000000000002', 'Test audio/video settings for meetings', true, 3);
+  ('20000000-0000-0000-0005-000000000002', 'Test audio/video settings for meetings', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 6: Finance & Money
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -275,7 +279,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#2f855a',
     'Finance & Money',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Finance & Money
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -284,7 +288,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0006-000000000001', 'Categorize each item (Food, Rent, Misc)', true, 3),
   ('20000000-0000-0000-0006-000000000002', 'Summarize total income and expenses', true, 1),
   ('20000000-0000-0000-0006-000000000002', 'Compare actual spending with budget goals', true, 2),
-  ('20000000-0000-0000-0006-000000000002', 'Adjust budget allocations for next month', true, 3);
+  ('20000000-0000-0000-0006-000000000002', 'Adjust budget allocations for next month', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 7: Creativity & Hobbies
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -309,7 +313,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#9f7aea',
     'Creativity & Hobbies',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Creativity & Hobbies
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -318,7 +322,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0007-000000000001', 'Reflect on one unexpected idea that surfaced', true, 3),
   ('20000000-0000-0000-0007-000000000002', 'Warm up with scales or basic exercises', true, 1),
   ('20000000-0000-0000-0007-000000000002', 'Practice a challenging section of a piece', true, 2),
-  ('20000000-0000-0000-0007-000000000002', 'Play one song for pure enjoyment', true, 3);
+  ('20000000-0000-0000-0007-000000000002', 'Play one song for pure enjoyment', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 8: Learning & Education
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -343,7 +347,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#38b2ac',
     'Learning & Education',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Learning & Education
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -352,7 +356,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0008-000000000001', 'Learn 5 new vocabulary words', true, 3),
   ('20000000-0000-0000-0008-000000000002', 'Deconstruct the skill into sub-skills', true, 1),
   ('20000000-0000-0000-0008-000000000002', 'Learn enough to self-correct', true, 2),
-  ('20000000-0000-0000-0008-000000000002', 'Practice for 45 minutes without distraction', true, 3);
+  ('20000000-0000-0000-0008-000000000002', 'Practice for 45 minutes without distraction', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 9: Relationships & Social
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -377,7 +381,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#4a5568',
     'Relationships & Social',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Relationships & Social
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -386,7 +390,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0009-000000000001', 'Set intentions for the weekend together', true, 3),
   ('20000000-0000-0000-0009-000000000002', 'List 3 people to reach out to today', true, 1),
   ('20000000-0000-0000-0009-000000000002', 'Send a thoughtful email or LinkedIn message', true, 2),
-  ('20000000-0000-0000-0009-000000000002', 'Schedule a coffee chat or call', true, 3);
+  ('20000000-0000-0000-0009-000000000002', 'Schedule a coffee chat or call', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 10: Mindfulness & Spirituality
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -411,7 +415,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#f6e05e',
     'Mindfulness & Spirituality',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Mindfulness & Spirituality
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -420,7 +424,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0010-000000000001', 'Gently bring mind back when it wanders', true, 3),
   ('20000000-0000-0000-0010-000000000002', 'Walk slow and rhythmic in a quiet area', true, 1),
   ('20000000-0000-0000-0010-000000000002', 'Coordinate breath with your steps', true, 2),
-  ('20000000-0000-0000-0010-000000000002', 'Notice sights, sounds, and body sensations', true, 3);
+  ('20000000-0000-0000-0010-000000000002', 'Notice sights, sounds, and body sensations', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 11: Home & Organization
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -445,7 +449,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#fc8181',
     'Home & Organization',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Home & Organization
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -454,7 +458,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0011-000000000001', 'Discard or donate unwanted items immediately', true, 3),
   ('20000000-0000-0000-0011-000000000002', 'Draft a meal plan for the next 7 days', true, 1),
   ('20000000-0000-0000-0011-000000000002', 'Grocery shop and prep core ingredients (grains, proteins)', true, 2),
-  ('20000000-0000-0000-0011-000000000002', 'Portion out meals into containers', true, 3);
+  ('20000000-0000-0000-0011-000000000002', 'Portion out meals into containers', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 12: Career & Entrepreneurship
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -479,7 +483,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#2c7a7b',
     'Career & Entrepreneurship',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Career & Entrepreneurship
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -488,7 +492,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0012-000000000001', 'Outreach to one potential customer or partner', true, 3),
   ('20000000-0000-0000-0012-000000000002', 'Review key business metrics from last week', true, 1),
   ('20000000-0000-0000-0012-000000000002', 'Identify bottlenecks in your current processes', true, 2),
-  ('20000000-0000-0000-0012-000000000002', 'Set 3 high-level priorities for next week', true, 3);
+  ('20000000-0000-0000-0012-000000000002', 'Set 3 high-level priorities for next week', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 13: Environmental & Sustainability
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -513,7 +517,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#48bb78',
     'Environmental & Sustainability',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Environmental & Sustainability
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -522,7 +526,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0013-000000000001', 'Clean and organize your composting bin', true, 3),
   ('20000000-0000-0000-0013-000000000002', 'Browse plant-based recipes for the week', true, 1),
   ('20000000-0000-0000-0013-000000000002', 'Prep a large batch of beans or grains', true, 2),
-  ('20000000-0000-0000-0013-000000000002', 'Ensure you have adequate plant-based protein sources', true, 3);
+  ('20000000-0000-0000-0013-000000000002', 'Ensure you have adequate plant-based protein sources', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 14: Community & Campaigns
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -547,7 +551,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#b794f4',
     'Community & Campaigns',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Community & Campaigns
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -556,7 +560,7 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0014-000000000001', 'Reflect on one person or situation you helped', true, 3),
   ('20000000-0000-0000-0014-000000000002', 'Contact a policy maker or local leader', true, 1),
   ('20000000-0000-0000-0014-000000000002', 'Share educational content about the cause', true, 2),
-  ('20000000-0000-0000-0014-000000000002', 'Connect with one other advocate', true, 3);
+  ('20000000-0000-0000-0014-000000000002', 'Connect with one other advocate', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 15: Recovery & Rehab
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -581,7 +585,7 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#63b3ed',
     'Recovery & Rehab',
     false
-  );
+  ) ON CONFLICT (id) DO NOTHING;
 
 -- Tasks for Recovery & Rehab
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
@@ -590,100 +594,100 @@ INSERT INTO template_tasks (template_id, description, is_recurring, display_orde
   ('20000000-0000-0000-0015-000000000001', 'Perform 5 minutes of mindful breathing', true, 3),
   ('20000000-0000-0000-0015-000000000002', 'Perform 3 sets of ankle/wrist mobility', true, 1),
   ('20000000-0000-0000-0015-000000000002', 'Focus on glute activation exercises', true, 2),
-  ('20000000-0000-0000-0015-000000000002', 'Check posture and joint alignment', true, 3);
+  ('20000000-0000-0000-0015-000000000002', 'Check posture and joint alignment', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 4: Fitness & Sports (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0004-000000000003', '00000000-0000-0000-0000-000000000009', 'Couch to 5K Sprint', 'Progressive running intervals to build endurance for beginners.', 'Couch to 5K Plan', null, '#f56565', 'Fitness & Sports', false);
+  ('20000000-0000-0000-0004-000000000003', '00000000-0000-0000-0000-000000000009', 'Couch to 5K Sprint', 'Progressive running intervals to build endurance for beginners.', 'Couch to 5K Plan', null, '#f56565', 'Fitness & Sports', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0004-000000000003', 'Brisk 5-minute warm-up walk', true, 1),
   ('20000000-0000-0000-0004-000000000003', 'Alternating 60s run / 90s walk (20 min total)', true, 2),
-  ('20000000-0000-0000-0004-000000000003', '5-minute cool-down walk', true, 3);
+  ('20000000-0000-0000-0004-000000000003', '5-minute cool-down walk', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 5: Travel & Adventure (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0005-000000000003', '00000000-0000-0000-0000-000000000013', 'Flight Recovery Ritual', 'Post-flight habits to reduce jet lag and re-energize.', 'The Jet Lag Solution', null, '#63b3ed', 'Travel & Adventure', false);
+  ('20000000-0000-0000-0005-000000000003', '00000000-0000-0000-0000-000000000013', 'Flight Recovery Ritual', 'Post-flight habits to reduce jet lag and re-energize.', 'The Jet Lag Solution', null, '#63b3ed', 'Travel & Adventure', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0005-000000000003', 'Hydrate with at least 20oz water', true, 1),
   ('20000000-0000-0000-0005-000000000003', '15-minute natural sunlight exposure', true, 2),
-  ('20000000-0000-0000-0005-000000000003', 'Light movement or stretching session', true, 3);
+  ('20000000-0000-0000-0005-000000000003', 'Light movement or stretching session', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 6: Finance & Money (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0006-000000000003', '00000000-0000-0000-0000-000000000011', 'Savings Milestone Tracker', 'Check-in on your emergency fund and investment goals.', 'Finance for Humans', null, '#48bb78', 'Finance & Money', false);
+  ('20000000-0000-0000-0006-000000000003', '00000000-0000-0000-0000-000000000011', 'Savings Milestone Tracker', 'Check-in on your emergency fund and investment goals.', 'Finance for Humans', null, '#48bb78', 'Finance & Money', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0006-000000000003', 'Calculate current total savings across accounts', true, 1),
   ('20000000-0000-0000-0006-000000000003', 'Log monthly contribution to goal', true, 2),
-  ('20000000-0000-0000-0006-000000000003', 'Visualize the next $1k milestone', true, 3);
+  ('20000000-0000-0000-0006-000000000003', 'Visualize the next $1k milestone', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 7: Creativity & Hobbies (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0007-000000000003', '00000000-0000-0000-0000-000000000012', 'Weekly Content Planning', 'Plan out your blog posts, videos, or social updates for the week.', 'Content Machine', null, '#f687b3', 'Creativity & Hobbies', false);
+  ('20000000-0000-0000-0007-000000000003', '00000000-0000-0000-0000-000000000012', 'Weekly Content Planning', 'Plan out your blog posts, videos, or social updates for the week.', 'Content Machine', null, '#f687b3', 'Creativity & Hobbies', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0007-000000000003', 'Brainstorm 5 new content ideas', true, 1),
   ('20000000-0000-0000-0007-000000000003', 'Draft outlines for 2 priority items', true, 2),
-  ('20000000-0000-0000-0007-000000000003', 'Schedule posting dates/times', true, 3);
+  ('20000000-0000-0000-0007-000000000003', 'Schedule posting dates/times', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 8: Learning & Education (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0008-000000000003', '00000000-0000-0000-0000-000000000010', 'Reading Log & Summary', 'Track your reading progress and summarize key takeaways.', 'How to Read a Book', null, '#4a5568', 'Learning & Education', false);
+  ('20000000-0000-0000-0008-000000000003', '00000000-0000-0000-0000-000000000010', 'Reading Log & Summary', 'Track your reading progress and summarize key takeaways.', 'How to Read a Book', null, '#4a5568', 'Learning & Education', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0008-000000000003', 'Read for at least 20 minutes', true, 1),
   ('20000000-0000-0000-0008-000000000003', 'Write 2-3 sentences summarizing the main ides', true, 2),
-  ('20000000-0000-0000-0008-000000000003', 'Highlight one actionable quote', true, 3);
+  ('20000000-0000-0000-0008-000000000003', 'Highlight one actionable quote', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 9: Relationships & Social (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0009-000000000003', '00000000-0000-0000-0000-000000000013', 'Date Night Intentions', 'Weekly planning for quality time with your partner.', 'The 5 Love Languages', null, '#fbb6ce', 'Relationships & Social', false);
+  ('20000000-0000-0000-0009-000000000003', '00000000-0000-0000-0000-000000000013', 'Date Night Intentions', 'Weekly planning for quality time with your partner.', 'The 5 Love Languages', null, '#fbb6ce', 'Relationships & Social', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0009-000000000003', 'Propose 2 activity options for date night', true, 1),
   ('20000000-0000-0000-0009-000000000003', 'Confirm reservations or logistics', true, 2),
-  ('20000000-0000-0000-0009-000000000003', 'Set a goal for distraction-free connection', true, 3);
+  ('20000000-0000-0000-0009-000000000003', 'Set a goal for distraction-free connection', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 10: Mindfulness & Spirituality (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0010-000000000003', '00000000-0000-0000-0000-000000000009', 'Evening Wind-Down Prayer', 'A short ritual for gratitude and spiritual reflection before bed.', 'The Daily Stoic', null, '#2d3748', 'Mindfulness & Spirituality', false);
+  ('20000000-0000-0000-0010-000000000003', '00000000-0000-0000-0000-000000000009', 'Evening Wind-Down Prayer', 'A short ritual for gratitude and spiritual reflection before bed.', 'The Daily Stoic', null, '#2d3748', 'Mindfulness & Spirituality', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0010-000000000003', 'Briefly reflect on the day''s highs and lows', true, 1),
   ('20000000-0000-0000-0010-000000000003', 'Practice 2 minutes of quiet prayer or silence', true, 2),
-  ('20000000-0000-0000-0010-000000000003', 'Formulate an intention for tomorrow', true, 3);
+  ('20000000-0000-0000-0010-000000000003', 'Formulate an intention for tomorrow', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 11: Home & Organization (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0011-000000000003', '00000000-0000-0000-0000-000000000013', 'Weekly Home Maintenance', 'Quick check of essential home systems and cleanliness.', 'Home Comforts', null, '#a0aec0', 'Home & Organization', false);
+  ('20000000-0000-0000-0011-000000000003', '00000000-0000-0000-0000-000000000013', 'Weekly Home Maintenance', 'Quick check of essential home systems and cleanliness.', 'Home Comforts', null, '#a0aec0', 'Home & Organization', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0011-000000000003', 'Check HVAC filters and water levels', true, 1),
   ('20000000-0000-0000-0011-000000000003', 'Clean one overlooked surface (e.g., handles, vents)', true, 2),
-  ('20000000-0000-0000-0011-000000000003', 'Refill household essentials (soaps, paper)', true, 3);
+  ('20000000-0000-0000-0011-000000000003', 'Refill household essentials (soaps, paper)', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 12: Career & Entrepreneurship (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0012-000000000003', '00000000-0000-0000-0000-000000000010', 'Sales Call Success Ritual', 'Preparation and follow-up habits for critical sales activities.', 'Influence', null, '#38b2ac', 'Career & Entrepreneurship', false);
+  ('20000000-0000-0000-0012-000000000003', '00000000-0000-0000-0000-000000000010', 'Sales Call Success Ritual', 'Preparation and follow-up habits for critical sales activities.', 'Influence', null, '#38b2ac', 'Career & Entrepreneurship', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0012-000000000003', 'Review lead notes 5 minutes before call', true, 1),
   ('20000000-0000-0000-0012-000000000003', 'Execute the call with focus and intent', true, 2),
-  ('20000000-0000-0000-0012-000000000003', 'Send follow-up summary within 30 minutes', true, 3);
+  ('20000000-0000-0000-0012-000000000003', 'Send follow-up summary within 30 minutes', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 13: Environmental & Sustainability (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0013-000000000003', '00000000-0000-0000-0000-000000000013', 'Circular Living Checklist', 'Practices for reducing and reusing daily consumption items.', 'The Circular Economy', null, '#68d391', 'Environmental & Sustainability', false);
+  ('20000000-0000-0000-0013-000000000003', '00000000-0000-0000-0000-000000000013', 'Circular Living Checklist', 'Practices for reducing and reusing daily consumption items.', 'The Circular Economy', null, '#68d391', 'Environmental & Sustainability', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0013-000000000003', 'Check for reuse opportunities before discarding', true, 1),
   ('20000000-0000-0000-0013-000000000003', 'Carry reusables (bottle, bag, utensils) today', true, 2),
-  ('20000000-0000-0000-0013-000000000003', 'Research one local eco-friendly business', true, 3);
+  ('20000000-0000-0000-0013-000000000003', 'Research one local eco-friendly business', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 14: Community & Campaigns (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0014-000000000003', '00000000-0000-0000-0000-000000000013', 'Fundraising Goal Sprints', 'Specific tasks for achieving a donation or campaign target.', 'Impact', null, '#9f7aea', 'Community & Campaigns', false);
+  ('20000000-0000-0000-0014-000000000003', '00000000-0000-0000-0000-000000000013', 'Fundraising Goal Sprints', 'Specific tasks for achieving a donation or campaign target.', 'Impact', null, '#9f7aea', 'Community & Campaigns', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0014-000000000003', 'Personal outreach to 2 past donors', true, 1),
   ('20000000-0000-0000-0014-000000000003', 'Post a compelling story of impact', true, 2),
-  ('20000000-0000-0000-0014-000000000003', 'Update progress towards the goal', true, 3);
+  ('20000000-0000-0000-0014-000000000003', 'Update progress towards the goal', true, 3) ON CONFLICT (id) DO NOTHING;
 
 -- CATEGORY 15: Recovery & Rehab (Loop 3)
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
-  ('20000000-0000-0000-0015-000000000003', '00000000-0000-0000-0000-000000000009', 'Digital Detox Weekend', 'Structured break from screens to restore mental focus.', 'Digital Minimalism Rituals', null, '#718096', 'Recovery & Rehab', false);
+  ('20000000-0000-0000-0015-000000000003', '00000000-0000-0000-0000-000000000009', 'Digital Detox Weekend', 'Structured break from screens to restore mental focus.', 'Digital Minimalism Rituals', null, '#718096', 'Recovery & Rehab', false) ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   ('20000000-0000-0000-0015-000000000003', 'Turn off all non-essential notifications', true, 1),
   ('20000000-0000-0000-0015-000000000003', 'Leave phone in another room for 4-hour blocks', true, 2),
-  ('20000000-0000-0000-0015-000000000003', 'Journal your observations on mental clarity', true, 3);
+  ('20000000-0000-0000-0015-000000000003', 'Journal your observations on mental clarity', true, 3) ON CONFLICT (id) DO NOTHING;

@@ -38,7 +38,8 @@ INSERT INTO template_creators (id, name, bio, title, photo_url) VALUES
     'Robin Sharma is a leadership expert and author of "The 5‑AM Club", teaching early‑morning routines for peak performance.',
     'Leadership Expert',
     'https://example.com/photos/robin-sharma.jpg'
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
 INSERT INTO template_creators (id, name, bio, title, photo_url) VALUES
   (
     '00000000-0000-0000-0000-000000000001',
@@ -60,7 +61,8 @@ INSERT INTO template_creators (id, name, bio, title, photo_url) VALUES
     'Tim Ferriss is an entrepreneur, author, and podcaster. He has written several #1 New York Times bestsellers including "The 4-Hour Workweek" and hosts one of the world''s most popular podcasts, The Tim Ferriss Show.',
     'Entrepreneur & Author',
     'https://tim.blog/wp-content/uploads/2020/01/tim-ferriss-high-res.jpg'
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
 
 -- Insert sample loop templates
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -217,7 +219,8 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#00796B',
     'work',
     false
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
 -- NOTE: Replace 'YOUR_AMAZON_TAG-20' with your actual Amazon Associates tag
 -- Example: If your tag is 'doloop-20', change all URLs to use ?tag=doloop-20
 INSERT INTO loop_templates (id, creator_id, title, description, book_course_title, affiliate_link, color, category, is_featured) VALUES
@@ -253,9 +256,15 @@ INSERT INTO loop_templates (id, creator_id, title, description, book_course_titl
     '#FEC041',
     'personal',
     true
-  );
+  )
+  ON CONFLICT (id) DO NOTHING;
 
 -- Insert sample tasks for templates
+DELETE FROM template_tasks WHERE template_id IN (
+  '10000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000002',
+  '10000000-0000-0000-0000-000000000003'
+);
 INSERT INTO template_tasks (template_id, description, is_recurring, display_order) VALUES
   -- Atomic Habits Daily Reset
   ('10000000-0000-0000-0000-000000000001', 'Review your habit scorecard', true, 1),

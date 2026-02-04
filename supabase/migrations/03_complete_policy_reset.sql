@@ -28,19 +28,24 @@ BEGIN
 END $$;
 
 -- 2. Create SIMPLE policies for loops (no joins, no subqueries initially)
+DROP POLICY IF EXISTS "loops_select_policy" ON loops;
 CREATE POLICY "loops_select_policy" ON loops
   FOR SELECT USING (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "loops_insert_policy" ON loops;
 CREATE POLICY "loops_insert_policy" ON loops
   FOR INSERT WITH CHECK (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "loops_update_policy" ON loops;
 CREATE POLICY "loops_update_policy" ON loops
   FOR UPDATE USING (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "loops_delete_policy" ON loops;
 CREATE POLICY "loops_delete_policy" ON loops
   FOR DELETE USING (owner_id = auth.uid());
 
 -- 3. Create policies for tasks (simple, just check owner_id directly on loops)
+DROP POLICY IF EXISTS "tasks_select_policy" ON tasks;
 CREATE POLICY "tasks_select_policy" ON tasks
   FOR SELECT USING (
     EXISTS (
@@ -50,6 +55,7 @@ CREATE POLICY "tasks_select_policy" ON tasks
     )
   );
 
+DROP POLICY IF EXISTS "tasks_insert_policy" ON tasks;
 CREATE POLICY "tasks_insert_policy" ON tasks
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -59,6 +65,7 @@ CREATE POLICY "tasks_insert_policy" ON tasks
     )
   );
 
+DROP POLICY IF EXISTS "tasks_update_policy" ON tasks;
 CREATE POLICY "tasks_update_policy" ON tasks
   FOR UPDATE USING (
     EXISTS (
@@ -68,6 +75,7 @@ CREATE POLICY "tasks_update_policy" ON tasks
     )
   );
 
+DROP POLICY IF EXISTS "tasks_delete_policy" ON tasks;
 CREATE POLICY "tasks_delete_policy" ON tasks
   FOR DELETE USING (
     EXISTS (
@@ -78,6 +86,7 @@ CREATE POLICY "tasks_delete_policy" ON tasks
   );
 
 -- 4. Create policies for archived_tasks
+DROP POLICY IF EXISTS "archived_tasks_select_policy" ON archived_tasks;
 CREATE POLICY "archived_tasks_select_policy" ON archived_tasks
   FOR SELECT USING (
     EXISTS (
@@ -87,6 +96,7 @@ CREATE POLICY "archived_tasks_select_policy" ON archived_tasks
     )
   );
 
+DROP POLICY IF EXISTS "archived_tasks_insert_policy" ON archived_tasks;
 CREATE POLICY "archived_tasks_insert_policy" ON archived_tasks
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -97,16 +107,20 @@ CREATE POLICY "archived_tasks_insert_policy" ON archived_tasks
   );
 
 -- 5. Create policies for user_streaks
+DROP POLICY IF EXISTS "user_streaks_select_policy" ON user_streaks;
 CREATE POLICY "user_streaks_select_policy" ON user_streaks
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "user_streaks_insert_policy" ON user_streaks;
 CREATE POLICY "user_streaks_insert_policy" ON user_streaks
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "user_streaks_update_policy" ON user_streaks;
 CREATE POLICY "user_streaks_update_policy" ON user_streaks
   FOR UPDATE USING (user_id = auth.uid());
 
 -- 6. Create policies for loop_members
+DROP POLICY IF EXISTS "loop_members_select_policy" ON loop_members;
 CREATE POLICY "loop_members_select_policy" ON loop_members
   FOR SELECT USING (
     user_id = auth.uid() OR
@@ -117,6 +131,7 @@ CREATE POLICY "loop_members_select_policy" ON loop_members
     )
   );
 
+DROP POLICY IF EXISTS "loop_members_insert_policy" ON loop_members;
 CREATE POLICY "loop_members_insert_policy" ON loop_members
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -126,6 +141,7 @@ CREATE POLICY "loop_members_insert_policy" ON loop_members
     )
   );
 
+DROP POLICY IF EXISTS "loop_members_update_policy" ON loop_members;
 CREATE POLICY "loop_members_update_policy" ON loop_members
   FOR UPDATE USING (
     EXISTS (
@@ -135,6 +151,7 @@ CREATE POLICY "loop_members_update_policy" ON loop_members
     )
   );
 
+DROP POLICY IF EXISTS "loop_members_delete_policy" ON loop_members;
 CREATE POLICY "loop_members_delete_policy" ON loop_members
   FOR DELETE USING (
     EXISTS (
