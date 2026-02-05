@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Redirect URL should be your app's deep link or website URL where they can reset
       // For now, using standard site URL
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://doloop-v2.vercel.app/reset-password',
+        redirectTo: 'https://doloop.app/reset-password',
       });
       return { error };
     } catch (error) {
