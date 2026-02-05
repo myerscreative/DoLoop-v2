@@ -349,7 +349,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                   style={styles.deleteButton}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="close" size={16} color="#94a3b8" />
+                  <Ionicons name="close" size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             );
@@ -357,16 +357,16 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
           {/* Attachments Section */}
           {task.attachments && task.attachments.length > 0 && (
-            <View style={styles.attachmentsSection}>
+            <View style={[styles.attachmentsSection, { borderTopColor: colors.border }]}>
               {task.attachments.map((att) => (
                 <View key={att.id} style={styles.attachmentRow}>
                   <Ionicons 
                     name={att.file_type?.startsWith('image/') ? 'image-outline' : 'document-outline'} 
                     size={16} 
-                    color="#64748b" 
+                    color={colors.textSecondary} 
                   />
                   <TouchableOpacity onPress={() => Linking.openURL(att.file_url)} style={{ flex: 1 }}>
-                    <Text style={styles.attachmentName} numberOfLines={1}>
+                    <Text style={[styles.attachmentName, { color: colors.textSecondary }]} numberOfLines={1}>
                       {att.file_name}
                     </Text>
                   </TouchableOpacity>
@@ -391,9 +391,9 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
           {showAddSubtask ? (
             <View style={styles.addSubtaskInputRow}>
               <TextInput
-                style={[styles.subtaskInput, { color: colors.text, borderColor: colors.border }]}
+                style={[styles.subtaskInput, { color: colors.text, borderBottomColor: colors.border }]}
                 placeholder="Add a step..."
-                placeholderTextColor="#94a3b8"
+                placeholderTextColor={colors.textSecondary}
                 value={newSubtaskText}
                 onChangeText={setNewSubtaskText}
                 onSubmitEditing={handleAddSubtask}
@@ -413,7 +413,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                 }}
                 style={styles.cancelButton}
               >
-                <Ionicons name="close" size={16} color="#64748b" />
+                <Ionicons name="close" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -440,8 +440,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
           }}
           style={styles.quickAddButton}
         >
-          <Ionicons name="add" size={14} color="#94a3b8" />
-          <Text style={styles.quickAddText}>Add Step</Text>
+          <Ionicons name="add" size={14} color={colors.textSecondary} />
+          <Text style={[styles.quickAddText, { color: colors.textSecondary }]}>Add Step</Text>
         </TouchableOpacity>
       )}
     </Animated.View>
@@ -559,7 +559,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 0, // Inline feel
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#ccc', // Override inline
     backgroundColor: 'transparent',
     borderRadius: 0,
   },
@@ -589,30 +589,30 @@ const styles = StyleSheet.create({
   },
   quickAddText: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#666', // Override inline
     fontWeight: '500',
   },
   attachmentsSection: {
     marginTop: 8,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: '#f1f5f9', // Override inline
     paddingTop: 8,
   },
   attachmentRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    paddingVertical: 2,
   },
   attachmentName: {
-    fontSize: 14,
-    color: '#64748b',
+    fontSize: 13,
+    color: '#666', // Override inline
     textDecorationLine: 'underline',
   },
   imagePreviewStrip: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
     marginTop: 4,
   },
   previewImage: {

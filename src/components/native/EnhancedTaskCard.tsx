@@ -207,13 +207,13 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
             <View style={[
               styles.notesContainer,
               isExpanded && styles.notesContainerExpanded,
-              { backgroundColor: isExpanded ? '#FFFBEB' : 'transparent' }
+              { backgroundColor: isExpanded ? 'rgba(255, 255, 255, 0.05)' : 'transparent' }
             ]}>
               <Text
                 style={[
                   styles.notes,
                   { color: colors.textSecondary },
-                  isExpanded && styles.notesExpanded
+                  isExpanded && { color: colors.text }
                 ]}
                 numberOfLines={isExpanded ? undefined : 1}
               >
@@ -243,7 +243,7 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
                     onPress={() => Linking.openURL(att.file_url)}
                     style={styles.fileItem}
                   >
-                    <Text style={styles.fileText}>📎 {att.file_name}</Text>
+                    <Text style={[styles.fileText, { color: colors.textSecondary }]}>📎 {att.file_name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   notesContainerExpanded: {
     padding: 10,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   notes: {
     fontSize: 13,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   fileList: {
     gap: 4,
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   },
   fileText: {
     fontSize: 13,
-    color: '#64748b',
+    color: '#666', // Override inline
     textDecorationLine: 'underline',
   },
 });

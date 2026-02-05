@@ -42,6 +42,7 @@ import { useSharedMomentum } from '../../hooks/useSharedMomentum';
 import { LoopProvenance } from '../loops/LoopProvenance';
 import { StarRatingInput } from '../native/StarRatingInput';
 import { getUserRating, submitRating, getLoopRatingStats } from '../../lib/ratingHelpers';
+const BRAND_GOLD = '#FEC00F';
 
 // Props: accepts loopId directly
 interface DesktopLoopDetailPanelProps {
@@ -501,7 +502,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           </Text>
           <View style={styles.headerMain}>
             <Text style={styles.heroTitle}>{loopData.name}</Text>
-            <Text style={styles.heroDescription}>{loopData.description}</Text>
+            <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>{loopData.description}</Text>
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}>
@@ -534,11 +535,13 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                 size={100}
                 width={10}
                 fill={currentProgress}
-                tintColor="#FEC00F"
-                backgroundColor="rgba(255, 255, 255, 0.05)"
+                tintColor={BRAND_GOLD}
+                backgroundColor={colors.surface}
                 >
                 <View style={styles.progressCircle}>
-                <Text style={styles.progressPercent}>{Math.round(currentProgress)}%</Text>
+                <Text style={[styles.progressStatus, { color: colors.text }]}>
+              {Math.round(currentProgress)}% Done
+            </Text>
                 </View>
                 </AnimatedCircularProgress>
             )}
@@ -664,14 +667,13 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         user={user}
         availableTags={availableTags}
         onCreateTag={handleCreateTag}
-        existingTasks={recurringTasks}
       />
 
       <InviteModal
         visible={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         loopId={loopId}
-        loopName={loopData.name}
+        loopName={loopData?.name || 'Loop'}
       />
     </View>
   );
@@ -748,17 +750,12 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   progressCard: {
-    backgroundColor: '#FFFBF0',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
     padding: 32,
     marginBottom: 40,
     borderWidth: 1,
-    borderColor: '#FFF4D1',
-    shadowColor: '#FEC00F',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 3,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   progressInfo: {
     flexDirection: 'row',
@@ -786,18 +783,18 @@ const styles = StyleSheet.create({
   },
   progressStatus: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: 'Outfit_700Bold',
+    color: '#000', // Override inline
     marginBottom: 12,
   },
   streakBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ffffff',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#FFD700',
+    borderColor: '#FEC00F40',
   },
   streakText: {
     fontSize: 14,
@@ -821,7 +818,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
     gap: 16,
   },
@@ -834,14 +831,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 44,
     padding: 16,
-    backgroundColor: '#FFFBE6',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   hintText: {
     fontSize: 14,
-    color: '#92400E',
+    color: '#666', // Override inline
     lineHeight: 20,
     fontStyle: 'italic',
   },

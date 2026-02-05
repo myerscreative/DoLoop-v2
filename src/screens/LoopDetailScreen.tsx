@@ -761,7 +761,7 @@ export const LoopDetailScreen: React.FC = () => {
                 color={loopData.color || BRAND_GOLD}
               />
               <View style={styles.ringCountOverlay}>
-                <Text style={styles.ringCountText}>
+                <Text style={[styles.ringCountText, { color: colors.text }]}>
                   {loopData.completedCount}/{loopData.totalCount}
                 </Text>
               </View>
@@ -819,9 +819,9 @@ export const LoopDetailScreen: React.FC = () => {
           ) : (
             <View style={styles.stepsSection}>
               <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionHeader}>
+                <Text style={[styles.sectionHeader, { color: colors.text }]}>
                   Steps 
-                  <Text style={styles.sectionHeaderCount}> ({loopData.completedCount}/{loopData.totalCount})</Text>
+                  <Text style={[styles.sectionHeaderCount, { color: colors.textSecondary }]}> ({loopData.completedCount}/{loopData.totalCount})</Text>
                 </Text>
 
                 <TouchableOpacity 
@@ -1259,7 +1259,7 @@ const styles = StyleSheet.create({
   ringCountText: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1f2937',
+    color: '#000', // Override inline
   },
 
   // Title
@@ -1276,8 +1276,8 @@ const styles = StyleSheet.create({
   },
   loopTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
+    fontFamily: 'Outfit_700Bold',
+    color: '#000', // Override inline
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -1315,8 +1315,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: 18,
-    fontWeight: '800',
-    color: '#1f2937',
+    fontFamily: 'Outfit_700Bold',
+    color: '#000', // Override inline
     marginLeft: 4,
   },
   resetLoopText: {
@@ -1326,7 +1326,7 @@ const styles = StyleSheet.create({
   },
   sectionHeaderCount: {
     fontSize: 14,
-    color: '#94a3b8',
+    color: '#666', // Override inline
     fontWeight: '600',
   },
   taskCardsGrid: {
@@ -1335,7 +1335,7 @@ const styles = StyleSheet.create({
   floatingAddStepButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -1444,16 +1444,18 @@ const styles = StyleSheet.create({
     right: 100,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     overflow: 'hidden',
   },
   synopsisFabGradient: {
     paddingVertical: 14,
     alignItems: 'center',
+    backgroundColor: 'transparent',
   },
   synopsisFabText: {
     fontSize: 14,
-    color: '#64748b',
+    color: BRAND_GOLD,
     fontWeight: '600',
   },
 
@@ -1485,16 +1487,16 @@ const styles = StyleSheet.create({
   },
   infoModalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontFamily: 'Outfit_700Bold',
+    color: '#000', // Override inline
   },
   infoSection: {
     marginBottom: 20,
   },
   infoSectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
+    fontFamily: 'Outfit_700Bold',
+    color: BRAND_GOLD,
     marginBottom: 12,
   },
   infoRow: {
@@ -1504,11 +1506,11 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#666', // Override inline
   },
   infoValue: {
     fontSize: 14,
-    color: '#1f2937',
+    color: '#000', // Override inline
     fontWeight: '500',
   },
 
@@ -1539,11 +1541,11 @@ const styles = StyleSheet.create({
 
   // Provenance Card
   provenanceCard: {
-    backgroundColor: '#fffbeb',
+    backgroundColor: 'rgba(254, 192, 15, 0.05)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: BRAND_GOLD + '20',
   },
   provenanceContent: {
     flexDirection: 'row',
