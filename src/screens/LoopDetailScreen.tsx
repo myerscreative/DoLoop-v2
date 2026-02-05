@@ -26,7 +26,6 @@ import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
 import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
 import { LoopIcon } from '../components/native/LoopIcon';
-import { MomentumRing } from '../components/native/MomentumRing';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
@@ -36,12 +35,13 @@ import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTa
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType } from '../types/loop';
-import { LoopProvenance } from '../components/loops/LoopProvenance';
 import { StarRatingInput } from '../components/native/StarRatingInput';
 import { getUserRating, submitRating, getLoopRatingStats } from '../lib/ratingHelpers';
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
+
+const BRAND_GOLD = '#FEC00F';
 
 export const LoopDetailScreen: React.FC = () => {
   const { colors } = useTheme();
@@ -70,6 +70,9 @@ export const LoopDetailScreen: React.FC = () => {
   const [memberJoinedAt, setMemberJoinedAt] = useState<string | null>(null);
   const [lastDismissedPrompt, setLastDismissedPrompt] = useState<number | null>(null);
 
+  // NEW: Loop Info Modal state
+  const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
+
   const handleUpdateLoop = async (data: any) => {
     if (!loopData) return;
     setSavingLoop(true);
@@ -84,7 +87,6 @@ export const LoopDetailScreen: React.FC = () => {
       if (dbResetRule === 'manual') {
         nextResetAt = null;
       } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
-        // If type changed or next_reset_at missing, recalculate
         if (loopData.reset_rule !== dbResetRule || !loopData.next_reset_at) {
           const days = data.type === 'weekly' ? 7 : 1;
           nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -121,10 +123,10 @@ export const LoopDetailScreen: React.FC = () => {
 
   const formatNextReset = (nextResetAt: string | null) => {
     if (!nextResetAt) return 'Not scheduled';
-    
+
     const date = new Date(nextResetAt);
     if (isNaN(date.getTime())) return 'Not scheduled';
-    
+
     const now = new Date();
     const diffMs = date.getTime() - now.getTime();
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -141,6 +143,17 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
+  const formatResetSchedule = () => {
+    if (!loopData) return '';
+    const rule = loopData.reset_rule;
+
+    if (rule === 'daily') return 'Daily at 8 AM';
+    if (rule === 'weekdays') return 'Weekdays at 8 AM';
+    if (rule === 'weekly') return 'Weekly at 8 AM';
+    if (rule === 'manual') return 'Manual';
+    return rule || 'Manual';
+  };
+
   const safeHapticImpact = async (style: Haptics.ImpactFeedbackStyle) => {
     try {
       if (Platform.OS !== 'web') {
@@ -152,8 +165,6 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const checkAndShowThemePrompt = async () => {
-    // Simplified - can be enhanced later
-    // For now, just return without showing prompt
     return;
   };
 
@@ -172,7 +183,6 @@ export const LoopDetailScreen: React.FC = () => {
     loadUserRating();
   }, [loopId]);
 
-  // Realtime subscription for "Shared Momentum"
   useSharedMomentum(loopId, () => {
     console.log('[LoopDetail] Realtime update triggered - reloading data...');
     loadLoopData();
@@ -194,14 +204,13 @@ export const LoopDetailScreen: React.FC = () => {
       Alert.alert('Sign In Required', 'Please sign in to rate loops.');
       return;
     }
-    
+
     setIsSubmittingRating(true);
-    setUserRating(score); // Optimistic update
-    
+    setUserRating(score);
+
     const success = await submitRating(loopId, score);
-    
+
     if (success) {
-      // Refresh loop data to get updated average
       const stats = await getLoopRatingStats(loopId);
       if (stats && loopData) {
         setLoopData({
@@ -211,12 +220,11 @@ export const LoopDetailScreen: React.FC = () => {
         });
       }
     } else {
-      // Revert optimistic update
       const originalRating = await getUserRating(loopId);
       setUserRating(originalRating || 0);
       Alert.alert('Error', 'Failed to submit rating. Please try again.');
     }
-    
+
     setIsSubmittingRating(false);
   };
 
@@ -254,7 +262,6 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (tasksError) throw tasksError;
 
-      // Load tags, subtasks, and attachments for each task
       const tasksWithDetails = await Promise.all(
         (tasks || []).map(async (task: any) => {
           const [tags, subtasks, attachments] = await Promise.all([
@@ -271,7 +278,6 @@ export const LoopDetailScreen: React.FC = () => {
           };
         })
       );
-
 
       const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
       const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
@@ -293,8 +299,7 @@ export const LoopDetailScreen: React.FC = () => {
       };
 
       setLoopData(loopWithTasks);
-      
-      // Load member profiles for collaboration display
+
       const members = await getLoopMemberProfiles(loopId);
       setLoopMembers(members);
 
@@ -305,18 +310,17 @@ export const LoopDetailScreen: React.FC = () => {
           .eq('loop_id', loopId)
           .eq('user_id', user.id)
           .maybeSingle();
-        
+
         if (membership) {
           setMemberJoinedAt(membership.joined_at);
         }
       }
 
-      // Load last dismissed from storage
       const dismissed = await AsyncStorage.getItem(`last_rating_dismissed_${loopId}`);
       if (dismissed) {
         setLastDismissedPrompt(parseInt(dismissed, 10));
       }
-      
+
       return loopWithTasks;
     } catch (error) {
       console.error('Error loading loop data:', error);
@@ -344,14 +348,11 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (error) throw error;
 
-      // Haptic feedback (no-op on web)
       if (newCompleted) {
         await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
       }
 
-      // Handle one-time tasks
       if (task.is_one_time && newCompleted) {
-        // Archive the task
         await supabase.from('archived_tasks').insert({
           original_task_id: task.id,
           loop_id: task.loop_id,
@@ -359,13 +360,11 @@ export const LoopDetailScreen: React.FC = () => {
           completed_at: new Date().toISOString(),
         });
 
-        // Remove from tasks
         await supabase.from('tasks').delete().eq('id', task.id);
       }
 
       const updatedLoopData = await loadLoopData();
-      
-      // Check if this is the first loop completion and show theme prompt
+
       if (updatedLoopData) {
         await checkAndShowThemePrompt();
       }
@@ -385,12 +384,8 @@ export const LoopDetailScreen: React.FC = () => {
 
     try {
       setGeneratingSynopsis(true);
-      
-      // We'll use the loop name and tasks to create a prompt
+
       const recurringTasks = loopData.tasks.filter(t => !t.is_one_time);
-      // Try to use the existing edge function or a local fallback
-      // For this implementation, we'll simulate a very smart local summary 
-      // based on the loop name and tasks.
       const summary = `This loop helps you manage "${loopData.name}" by tracking ${recurringTasks.length} key steps including ${recurringTasks[0].description.toLowerCase()}.`;
 
       const { error } = await supabase
@@ -416,13 +411,12 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleSaveTask = async (
-    taskData: Partial<TaskWithDetails>, 
+    taskData: Partial<TaskWithDetails>,
     pendingSubtasks?: Subtask[],
     pendingAttachments?: PendingAttachment[],
     closeModal: boolean = true
   ): Promise<string | null | void> => {
     try {
-      // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
       let finalAssignedTo = taskData.assigned_to;
       if (finalAssignedTo) {
          const memberId = await ensureLoopMember(finalAssignedTo, loopId);
@@ -432,14 +426,12 @@ export const LoopDetailScreen: React.FC = () => {
       let savedTaskId: string | null = null;
 
       if (editingTask) {
-        // Update existing task
         await updateTaskExtended(editingTask.id, {
             ...taskData,
             assigned_to: finalAssignedTo
         });
         savedTaskId = editingTask.id;
       } else {
-        // Create new task
         const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
@@ -456,7 +448,7 @@ export const LoopDetailScreen: React.FC = () => {
         .single();
 
         if (error) throw error;
-        
+
         if (newTask) {
             savedTaskId = newTask.id;
             if (taskData.tags && taskData.tags.length > 0) {
@@ -466,17 +458,13 @@ export const LoopDetailScreen: React.FC = () => {
       }
 
       if (savedTaskId) {
-        // Save pending subtasks
         if (pendingSubtasks && pendingSubtasks.length > 0) {
-            console.log(`[LoopDetail] Saving ${pendingSubtasks.length} pending subtasks for task ${savedTaskId}`);
             for (const sub of pendingSubtasks) {
                 await createSubtask(savedTaskId, sub.description, sub.order_index);
             }
         }
 
-        // Save pending attachments
         if (pendingAttachments && pendingAttachments.length > 0 && user) {
-            console.log(`[LoopDetail] Uploading ${pendingAttachments.length} attachments for task ${savedTaskId}`);
             for (const att of pendingAttachments) {
                 try {
                   await uploadAttachment(savedTaskId, {
@@ -492,14 +480,13 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      console.log('[LoopDetail] Task and subtasks/attachments saved successfully');
       await loadLoopData();
-      
+
       if (closeModal) {
         setModalVisible(false);
         setEditingTask(null);
       }
-      
+
       return savedTaskId;
     } catch (error) {
       console.error('Error saving task:', error);
@@ -514,7 +501,7 @@ export const LoopDetailScreen: React.FC = () => {
     if (!tag) {
         throw new Error('Failed to create tag');
     }
-    setAvailableTags(prev => [...prev, tag]); // Use functional update
+    setAvailableTags(prev => [...prev, tag]);
     return tag;
   };
 
@@ -523,9 +510,7 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-
   const handleReloop = async () => {
-    // If loop is incomplete, ask for confirmation
     if (currentProgress < 100) {
       Alert.alert(
         'Reset Incomplete Loop?',
@@ -568,24 +553,23 @@ export const LoopDetailScreen: React.FC = () => {
     try {
       await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
 
-      // === PER-LOOP STREAK LOGIC for Practice Loops ===
       if (loopData && loopData.function_type === 'practice' && loopData.completedCount === loopData.totalCount) {
           const today = new Date().toISOString().split('T')[0];
           const lastDate = loopData.lastCompletedDate?.split('T')[0];
-          
+
           let newStreak = 1;
           if (lastDate) {
               const yesterday = new Date();
               yesterday.setDate(yesterday.getDate() - 1);
               const yesterdayStr = yesterday.toISOString().split('T')[0];
-              
+
               if (lastDate === yesterdayStr) {
                   newStreak = (loopData.currentStreak || 0) + 1;
               } else if (lastDate === today) {
                   newStreak = loopData.currentStreak || 0;
               }
           }
-          
+
           const longestStreak = Math.max(newStreak, loopData.longestStreak || 0);
 
           await supabase
@@ -599,9 +583,7 @@ export const LoopDetailScreen: React.FC = () => {
             });
       }
 
-      // === GLOBAL STREAK LOGIC: Update global user streak for daily loops ===
       if (loopData && loopData.reset_rule === 'daily' && loopData.completedCount === loopData.totalCount) {
-        // Check if ALL daily loops are complete
         const { data: allDailyLoops } = await supabase
           .from('loops')
           .select('id')
@@ -609,7 +591,7 @@ export const LoopDetailScreen: React.FC = () => {
           .eq('reset_rule', 'daily');
 
         let allDailyLoopsComplete = true;
-        
+
         if (allDailyLoops && allDailyLoops.length > 0) {
           for (const loop of allDailyLoops) {
             const { data: tasks } = await supabase
@@ -620,7 +602,7 @@ export const LoopDetailScreen: React.FC = () => {
 
             const completed = tasks?.filter(t => t.completed).length || 0;
             const total = tasks?.length || 0;
-            
+
             if (total > 0 && completed < total && loop.id !== loopId) {
               allDailyLoopsComplete = false;
               break;
@@ -628,10 +610,9 @@ export const LoopDetailScreen: React.FC = () => {
           }
         }
 
-        // Update streak if all daily loops are complete
         if (allDailyLoopsComplete) {
           const today = new Date().toISOString().split('T')[0];
-          
+
           const { data: streakData } = await supabase
             .from('user_streaks')
             .select('*')
@@ -645,22 +626,21 @@ export const LoopDetailScreen: React.FC = () => {
 
           if (currentStreak) {
             const lastDate = currentStreak.last_completed_date?.split('T')[0];
-            
+
             if (lastDate && lastDate !== today) {
-              // Check if it was yesterday
               const yesterday = new Date();
               yesterday.setDate(yesterday.getDate() - 1);
               const yesterdayStr = yesterday.toISOString().split('T')[0];
-              
+
               if (lastDate === yesterdayStr) {
                 newStreak = currentStreak.current_streak + 1;
               } else {
-                newStreak = 1; // Streak broken
+                newStreak = 1;
               }
             } else if (lastDate === today) {
-              newStreak = currentStreak.current_streak; // Already counted today
+              newStreak = currentStreak.current_streak;
             }
-            
+
             longestStreak = Math.max(newStreak, currentStreak.longest_streak || 0);
           }
 
@@ -676,7 +656,6 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      // Reset tasks
       const { error } = await supabase
         .from('tasks')
         .update({
@@ -687,12 +666,11 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (error) throw error;
 
-      // Update next reset time if scheduled
       if (loopData && loopData.reset_rule !== 'manual') {
         let nextResetAt: string;
         if (loopData.reset_rule === 'daily') {
           nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        } else { // weekly
+        } else {
           nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
         }
 
@@ -704,26 +682,17 @@ export const LoopDetailScreen: React.FC = () => {
 
       await loadLoopData();
       setShowResetMenu(false);
+      setShowLoopInfoModal(false); // Close modal after reloop
     } catch (error) {
       console.error('Error resetting loop:', error);
       Alert.alert('Error', 'Failed to reset loop');
     }
   };
 
-  const longPressReloop = () => {
-    setShowResetMenu(true);
-    // Auto-hide after a delay
-    setTimeout(() => setShowResetMenu(false), 3000);
-  };
-
-  // Check prompt visibility whenever relevant data changes
   useEffect(() => {
     const checkPromptVisibility = () => {
-      // If user already rated, we don't show the prompt logic, 
-      // but we might still want to show the section so they can see/edit.
-      // However, the user said "not be there all the time".
       if (userRating > 0) {
-        setShowRatingPrompt(true); // Keep it visible if rated
+        setShowRatingPrompt(true);
         return;
       }
 
@@ -736,13 +705,11 @@ export const LoopDetailScreen: React.FC = () => {
       const now = Date.now();
       const daysSinceJoined = (now - joined) / (1000 * 60 * 60 * 24);
 
-      // Rule: Show after 2 days (using 2.5 to be safe)
       if (daysSinceJoined < 2) {
         setShowRatingPrompt(false);
         return;
       }
 
-      // Rule: If dismissed, wait 30 days
       if (lastDismissedPrompt) {
         const daysSinceDismissed = (now - lastDismissedPrompt) / (1000 * 60 * 60 * 24);
         if (daysSinceDismissed < 30) {
@@ -760,8 +727,8 @@ export const LoopDetailScreen: React.FC = () => {
   // Derived state
   const recurringTasks = loopData?.tasks?.filter(t => !t.is_one_time) || [];
   const oneTimeTasks = loopData?.tasks?.filter(t => t.is_one_time) || [];
-  const currentProgress = loopData?.totalCount && loopData.totalCount > 0 
-    ? Math.round((loopData.completedCount / loopData.totalCount) * 100) 
+  const currentProgress = loopData?.totalCount && loopData.totalCount > 0
+    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
     : 0;
 
   if (loading || !loopData) {
@@ -772,463 +739,348 @@ export const LoopDetailScreen: React.FC = () => {
     );
   }
 
-  
+  // Get category label
+  const getCategoryLabel = () => {
+    const type = loopData.category || 'personal';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f5f5f5' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
       <View style={{
         flex: 1,
         maxWidth: 600,
         width: '100%',
         alignSelf: 'center',
-        backgroundColor: '#f5f5f5',
+        backgroundColor: '#f8f9fa',
       }}>
-        {/* Back Button */}
-        <View style={{
-          paddingHorizontal: 20,
-          paddingVertical: 12,
-        }}>
+        {/* Header Row: Back + Title + Icons */}
+        <View style={styles.headerRow}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 8,
-              marginLeft: -8,
-            }}
+            style={styles.backButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Text style={{
-              fontSize: 28,
-              color: colors.primary,
-              lineHeight: 28,
-            }}>‹</Text>
-            <Text style={{
-              fontSize: 17,
-              color: colors.primary,
-              marginLeft: 4,
-              fontWeight: '500',
-            }}>Back</Text>
+            <Text style={[styles.backChevron, { color: BRAND_GOLD }]}>‹</Text>
+            <Text style={[styles.backText, { color: BRAND_GOLD }]}>Back</Text>
           </TouchableOpacity>
         </View>
 
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 180 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Header with Icon and Name */}
-          <View style={{
-            alignItems: 'center',
-            paddingVertical: 20,
-            paddingHorizontal: 20,
-          }}>
-            {/* Loop Icon - Custom SVG */}
-            {loopData.function_type === 'practice' ? (
-                <MomentumRing size={80} strokeWidth={8} streak={loopData.currentStreak || 0} />
-            ) : (
-                <LoopIcon 
-                size={64} 
-                color={loopData.color || '#FFB800'} 
-                />
-            )}
-            <View style={{ height: 16 }} />
-
-            {/* Loop Name */}
-            <Text style={{
-              fontSize: 28,
-              fontWeight: 'bold',
-              color: colors.text,
-              textAlign: 'center',
-              marginBottom: 4,
-            }}>
-              {loopData.name}
-            </Text>
-            
-            {loopData.function_type === 'practice' && (
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFB800', marginBottom: 8 }}>
-                    🧘 PRACTICE MODE
+          {/* Centered Progress Ring */}
+          <View style={styles.ringContainer}>
+            <View style={styles.ringWrapper}>
+              <LoopIcon
+                size={100}
+                color={loopData.color || BRAND_GOLD}
+              />
+              <View style={styles.ringCountOverlay}>
+                <Text style={styles.ringCountText}>
+                  {loopData.completedCount}/{loopData.totalCount}
                 </Text>
-            )}
-
-            {loopData.is_favorite && (
-              <Text style={{ fontSize: 16, marginTop: 4 }}>⭐</Text>
-            )}
-
-          {/* Clickable Reset Info */}
-          <TouchableOpacity 
-            onPress={() => setEditingLoop(true)}
-            activeOpacity={0.6}
-            style={{
-              marginTop: 12,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: 'transparent',
-            }}
-          >
-            <Text style={{
-              fontSize: 14,
-              color: colors.textSecondary,
-              textAlign: 'center',
-              textDecorationLine: 'underline',
-            }}>
-              {loopData.function_type === 'practice'
-                ? `Daily habit • ${loopData.currentStreak || 0} day streak`
-                : (loopData.reset_rule === 'manual'
-                    ? 'Manual checklist • Complete when ready'
-                    : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`)}
-            </Text>
-          </TouchableOpacity>
-          </View>
-
-        {/* Recurring Tasks or Empty State */}
-        {recurringTasks.length === 0 ? (
-          <View style={{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingHorizontal: 40,
-            paddingVertical: 80,
-            minHeight: 400,
-          }}>
-            <BeeIcon size={120} />
-            <Text style={{
-              fontSize: 28,
-              fontWeight: 'bold',
-              color: colors.text,
-              marginTop: 24,
-              marginBottom: 12,
-              textAlign: 'center',
-              letterSpacing: -0.5,
-            }}>
-              No steps yet
-            </Text>
-            <Text style={{
-              fontSize: 17,
-              color: colors.textSecondary,
-              textAlign: 'center',
-              marginBottom: 40,
-              lineHeight: 24,
-            }}>
-              Tap the + button to add your first step
-            </Text>
-            <TouchableOpacity
-              style={{
-                width: 72,
-                height: 72,
-                borderRadius: 36,
-                backgroundColor: colors.primary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                elevation: 12,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 6 },
-                shadowOpacity: 0.4,
-                shadowRadius: 12,
-              }}
-              onPress={openAddTaskModal}
-              activeOpacity={0.8}
-            >
-              <Text style={{ 
-                color: '#fff', 
-                fontSize: 40, 
-                fontWeight: '300',
-                marginTop: -2,
-              }}>+</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: colors.text,
-              marginBottom: 12,
-            }}>
-              Steps ({loopData.completedCount}/{loopData.totalCount})
-            </Text>
-
-            <View style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                elevation: 2,
-            }}>
-                {recurringTasks.map((task) => (
-                <View key={task.id}>
-                    <ExpandableTaskCard
-                        task={task as TaskWithDetails}
-                        onPress={() => handleEditTask(task as TaskWithDetails)}
-                        onToggle={() => toggleTask(task)}
-                        onSubtaskChange={loadLoopData}
-                        isPracticeLoop={loopData.function_type === 'practice'}
-                    />
-                </View>
-                ))}
+              </View>
             </View>
-
-            {/* Add Task Button */}
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 16,
-                marginTop: 12,
-              }}
-              onPress={openAddTaskModal}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={20} color={colors.primary} />
-              <Text style={{
-                fontSize: 16,
-                color: colors.textSecondary,
-                fontWeight: '500',
-                marginLeft: 8,
-              }}>
-                Add Step
-              </Text>
-            </TouchableOpacity>
           </View>
-        )}
 
-        {/* One-time Tasks */}
-        {oneTimeTasks.length > 0 && (
-          <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: colors.text,
-              marginBottom: 12,
-            }}>
-              One-time Tasks
-            </Text>
+          {/* Title Row with Eye Icon and Member Avatars */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.loopTitle}>{loopData.name}</Text>
 
-            <View style={{
-                backgroundColor: '#ffffff',
-                borderRadius: 16,
-                overflow: 'hidden',
-                borderWidth: 1,
-                borderColor: '#e2e8f0',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.05,
-                shadowRadius: 8,
-                elevation: 2,
-            }}>
+            <View style={styles.titleActions}>
+              {/* Eye Icon - Opens Loop Info Modal */}
+              <TouchableOpacity
+                onPress={() => setShowLoopInfoModal(true)}
+                style={styles.eyeButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Ionicons name="eye-outline" size={22} color="#6b7280" />
+              </TouchableOpacity>
+
+              {/* Member Avatars */}
+              {loopMembers.length > 0 && (
+                <MemberAvatars
+                  members={loopMembers}
+                  maxVisible={3}
+                  size={28}
+                  onPress={() => setShowMemberList(true)}
+                />
+              )}
+            </View>
+          </View>
+
+          {/* Steps Section */}
+          {recurringTasks.length === 0 ? (
+            <View style={styles.emptyState}>
+              <BeeIcon size={100} />
+              <Text style={styles.emptyTitle}>No steps yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap the + button to add your first step
+              </Text>
+              <TouchableOpacity
+                style={styles.emptyAddButton}
+                onPress={openAddTaskModal}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.emptyAddButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.stepsSection}>
+              <Text style={styles.stepsHeader}>
+                Steps ({loopData.completedCount}/{loopData.totalCount})
+              </Text>
+
+              {/* Glassmorphic Task Cards Container */}
+              <View style={styles.taskCardsContainer}>
+                {recurringTasks.map((task) => (
+                  <View key={task.id}>
+                    <ExpandableTaskCard
+                      task={task as TaskWithDetails}
+                      onPress={() => handleEditTask(task as TaskWithDetails)}
+                      onToggle={() => toggleTask(task)}
+                      onSubtaskChange={loadLoopData}
+                      isPracticeLoop={loopData.function_type === 'practice'}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {/* Add Step Button */}
+              <TouchableOpacity
+                style={styles.addStepButton}
+                onPress={openAddTaskModal}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={20} color={BRAND_GOLD} />
+                <Text style={styles.addStepText}>Add Step</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* One-time Tasks */}
+          {oneTimeTasks.length > 0 && (
+            <View style={styles.stepsSection}>
+              <Text style={styles.stepsHeader}>One-time Tasks</Text>
+              <View style={styles.taskCardsContainer}>
                 {oneTimeTasks.map((task) => (
-                <ExpandableTaskCard
+                  <ExpandableTaskCard
                     key={task.id}
                     task={task as TaskWithDetails}
                     onPress={() => handleEditTask(task as TaskWithDetails)}
                     onToggle={() => toggleTask(task)}
                     onSubtaskChange={loadLoopData}
-                />
+                  />
                 ))}
-            </View>
-          </View>
-        )}
-
-        {/* AI Synopsis & Rating Section - Now after tasks */}
-        <View style={{ paddingHorizontal: 20, alignItems: 'center' }}>
-          {/* Synopsis / Description */}
-          {loopData.description ? (
-            <View style={styles.synopsisContainer}>
-              <View style={styles.synopsisHeader}>
-                <Text style={styles.synopsisLabel}>AI SYNOPSIS</Text>
-                <TouchableOpacity onPress={handleGenerateSynopsis} disabled={generatingSynopsis}>
-                  <Text style={styles.regenerateText}>{generatingSynopsis ? '...' : '🔄 Regenerate'}</Text>
-                </TouchableOpacity>
               </View>
-              <Text style={styles.synopsisText}>{loopData.description}</Text>
-            </View>
-          ) : (
-            recurringTasks.length > 0 && (
-              <TouchableOpacity
-                style={styles.generateButton}
-                onPress={handleGenerateSynopsis}
-                disabled={generatingSynopsis}
-              >
-                <LinearGradient
-                  colors={['#f8fafc', '#f1f5f9']}
-                  style={styles.generateButtonGradient}
-                >
-                  <Text style={styles.generateButtonText}>
-                    {generatingSynopsis ? 'Generating...' : '✨ Create AI Synopsis'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )
-          )}
-
-          {/* Star Rating Section */}
-          {showRatingPrompt && (
-            <View style={styles.ratingSection}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 8 }}>
-                <Text style={styles.ratingLabel}>Rate this Loop</Text>
-                {userRating === 0 && (
-                  <TouchableOpacity onPress={handleDismissRating} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <StarRatingInput 
-                value={userRating}
-                onChange={handleSubmitRating}
-                disabled={isSubmittingRating}
-                size={32}
-              />
-              {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
-                <Text style={styles.ratingStats}>
-                  Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
-                </Text>
-              )}
-              {userRating === 0 && (
-                <TouchableOpacity onPress={handleDismissRating} style={{ marginTop: 12 }}>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, textDecorationLine: 'underline' }}>
-                    Maybe later
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
 
-          {loopData.affiliate_link && (
-            <TouchableOpacity
-              style={styles.orderButton}
-              onPress={() => {
-                Linking.openURL(loopData.affiliate_link!).catch(err => 
-                  console.error('Error opening affiliate link:', err)
-                );
-              }}
-            >
-              <LinearGradient
-                colors={['#FFD700', '#FFA500']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.orderButtonGradient}
-              >
-                <Text style={styles.orderButtonText}>📖 Order Book / Training</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-
-          {/* PROVENANCE SECTION */}
-          <View style={{ width: '100%', marginTop: 24 }}>
-            <LoopProvenance
-              authorName={loopData.author_name}
-              authorBio={loopData.author_bio}
-              authorImageUrl={loopData.author_image_url}
-              sourceTitle={loopData.source_title}
-              sourceLink={loopData.source_link}
-              endGoalDescription={loopData.end_goal_description}
-            />
-          </View>
-        </View>
-
-        {/* Collaborators Section - Now at the bottom */}
-        <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 }}>
-          {/* Member Avatars - Show collaborators */}
-          {loopMembers.length > 0 && (
-            <View style={{ marginBottom: 16, alignItems: 'center' }}>
-              <MemberAvatars
-                members={loopMembers}
-                maxVisible={4}
-                size={36}
-                onPress={() => setShowMemberList(true)}
-              />
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
-                {loopMembers.length} member{loopMembers.length !== 1 ? 's' : ''} • Tap to view
-              </Text>
-            </View>
-          )}
-
-          {/* Compact Invite Button - Only for loop owners */}
+          {/* Invite Collaborator Link - Compact */}
           {loopData.owner_id === user?.id && (
-            <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
-              onPress={() => setShowInviteModal(true)}
-            >
-              <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
-              <Text style={{ 
-                fontSize: 14, 
-                fontWeight: '600', 
-                color: colors.primary, 
-                marginLeft: 6
-              }}>
-                Invite Collaborator
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.inviteSection}>
+              <TouchableOpacity
+                style={styles.inviteLink}
+                onPress={() => setShowInviteModal(true)}
+              >
+                <Ionicons name="checkbox-outline" size={18} color={BRAND_GOLD} />
+                <Text style={styles.inviteLinkText}>Invite Collaborator</Text>
+              </TouchableOpacity>
+            </View>
           )}
-        </View>
-
         </ScrollView>
 
-        {/* Reloop Button */}
-        {recurringTasks.length > 0 && (
-          <View style={{
-            position: 'absolute',
-            bottom: 40,
-            left: 20,
-            right: 20,
-          }}>
-            {(() => {
-              const isManual = loopData?.reset_rule === 'manual';
-              const canReset = true; // Always allow reset now
-              
-              const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : (currentProgress >= 100 ? 'Reloop' : 'Reloop Early'));
-              
-              const buttonBg = showResetMenu 
-                ? colors.error 
-                : (canReset ? loopData.color : '#e2e8f0'); 
-
-              const buttonTextColor = 'white'; 
-
-              return (
-                <TouchableOpacity
-                  style={{
-                    backgroundColor: buttonBg,
-                    paddingVertical: 16,
-                    paddingHorizontal: 24,
-                    borderRadius: 25,
-                    alignItems: 'center',
-                    opacity: 1, // Remove opacity, use explicit colors
-                    elevation: canReset ? 4 : 0,
-                    shadowColor: canReset ? '#000' : 'transparent',
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 4,
-                  }}
-                  onPress={handleReloop}
-                  onLongPress={longPressReloop}
-                  delayLongPress={500}
-                  disabled={!canReset}
-                >
-                  <Text style={{
-                    color: buttonTextColor,
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                    {buttonText}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })()}
-          </View>
+        {/* AI Synopsis FAB - Sparkle Button */}
+        {recurringTasks.length > 0 && !loopData.description && (
+          <TouchableOpacity
+            style={styles.synopsisFab}
+            onPress={handleGenerateSynopsis}
+            disabled={generatingSynopsis}
+          >
+            <LinearGradient
+              colors={['#f8fafc', '#f1f5f9']}
+              style={styles.synopsisFabGradient}
+            >
+              <Text style={styles.synopsisFabText}>
+                {generatingSynopsis ? '...' : '✨ Create AI Synopsis'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
         )}
+
+        {/* Add Task FAB */}
+        {recurringTasks.length > 0 && (
+          <TouchableOpacity
+            style={styles.fab}
+            onPress={handleAddTask}
+          >
+            <Text style={styles.fabText}>+</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* =====================================================
+            LOOP INFO MODAL (Glassmorphic Bottom Sheet)
+            ===================================================== */}
+        <Modal
+          visible={showLoopInfoModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowLoopInfoModal(false)}
+        >
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowLoopInfoModal(false)}
+          >
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={styles.infoModalContent}
+            >
+              {/* Modal Header */}
+              <View style={styles.infoModalHeader}>
+                <Text style={styles.infoModalTitle}>Loop Details & Settings</Text>
+                <TouchableOpacity
+                  onPress={() => setShowLoopInfoModal(false)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="close" size={24} color="#374151" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+                {/* Loop Specs Section */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoSectionTitle}>Loop Specs</Text>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Resets:</Text>
+                    <Text style={styles.infoValue}>{formatResetSchedule()}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Category:</Text>
+                    <Text style={styles.infoValue}>{getCategoryLabel()}</Text>
+                  </View>
+
+                  {loopData.source_title && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Source:</Text>
+                      <Text style={styles.infoValue}>{loopData.source_title}</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Notifications:</Text>
+                    <Text style={styles.infoValue}>On</Text>
+                  </View>
+                </View>
+
+                {/* Provenance Section */}
+                {(loopData.author_name || loopData.source_title) && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.infoSectionTitle}>Provenance (Expert System)</Text>
+                    <View style={styles.provenanceCard}>
+                      <View style={styles.provenanceContent}>
+                        <Ionicons name="book-outline" size={24} color={BRAND_GOLD} />
+                        <View style={{ flex: 1, marginLeft: 12 }}>
+                          <Text style={styles.provenanceStreakText}>
+                            Current Streak: {loopData.currentStreak || 0} days
+                          </Text>
+                          <Text style={styles.provenanceCompletionText}>
+                            Completion Rate: {currentProgress}%
+                          </Text>
+                        </View>
+                        <View style={styles.expertBadge}>
+                          <Ionicons name="checkmark" size={12} color="#fff" />
+                          <Text style={styles.expertBadgeText}>Expert</Text>
+                        </View>
+                      </View>
+
+                      {loopData.affiliate_link && (
+                        <TouchableOpacity
+                          style={styles.affiliateLink}
+                          onPress={() => Linking.openURL(loopData.affiliate_link!)}
+                        >
+                          <Text style={styles.affiliateLinkText}>
+                            Buy on Amazon (Affiliate Link)
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Stats Section */}
+                <View style={styles.infoSection}>
+                  <Text style={styles.infoSectionTitle}>Stats</Text>
+                  <View style={styles.statsRow}>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statLabel}>Times Looped</Text>
+                      <Text style={styles.statValue}>{loopData.longestStreak || 0}</Text>
+                    </View>
+                    <View style={styles.statItem}>
+                      <Text style={styles.statLabel}>Completion Rate</Text>
+                      <Text style={styles.statValue}>{currentProgress}%</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Rating Section */}
+                {showRatingPrompt && (
+                  <View style={styles.infoSection}>
+                    <Text style={styles.infoSectionTitle}>Rate this Loop</Text>
+                    <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                      <StarRatingInput
+                        value={userRating}
+                        onChange={handleSubmitRating}
+                        disabled={isSubmittingRating}
+                        size={32}
+                      />
+                      {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
+                        <Text style={styles.ratingStats}>
+                          Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} ratings)
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* Edit Loop Button */}
+                <TouchableOpacity
+                  style={styles.editLoopButton}
+                  onPress={() => {
+                    setShowLoopInfoModal(false);
+                    setEditingLoop(true);
+                  }}
+                >
+                  <Ionicons name="settings-outline" size={18} color="#6b7280" />
+                  <Text style={styles.editLoopButtonText}>Edit Loop Settings</Text>
+                </TouchableOpacity>
+
+                {/* Reloop Early Button - Moved here */}
+                {recurringTasks.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.reloopButton}
+                    onPress={handleReloop}
+                  >
+                    <Text style={styles.reloopButtonText}>
+                      {loopData.reset_rule === 'manual'
+                        ? 'Complete Checklist'
+                        : (currentProgress >= 100 ? 'Reloop' : 'Reloop Early')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Theme Customization Prompt Modal */}
         <Modal
@@ -1238,42 +1090,36 @@ export const LoopDetailScreen: React.FC = () => {
           onRequestClose={handleThemePromptLater}
         >
           <View style={styles.modalOverlay}>
-            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.modalEmoji, { fontSize: 64 }]}>🎉</Text>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <View style={[styles.themeModalContent, { backgroundColor: colors.surface }]}>
+              <Text style={{ fontSize: 64, marginBottom: 16 }}>🎉</Text>
+              <Text style={[styles.themeModalTitle, { color: colors.text }]}>
                 Nice work!
               </Text>
-              <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
+              <Text style={[styles.themeModalMessage, { color: colors.textSecondary }]}>
                 Want to personalize your DoLoop theme?
               </Text>
-              
-              <View style={styles.modalButtons}>
+
+              <View style={styles.themeModalButtons}>
                 <TouchableOpacity
-                  style={styles.modalButtonSecondary}
+                  style={styles.themeModalButtonSecondary}
                   onPress={handleThemePromptLater}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Maybe later"
                 >
-                  <Text style={[styles.modalButtonTextSecondary, { color: colors.textSecondary }]}>
+                  <Text style={[styles.themeModalButtonTextSecondary, { color: colors.textSecondary }]}>
                     Maybe Later
                   </Text>
                 </TouchableOpacity>
-                
+
                 <TouchableOpacity
-                  style={styles.modalButtonPrimary}
+                  style={styles.themeModalButtonPrimary}
                   onPress={handleThemePromptCustomize}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel="Customize theme"
                 >
                   <LinearGradient
-                    colors={[colors.primary, colors.primary + 'CC']}
+                    colors={[BRAND_GOLD, '#ffa500']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
-                    style={styles.modalButtonGradient}
+                    style={styles.themeModalButtonGradient}
                   >
-                    <Text style={styles.modalButtonTextPrimary}>
+                    <Text style={styles.themeModalButtonTextPrimary}>
                       Customize Theme
                     </Text>
                   </LinearGradient>
@@ -1283,93 +1129,428 @@ export const LoopDetailScreen: React.FC = () => {
           </View>
         </Modal>
 
-      {/* FAB - Only show if tasks exist (otherwise Empty State + button is shown) */}
-      {recurringTasks.length > 0 && (
-        <TouchableOpacity
-          style={{
-            position: 'absolute',
-            bottom: 110, // Moved up to sit above the Complete Checklist button
-            right: 24,
-            width: 56,
-            height: 56,
-            borderRadius: 28,
-            backgroundColor: colors.primary,
-            alignItems: 'center',
-            justifyContent: 'center',
-            elevation: 8,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
+        {/* Task Edit Modal */}
+        <TaskEditModal
+          visible={modalVisible}
+          onClose={() => {
+              setModalVisible(false);
+              setEditingTask(null);
           }}
-          onPress={handleAddTask}
-        >
-          <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
-        </TouchableOpacity>
-      )}
+          onSave={handleSaveTask}
+          task={editingTask}
+          user={user}
+          availableTags={availableTags}
+          onCreateTag={handleCreateTag}
+          existingTasks={recurringTasks}
+        />
 
-      {/* Task Edit Modal */}
-      <TaskEditModal
-        visible={modalVisible}
-        onClose={() => {
-            setModalVisible(false);
-            setEditingTask(null);
-        }}
-        onSave={handleSaveTask}
-        task={editingTask}
-        user={user}
-        availableTags={availableTags}
-        onCreateTag={handleCreateTag}
-        existingTasks={recurringTasks}
-      />
+        {/* Invite Modal */}
+        <InviteModal
+          visible={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          loopId={loopId}
+          loopName={loopData?.name || 'Loop'}
+          onInviteSent={() => {
+            getLoopMemberProfiles(loopId).then(setLoopMembers);
+          }}
+        />
 
-      {/* Invite Modal */}
-      <InviteModal
-        visible={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-        loopId={loopId}
-        loopName={loopData?.name || 'Loop'}
-        onInviteSent={() => {
-          // Reload members after invite
-          getLoopMemberProfiles(loopId).then(setLoopMembers);
-        }}
-      />
+        {/* Member List Modal */}
+        <MemberListModal
+          visible={showMemberList}
+          onClose={() => setShowMemberList(false)}
+          members={loopMembers}
+          loopName={loopData?.name || 'Loop'}
+        />
 
-      {/* Member List Modal */}
-      <MemberListModal
-        visible={showMemberList}
-        onClose={() => setShowMemberList(false)}
-        members={loopMembers}
-        loopName={loopData?.name || 'Loop'}
-      />
-      <CreateLoopModal 
-        visible={isEditingLoop}
-        onClose={() => setEditingLoop(false)}
-        onSave={handleUpdateLoop}
-        initialData={loopData ? {
-          name: loopData.name || '',
-          description: loopData.description || '',
-          affiliate_link: loopData.affiliate_link || '',
-          reset_rule: loopData.reset_rule || 'manual',
-          color: loopData.color,
-          due_date: loopData.due_date,
-          function_type: loopData.function_type,
-        } : null}
-        loading={savingLoop}
-        isEditing={true}
-      />
+        {/* Create/Edit Loop Modal */}
+        <CreateLoopModal
+          visible={isEditingLoop}
+          onClose={() => setEditingLoop(false)}
+          onSave={handleUpdateLoop}
+          initialData={loopData ? {
+            name: loopData.name || '',
+            description: loopData.description || '',
+            affiliate_link: loopData.affiliate_link || '',
+            reset_rule: loopData.reset_rule || 'manual',
+            color: loopData.color,
+            due_date: loopData.due_date,
+            function_type: loopData.function_type,
+          } : null}
+          loading={savingLoop}
+          isEditing={true}
+        />
       </View>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  // Header
+  headerRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    marginLeft: -8,
+  },
+  backChevron: {
+    fontSize: 28,
+    lineHeight: 28,
+  },
+  backText: {
+    fontSize: 17,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+
+  // Ring
+  ringContainer: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 20,
+  },
+  ringWrapper: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringCountOverlay: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringCountText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#374151',
+  },
+
+  // Title
+  titleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+    gap: 12,
+  },
+  loopTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1f2937',
+    textAlign: 'center',
+    flex: 1,
+  },
+  titleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eyeButton: {
+    padding: 4,
+  },
+
+  // Steps
+  stepsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  stepsHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginBottom: 12,
+  },
+  taskCardsContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  addStepButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginTop: 12,
+  },
+  addStepText: {
+    fontSize: 16,
+    color: '#6b7280',
+    fontWeight: '500',
+    marginLeft: 8,
+  },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+    minHeight: 350,
+  },
+  emptyTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#1f2937',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#6b7280',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 22,
+  },
+  emptyAddButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: BRAND_GOLD,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  emptyAddButtonText: {
+    color: '#fff',
+    fontSize: 36,
+    fontWeight: '300',
+    marginTop: -2,
+  },
+
+  // Invite Section
+  inviteSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  inviteLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inviteLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: BRAND_GOLD,
+  },
+
+  // FABs
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: BRAND_GOLD,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabText: {
+    fontSize: 28,
+    color: 'white',
+    fontWeight: '500',
+  },
+  synopsisFab: {
+    position: 'absolute',
+    bottom: 24,
+    left: 20,
+    right: 100,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+  },
+  synopsisFabGradient: {
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  synopsisFabText: {
+    fontSize: 14,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+
+  // Modal Overlay
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
+
+  // Loop Info Modal
+  infoModalContent: {
+    backgroundColor: '#ffffff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  infoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  infoModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  infoSection: {
+    marginBottom: 20,
+  },
+  infoSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  infoLabel: {
+    fontSize: 14,
+    color: '#6b7280',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1f2937',
+    fontWeight: '500',
+  },
+
+  // Provenance Card
+  provenanceCard: {
+    backgroundColor: '#fffbeb',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  provenanceContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  provenanceStreakText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f2937',
+  },
+  provenanceCompletionText: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  expertBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#22c55e',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  expertBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  affiliateLink: {
+    marginTop: 12,
+  },
+  affiliateLinkText: {
+    fontSize: 14,
+    color: '#2563eb',
+    fontWeight: '500',
+  },
+
+  // Stats
+  statsRow: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  statItem: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: BRAND_GOLD,
+  },
+  ratingStats: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginTop: 8,
+  },
+
+  // Edit Loop Button
+  editLoopButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 8,
+    marginBottom: 12,
+  },
+  editLoopButtonText: {
+    fontSize: 14,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+
+  // Reloop Button
+  reloopButton: {
+    backgroundColor: BRAND_GOLD,
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  reloopButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // Theme Modal
+  themeModalContent: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
@@ -1381,154 +1562,48 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 10,
   },
-  modalEmoji: {
-    marginBottom: 16,
-  },
-  modalTitle: {
+  themeModalTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
-    fontFamily: 'Inter_700Bold',
   },
-  modalMessage: {
+  themeModalMessage: {
     fontSize: 16,
     marginBottom: 32,
     textAlign: 'center',
-    fontFamily: 'Inter_400Regular',
   },
-  modalButtons: {
+  themeModalButtons: {
     flexDirection: 'row',
     gap: 12,
     width: '100%',
   },
-  modalButtonSecondary: {
+  themeModalButtonSecondary: {
     flex: 1,
     paddingVertical: 16,
     paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-  },
-  modalButtonTextSecondary: {
-    fontSize: 16,
-    fontWeight: '600',
-    fontFamily: 'Inter_600SemiBold',
-  },
-  modalButtonPrimary: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  modalButtonGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  modalButtonTextPrimary: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#000',
-  },
-  synopsisHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  regenerateText: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  generateButton: {
-    marginTop: 20,
-    width: '100%',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-    overflow: 'hidden',
-  },
-  generateButtonGradient: {
-    paddingVertical: 12,
     alignItems: 'center',
   },
-  generateButtonText: {
-    fontSize: 14,
-    color: '#64748b',
+  themeModalButtonTextSecondary: {
+    fontSize: 16,
     fontWeight: '600',
   },
-  synopsisContainer: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-    width: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  synopsisLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FFB800',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  synopsisText: {
-    fontSize: 15,
-    color: '#444',
-    lineHeight: 22,
-  },
-  orderButton: {
-    marginTop: 16,
-    width: '100%',
+  themeModalButtonPrimary: {
+    flex: 1,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#FFD700',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
   },
-  orderButtonGradient: {
-    paddingVertical: 14,
+  themeModalButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  orderButtonText: {
+  themeModalButtonTextPrimary: {
     fontSize: 16,
     fontWeight: '700',
     color: '#000',
-  },
-  ratingSection: {
-    marginTop: 24,
-    padding: 20,
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#eee',
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  ratingLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 12,
-  },
-  ratingStats: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 12,
   },
 });
