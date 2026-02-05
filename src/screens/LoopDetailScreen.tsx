@@ -704,8 +704,7 @@ export const LoopDetailScreen: React.FC = () => {
       await loadLoopData();
       setShowResetMenu(false);
       setShowLoopInfoModal(false); // Close modal after reloop
-    } catch (error) {
-      console.error('Error resetting loop:', error);
+    } catch {
       Alert.alert('Error', 'Failed to reset loop');
     }
   };
@@ -798,7 +797,13 @@ export const LoopDetailScreen: React.FC = () => {
           {/* Centered Momentum Header */}
           <View style={styles.momentumHeader}>
             <View style={styles.glowContainer}>
-              <Animated.View style={[styles.ringGlow, { opacity: glowAnim }]} />
+              <Animated.View style={[styles.ringGlow, { opacity: glowAnim }]}>
+                <LoopIcon
+                  size={140}
+                  color={loopData.color || BRAND_GOLD}
+                  style={styles.glowIcon}
+                />
+              </Animated.View>
               <View style={styles.ringWrapper}>
                 <LoopIcon
                   size={120}
@@ -863,10 +868,19 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.stepsSection}>
-              <Text style={styles.sectionHeader}>
-                Steps 
-                <Text style={styles.sectionHeaderCount}> ({loopData.completedCount}/{loopData.totalCount})</Text>
-              </Text>
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionHeader}>
+                  Steps 
+                  <Text style={styles.sectionHeaderCount}> ({loopData.completedCount}/{loopData.totalCount})</Text>
+                </Text>
+
+                <TouchableOpacity 
+                  onPress={handleReloop}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.resetLoopText}>Reset Loop</Text>
+                </TouchableOpacity>
+              </View>
 
               {/* Individual Glassmorphic Task Cards */}
               <View style={styles.taskCardsGrid}>
@@ -1171,7 +1185,6 @@ export const LoopDetailScreen: React.FC = () => {
           user={user}
           availableTags={availableTags}
           onCreateTag={handleCreateTag}
-          existingTasks={recurringTasks}
         />
 
         {/* Invite Modal */}
@@ -1253,14 +1266,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 140,
     height: 140,
-    borderRadius: 70,
-    backgroundColor: BRAND_GOLD,
-    opacity: 0.15,
-    // Note: React Native shadow can also create this glow
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowIcon: {
     shadowColor: BRAND_GOLD,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
+    shadowOpacity: 1,
+    shadowRadius: 15,
   },
   ringWrapper: {
     position: 'relative',
@@ -1324,12 +1337,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 24,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingRight: 4,
+  },
   sectionHeader: {
     fontSize: 18,
     fontWeight: '800',
     color: '#1f2937',
-    marginBottom: 16,
     marginLeft: 4,
+  },
+  resetLoopText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: BRAND_GOLD,
   },
   sectionHeaderCount: {
     fontSize: 14,

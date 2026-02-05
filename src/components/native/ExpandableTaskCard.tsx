@@ -192,72 +192,87 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
     >
       {/* Main Task Row */}
       <View style={styles.mainRow}>
-        {/* Checkbox */}
-        <TouchableOpacity
-          onPress={onToggle}
-          style={[
-            styles.checkbox,
-            {
-              borderColor: taskStatus === 'done' ? BRAND_GOLD : colors.border,
-              backgroundColor: taskStatus === 'done' ? BRAND_GOLD : 'transparent',
-            },
-          ]}
+        {/* Toggle Completion Area (Checkbox + Title + Icons) */}
+        <TouchableOpacity 
+          onPress={onToggle} 
+          style={styles.toggleArea}
+          activeOpacity={0.7}
         >
-          {taskStatus === 'done' && (
-            <Ionicons name="checkmark" size={14} color="white" />
-          )}
+          {/* Checkbox */}
+          <View
+            style={[
+              styles.checkbox,
+              {
+                borderColor: taskStatus === 'done' ? BRAND_GOLD : colors.border,
+                backgroundColor: taskStatus === 'done' ? BRAND_GOLD : 'transparent',
+              },
+            ]}
+          >
+            {taskStatus === 'done' && (
+              <Ionicons name="checkmark" size={14} color="white" />
+            )}
+          </View>
+
+          {/* Task Content */}
+          <View style={styles.content}>
+            {/* Icon + Title Row */}
+            <View style={styles.titleRow}>
+              <View style={styles.taskIconContainer}>
+                <Ionicons 
+                  name={getTaskIcon(task.description)} 
+                  size={20} 
+                  color={taskStatus === 'done' ? '#94a3b8' : BRAND_GOLD} 
+                />
+              </View>
+              <Text
+                style={[
+                  styles.description,
+                  {
+                    color: colors.text,
+                    textDecorationLine: taskStatus === 'done' ? 'line-through' : 'none',
+                    opacity: taskStatus === 'done' ? 0.6 : 1,
+                  },
+                ]}
+                numberOfLines={2}
+              >
+                {task.description}
+              </Text>
+              {task.priority !== 'none' && (
+                <PriorityBadge priority={task.priority} size="small" />
+              )}
+            </View>
+
+            {/* Feature Icons Row - Simple line icons */}
+            <View style={styles.iconsRow}>
+              {hasAssignee && (
+                <Ionicons name="person-outline" size={14} color="#9ca3af" />
+              )}
+              {isRecurring && (
+                <Ionicons name="sync-outline" size={14} color="#9ca3af" />
+              )}
+              {hasDueDate && (
+                <Ionicons name="calendar-outline" size={14} color={isOverdue ? '#EF4444' : '#9ca3af'} />
+              )}
+              {hasAttachments && (
+                <Ionicons name="image-outline" size={14} color="#9ca3af" />
+              )}
+              {hasNotes && (
+                <Ionicons name="document-text-outline" size={14} color="#9ca3af" />
+              )}
+              {hasReminder && (
+                <Ionicons name="alarm-outline" size={14} color="#9ca3af" />
+              )}
+            </View>
+          </View>
         </TouchableOpacity>
 
-        {/* Task Content */}
-        <TouchableOpacity style={styles.content} onPress={onPress} activeOpacity={0.7}>
-          {/* Icon + Title Row */}
-          <View style={styles.titleRow}>
-            <View style={styles.taskIconContainer}>
-              <Ionicons 
-                name={getTaskIcon(task.description)} 
-                size={20} 
-                color={taskStatus === 'done' ? '#94a3b8' : BRAND_GOLD} 
-              />
-            </View>
-            <Text
-              style={[
-                styles.description,
-                {
-                  color: colors.text,
-                  textDecorationLine: taskStatus === 'done' ? 'line-through' : 'none',
-                  opacity: taskStatus === 'done' ? 0.6 : 1,
-                },
-              ]}
-              numberOfLines={2}
-            >
-              {task.description}
-            </Text>
-            {task.priority !== 'none' && (
-              <PriorityBadge priority={task.priority} size="small" />
-            )}
-          </View>
-
-          {/* Feature Icons Row - Simple line icons */}
-          <View style={styles.iconsRow}>
-            {hasAssignee && (
-              <Ionicons name="person-outline" size={14} color="#9ca3af" />
-            )}
-            {isRecurring && (
-              <Ionicons name="sync-outline" size={14} color="#9ca3af" />
-            )}
-            {hasDueDate && (
-              <Ionicons name="calendar-outline" size={14} color={isOverdue ? '#EF4444' : '#9ca3af'} />
-            )}
-            {hasAttachments && (
-              <Ionicons name="image-outline" size={14} color="#9ca3af" />
-            )}
-            {hasNotes && (
-              <Ionicons name="document-text-outline" size={14} color="#9ca3af" />
-            )}
-            {hasReminder && (
-              <Ionicons name="alarm-outline" size={14} color="#9ca3af" />
-            )}
-          </View>
+        {/* Edit Button */}
+        <TouchableOpacity
+          onPress={onPress}
+          style={styles.editButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Ionicons name="pencil-outline" size={18} color="#94a3b8" />
         </TouchableOpacity>
 
         {/* Expand/Collapse Button */}
@@ -468,6 +483,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     minHeight: 64,
   },
+  toggleArea: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   checkbox: {
     width: 24,
     height: 24,
@@ -479,15 +499,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    flexDirection: 'row', // Horizontal layout for desktop-like feel or compact mobile
-    alignItems: 'center',
-    flexWrap: 'wrap', // Allow wrapping if very narrow
+    paddingVertical: 14,
   },
   titleRow: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginBottom: 4,
   },
   taskIconContainer: {
     width: 32,
@@ -507,10 +525,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingLeft: 42, // Align with description text
+  },
+  editButton: {
+    padding: 10,
+    marginLeft: 4,
   },
   expandButton: {
-    padding: 8,
-    marginLeft: 4,
+    padding: 10,
   },
   subtasksSection: {
     paddingLeft: 52, // Align with text (16 padding + 24 checkbox + 12 gap)

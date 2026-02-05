@@ -1,14 +1,15 @@
-import React from 'react';
+import { StyleProp, ViewStyle } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
 interface LoopIconProps {
   size?: number;
   color?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export const LoopIcon: React.FC<LoopIconProps> = ({ size = 24, color = '#000' }) => {
+export const LoopIcon: React.FC<LoopIconProps> = ({ size = 24, color = '#000', style }) => {
   return (
-    <Svg width={size} height={size} viewBox="0 0 444.25 444.25" fill="none">
+    <Svg width={size} height={size} viewBox="0 0 444.25 444.25" fill="none" style={style}>
       <Path
         d="M239.72,111.74l30.57-25.47c-12.11-9.89-24.22-19.79-36.33-29.68,11.16,1,78.57,8.2,124.27,67.79,4.09,5.34,43.27,54.72,35,126.27-2.14,18.49-6.5,33.53-10.41,43.86l17.72,11.08-72.81,27.39c-4.65-25.62-8.64-51.32-12.63-76.79,7.09,3.77,12.18,6.65,19.72,10.63,8.64-34.78,3.99-81.08-20.16-109.21-31.65-36.88-62.25-42.53-74.95-45.85Z"
         fill={color}

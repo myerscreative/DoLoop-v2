@@ -5,7 +5,6 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
 import { 
   TaskWithDetails, 
   TaskPriority, 
@@ -37,7 +36,6 @@ interface TaskEditModalProps {
   onCreateTag?: (name: string, color: string) => Promise<Tag | null>;
   initialValues?: Partial<TaskWithDetails>;
   availableTags: Tag[];
-  existingTasks?: TaskWithDetails[];
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -48,7 +46,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   availableTags,
   onCreateTag,
   initialValues,
-  existingTasks = [],
 }) => {
   const { user } = useAuth();
 
@@ -88,9 +85,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
-  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showReminderPicker, setShowReminderPicker] = useState(false);
 
   const isProcessingSubtask = useRef(false);
 
@@ -131,9 +126,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setExistingAttachments([]);
     setSubtasks([]);
     setShowDetails(false);
-    setShowPriorityPicker(false);
     setShowDatePicker(false);
-    setShowReminderPicker(false);
     setShowTagInput(false);
     setShowSubtaskInput(false);
     setNewSubtaskText('');
@@ -166,8 +159,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
           mimeType: asset.mimeType || 'image/jpeg',
         }]);
       }
-    } catch (error) {
-      console.error('Error picking image:', error);
+    } catch {
       Alert.alert('Error', 'Failed to pick image');
     }
   };
@@ -189,8 +181,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
           mimeType: asset.mimeType || 'application/octet-stream',
         }]);
       }
-    } catch (error) {
-      console.error('Error picking document:', error);
+    } catch {
       Alert.alert('Error', 'Failed to pick file');
     }
   };
@@ -208,8 +199,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         } else {
             Alert.alert('Error', 'Failed to delete attachment');
         }
-    } catch (error) {
-        console.error('Error deleting attachment:', error);
+    } catch {
         Alert.alert('Error', 'Could not delete attachment');
     }
   };
@@ -234,7 +224,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             setNewTagName('');
             setShowTagInput(false);
         }
-    } catch (error) {
+    } catch {
         Alert.alert('Error', 'Failed to create tag');
     }
   };
@@ -275,26 +265,13 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
           descriptionInputRef.current?.focus();
         }, 100);
       }
-    } catch (error) {
-      console.error('Error saving task:', error);
+    } catch {
       Alert.alert('Error', 'Failed to save task');
     } finally {
       setSaving(false);
     }
   };
 
-  // Helper for Web Dates
-  const formatDateForWeb = (date: Date): string => {
-    return date.toISOString().split('T')[0];
-  };
-
-  const formatTimeForWeb = (date: Date): string => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
-
-  // Unified accent color for all recurrence options
-  const accentColor = '#FEC00F'; // Gold
-  const accentBg = '#FFF9E6'; // Light gold tint 
 
   // Subtask Helpers
   const handleAddSubtask = () => {
@@ -341,7 +318,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             Alert.alert('Error', 'Failed to delete subtask from server.');
         }
     } catch (error) {
-        console.error('Failed to delete subtask', error);
         Alert.alert('Error', 'Could not delete subtask.');
     }
   };
@@ -410,11 +386,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         {/* Header */}
         <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={28} color="white" />
+                <Ionicons name="close" size={28} color="#0f172a" />
             </TouchableOpacity>
             
             <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>{task ? 'Task Details' : 'Add Steps'}</Text>
+                <Text style={styles.headerTitle}>{task ? 'Item Details' : 'Add Item'}</Text>
             </View>
 
             <TouchableOpacity 
@@ -423,7 +399,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 disabled={saving}
             >
                 {saving ? (
-                    <ActivityIndicator size="small" color="white" />
+                    <ActivityIndicator size="small" color="#0f172a" />
                 ) : (
                     <Text style={styles.saveHeaderText}>Save</Text>
                 )}
@@ -431,36 +407,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-            {/* Horizontal Trail of Existing Steps */}
-            {!task && existingTasks.length > 0 && (
-                <View style={styles.trailContainer}>
-                    <Text style={styles.trailLabel}>Existing Steps:</Text>
-                    <ScrollView 
-                        horizontal 
-                        showsHorizontalScrollIndicator={false} 
-                        style={styles.existingTasksTrail}
-                        contentContainerStyle={styles.trailContent}
-                    >
-                        {existingTasks.map((t) => (
-                            <View key={t.id} style={styles.trailItem}>
-                                <View style={styles.trailDot} />
-                                <Text style={styles.trailText}>{t.description}</Text>
-                            </View>
-                        ))}
-                    </ScrollView>
-                </View>
-            )}
-
             {/* Name Input Row */}
-            <View style={styles.nameInputRow}>
-                <View style={[styles.nameSection, { flex: 0.7, paddingRight: 10 }]}>
+            <View style={styles.nameInputContainer}>
+                <View style={styles.nameSection}>
                     <TouchableOpacity style={styles.radioPlaceholder}>
                         <View style={styles.radioCircle} />
                     </TouchableOpacity>
                     <TextInput
                         ref={descriptionInputRef}
                         style={styles.nameInput}
-                        placeholder="Enter Step Name..."
+                        placeholder="Enter Item Name..."
                         value={description}
                         onChangeText={setDescription}
                         placeholderTextColor="#94a3b8"
@@ -473,11 +429,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
                 {!showDetails && (
                     <TouchableOpacity 
-                        style={[styles.addDetailsLink, { flex: 0.3, justifyContent: 'center' }]} 
+                        style={styles.addDetailsLinkUnder} 
                         onPress={() => setShowDetails(true)}
                     >
                         <Ionicons name="options-outline" size={16} color="#6366f1" />
-                        <Text style={styles.addDetailsLinkText}>Add Step Details</Text>
+                        <Text style={styles.addDetailsLinkText}>Add Item Details</Text>
                     </TouchableOpacity>
                 )}
             </View>
@@ -492,7 +448,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                             onPress={() => setShowSubtaskInput(true)}
                         >
                             <Ionicons name="add" size={18} color="#64748b" />
-                            <Text style={styles.addSubtaskLinkText}>Add Sub-Step/Sub-Task</Text>
+                            <Text style={styles.addSubtaskLinkText}>Add Sub-Item</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.addSubtaskRow}>
@@ -815,7 +771,7 @@ const styles = StyleSheet.create({
     justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end', // On mobile, slide from bottom
   },
   modalContentWrapper: {
-      width: Platform.OS === 'web' ? '70%' : '100%',
+      width: '100%',
       maxWidth: 800,
       maxHeight: Platform.OS === 'web' ? '90%' : '95%', // Use maxHeight to avoid gap
       backgroundColor: 'white',
@@ -843,7 +799,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: 'white',
+    color: '#0f172a',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -852,7 +808,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   saveHeaderText: {
-    color: 'white',
+    color: '#0f172a',
     fontSize: 17,
     fontWeight: '700',
   },
@@ -1096,6 +1052,15 @@ const styles = StyleSheet.create({
       fontWeight: '600',
       textDecorationLine: 'underline',
   },
+  addDetailsLinkUnder: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      gap: 6,
+      marginLeft: 60, // Align with input text
+      marginTop: -8,
+      marginBottom: 10,
+  },
   cancelSubtask: {
       padding: 4,
   },
@@ -1239,6 +1204,9 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'flex-start',
       paddingRight: 10,
+  },
+  nameInputContainer: {
+      marginBottom: 0,
   },
   addSubtaskContainer: {
       flexDirection: 'row',
