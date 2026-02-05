@@ -924,10 +924,10 @@ export const LoopDetailScreen: React.FC = () => {
             disabled={generatingSynopsis}
           >
             <LinearGradient
-              colors={[BRAND_GOLD + '20', BRAND_GOLD + '40']}
+              colors={[BRAND_GOLD + '40', BRAND_GOLD + '70']}
               style={styles.synopsisFabGradient}
             >
-              <Text style={styles.synopsisFabText}>
+              <Text style={[styles.synopsisFabText, { color: '#000', fontWeight: '900' }]}>
                 {generatingSynopsis ? '...' : '✨ Create AI Synopsis'}
               </Text>
             </LinearGradient>

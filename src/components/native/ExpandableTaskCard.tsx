@@ -169,7 +169,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         styles.container,
         {
           backgroundColor: isShelved ? 'rgba(255, 255, 255, 0.02)' : 
-                          isActive ? 'rgba(254, 192, 15, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+                          isActive ? 'rgba(254, 192, 15, 0.25)' : 'rgba(255, 255, 255, 0.05)',
           borderColor: isActive ? BRAND_GOLD : 'rgba(255, 255, 255, 0.1)',
           opacity: isShelved ? 0.4 : (isActive ? 1 : 0.6),
           minHeight: isShelved ? 40 : 54,
