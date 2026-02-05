@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
 

@@ -99,14 +99,27 @@ export default function App() {
   const [isNavReady, setIsNavReady] = useState(false);
 
   // Hydrate nav state for web (persist across reloads)
+  // BUT skip restoration if URL contains a deep link path (e.g., /reset-password)
+  // so that deep linking can take precedence
   useEffect(() => {
     // Only run on web
     if (Platform.OS === "web") {
       const restoreState = async () => {
         try {
-          const savedState = localStorage.getItem(NAV_STATE_KEY);
-          if (savedState) {
-            setInitialNavState(JSON.parse(savedState));
+          // Check if the current URL has a specific path that should be deep linked
+          const currentPath = window.location.pathname;
+          const deepLinkPaths = ["/reset-password", "/loop/", "/template/", "/sommelier"];
+          const isDeepLink = deepLinkPaths.some(path => currentPath.startsWith(path));
+
+          if (isDeepLink) {
+            console.log("[App] Deep link detected, skipping nav state restoration:", currentPath);
+            // Clear saved state so the deep link takes precedence
+            localStorage.removeItem(NAV_STATE_KEY);
+          } else {
+            const savedState = localStorage.getItem(NAV_STATE_KEY);
+            if (savedState) {
+              setInitialNavState(JSON.parse(savedState));
+            }
           }
         } catch {}
         setIsNavReady(true);
