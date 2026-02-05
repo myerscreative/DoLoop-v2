@@ -731,7 +731,13 @@ export const LoopDetailScreen: React.FC = () => {
         {/* Header Row: Back + Title + Icons */}
         <View style={styles.headerRow}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation.canGoBack()) {
+                navigation.goBack();
+              } else {
+                navigation.navigate('Home');
+              }
+            }}
             style={styles.backButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
