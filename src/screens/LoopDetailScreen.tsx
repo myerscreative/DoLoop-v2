@@ -74,172 +74,6 @@ export const LoopDetailScreen: React.FC = () => {
   const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
 
 
-  const handleUpdateLoop = async (data: any) => {
-    if (!loopData) return;
-    setSavingLoop(true);
-
-    try {
-      const isGoal = data.type === 'goals';
-      const category = data.type as LoopType;
-      const dbResetRule = isGoal ? 'manual' : data.type;
-
-      let nextResetAt: string | null = loopData.next_reset_at || null;
-
-      if (dbResetRule === 'manual') {
-        nextResetAt = null;
-      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
-        if (loopData.reset_rule !== dbResetRule || !loopData.next_reset_at) {
-          const days = data.type === 'weekly' ? 7 : 1;
-          nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        }
-      }
-
-      const { error } = await supabase
-        .from('loops')
-        .update({
-          name: data.name,
-          description: data.description,
-          affiliate_link: data.affiliate_link,
-          color: data.color,
-          loop_type: category,
-          reset_rule: dbResetRule,
-          function_type: data.function_type,
-          custom_days: data.custom_days || null,
-          next_reset_at: nextResetAt,
-          due_date: data.due_date,
-        })
-        .eq('id', loopId);
-
-      if (error) throw error;
-
-      await loadLoopData();
-      setEditingLoop(false);
-    } catch (error: any) {
-      console.error('Error updating loop:', error);
-      Alert.alert('Error', `Failed to update loop: ${error?.message}`);
-    } finally {
-      setSavingLoop(false);
-    }
-  };
-
-  const formatNextReset = (nextResetAt: string | null) => {
-    if (!nextResetAt) return 'Not scheduled';
-
-    const date = new Date(nextResetAt);
-    if (isNaN(date.getTime())) return 'Not scheduled';
-
-    const now = new Date();
-    const diffMs = date.getTime() - now.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays > 1) {
-      return `${diffDays} days`;
-    } else if (diffHours > 1) {
-      return `${diffHours} hours`;
-    } else if (diffHours < -24) {
-      return 'Overdue';
-    } else {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-  };
-
-  const formatResetSchedule = () => {
-    if (!loopData) return '';
-    const rule = loopData.reset_rule;
-
-    if (rule === 'daily') return 'Daily at 8 AM';
-    if (rule === 'weekdays') return 'Weekdays at 8 AM';
-    if (rule === 'weekly') return 'Weekly at 8 AM';
-    if (rule === 'manual') return 'Manual';
-    return rule || 'Manual';
-  };
-
-  const safeHapticImpact = async (style: Haptics.ImpactFeedbackStyle) => {
-    try {
-      if (Platform.OS !== 'web') {
-        await Haptics.impactAsync(style);
-      }
-    } catch (error) {
-      console.warn('[LoopDetail] Haptics not available:', error);
-    }
-  };
-
-  const checkAndShowThemePrompt = async () => {
-    return;
-  };
-
-  const handleThemePromptLater = async () => {
-    setShowThemePrompt(false);
-  };
-
-  const handleThemePromptCustomize = () => {
-    setShowThemePrompt(false);
-    navigation.navigate('Settings');
-  };
-
-  useEffect(() => {
-    loadLoopData();
-    loadTags();
-    loadUserRating();
-  }, [loopId]);
-
-  useSharedMomentum(loopId, () => {
-    console.log('[LoopDetail] Realtime update triggered - reloading data...');
-    loadLoopData();
-  });
-
-  const loadTags = async () => {
-    if (!user) return;
-    const tags = await getUserTags(user.id);
-    setAvailableTags(tags);
-  };
-
-  const loadUserRating = async () => {
-    const rating = await getUserRating(loopId);
-    setUserRating(rating || 0);
-  };
-
-  const handleSubmitRating = async (score: number) => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to rate loops.');
-      return;
-    }
-
-    setIsSubmittingRating(true);
-    setUserRating(score);
-
-    const success = await submitRating(loopId, score);
-
-    if (success) {
-      const stats = await getLoopRatingStats(loopId);
-      if (stats && loopData) {
-        setLoopData({
-          ...loopData,
-          average_rating: stats.average,
-          total_ratings: stats.total,
-        });
-      }
-    } else {
-      const originalRating = await getUserRating(loopId);
-      setUserRating(originalRating || 0);
-      Alert.alert('Error', 'Failed to submit rating. Please try again.');
-    }
-
-    setIsSubmittingRating(false);
-  };
-
-  const handleDismissRating = async () => {
-    const now = Date.now();
-    try {
-      await AsyncStorage.setItem(`last_rating_dismissed_${loopId}`, now.toString());
-      setLastDismissedPrompt(now);
-      setShowRatingPrompt(false);
-    } catch (e) {
-      console.error('Error saving dismissal:', e);
-    }
-  };
-
   const loadLoopData = async () => {
     try {
       const { data: loop, error: loopError } = await supabase
@@ -329,14 +163,143 @@ export const LoopDetailScreen: React.FC = () => {
       return null;
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await loadLoopData();
-    setRefreshing(false);
+  const handleUpdateLoop = async (data: any) => {
+    if (!loopData) return;
+    setSavingLoop(true);
+
+    try {
+      const isGoal = data.type === 'goals';
+      const category = data.type as LoopType;
+      const dbResetRule = isGoal ? 'manual' : data.type;
+
+      let nextResetAt: string | null = loopData.next_reset_at || null;
+
+      if (dbResetRule === 'manual') {
+        nextResetAt = null;
+      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
+        if (loopData.reset_rule !== dbResetRule || !loopData.next_reset_at) {
+          const days = data.type === 'weekly' ? 7 : 1;
+          nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('loops')
+        .update({
+          name: data.name,
+          description: data.description,
+          affiliate_link: data.affiliate_link,
+          color: data.color,
+          loop_type: category,
+          reset_rule: dbResetRule,
+          function_type: data.function_type,
+          custom_days: data.custom_days || null,
+          next_reset_at: nextResetAt,
+          due_date: data.due_date,
+        })
+        .eq('id', loopId);
+
+      if (error) throw error;
+
+      await loadLoopData();
+      setEditingLoop(false);
+    } catch (error: any) {
+      console.error('Error updating loop:', error);
+      Alert.alert('Error', `Failed to update loop: ${error?.message}`);
+    } finally {
+      setSavingLoop(false);
+    }
   };
+
+  const formatResetSchedule = () => {
+    if (!loopData) return '';
+    const rule = loopData.reset_rule;
+
+    if (rule === 'daily') return 'Daily at 8 AM';
+    if (rule === 'weekdays') return 'Weekdays at 8 AM';
+    if (rule === 'weekly') return 'Weekly at 8 AM';
+    if (rule === 'manual') return 'Manual';
+    return rule || 'Manual';
+  };
+
+  const safeHapticImpact = async (style: Haptics.ImpactFeedbackStyle) => {
+    try {
+      if (Platform.OS !== 'web') {
+        await Haptics.impactAsync(style);
+      }
+    } catch (error) {
+      console.warn('[LoopDetail] Haptics not available:', error);
+    }
+  };
+
+  const checkAndShowThemePrompt = async () => {
+    return;
+  };
+
+  const handleThemePromptLater = async () => {
+    setShowThemePrompt(false);
+  };
+
+  const handleThemePromptCustomize = () => {
+    setShowThemePrompt(false);
+    navigation.navigate('Settings');
+  };
+
+  useEffect(() => {
+    loadLoopData();
+    loadTags();
+    loadUserRating();
+  }, [loopId]);
+
+  useSharedMomentum(loopId, () => {
+    console.log('[LoopDetail] Realtime update triggered - reloading data...');
+    loadLoopData();
+  });
+
+  const loadTags = async () => {
+    if (!user) return;
+    const tags = await getUserTags(user.id);
+    setAvailableTags(tags);
+  };
+
+  const loadUserRating = async () => {
+    const rating = await getUserRating(loopId);
+    setUserRating(rating || 0);
+  };
+
+  const handleSubmitRating = async (score: number) => {
+    if (!user) {
+      Alert.alert('Sign In Required', 'Please sign in to rate loops.');
+      return;
+    }
+
+    setIsSubmittingRating(true);
+    setUserRating(score);
+
+    const success = await submitRating(loopId, score);
+
+    if (success) {
+      const stats = await getLoopRatingStats(loopId);
+      if (stats && loopData) {
+        setLoopData({
+          ...loopData,
+          average_rating: stats.average,
+          total_ratings: stats.total,
+        });
+      }
+    } else {
+      const originalRating = await getUserRating(loopId);
+      setUserRating(originalRating || 0);
+      Alert.alert('Error', 'Failed to submit rating. Please try again.');
+    }
+
+    setIsSubmittingRating(false);
+  };
+
 
   const toggleTask = async (task: Task) => {
     try {
@@ -920,6 +883,13 @@ export const LoopDetailScreen: React.FC = () => {
 
         </ScrollView>
 
+        {/* Readability Anchor: Dark gradient at bottom to isolate floating buttons */}
+        <LinearGradient
+          colors={['transparent', 'rgba(15, 17, 21, 0.8)', 'rgba(15, 17, 21, 1)']}
+          style={styles.bottomReadabilityAnchor}
+          pointerEvents="none"
+        />
+
         {/* AI Synopsis FAB - Sparkle Button */}
         {recurringTasks.length > 0 && !loopData.description && (
           <TouchableOpacity
@@ -928,7 +898,7 @@ export const LoopDetailScreen: React.FC = () => {
             disabled={generatingSynopsis}
           >
             <LinearGradient
-              colors={[BRAND_GOLD + '40', BRAND_GOLD + '70']}
+              colors={[BRAND_GOLD + '60', BRAND_GOLD + '90']} // Increased opacity
               style={styles.synopsisFabGradient}
             >
               <Text style={[styles.synopsisFabText, { color: '#000', fontWeight: '900' }]}>
@@ -1447,6 +1417,7 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    zIndex: 10,
   },
   fabText: {
     fontSize: 32,
@@ -1470,10 +1441,16 @@ const styles = StyleSheet.create({
     left: 20,
     right: 100,
     borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Much more opaque for readability
     overflow: 'hidden',
+    zIndex: 10,
+    shadowColor: BRAND_GOLD,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
   },
   synopsisFabGradient: {
     paddingVertical: 14,
@@ -1482,8 +1459,16 @@ const styles = StyleSheet.create({
   },
   synopsisFabText: {
     fontSize: 14,
-    color: BRAND_GOLD,
-    fontWeight: '600',
+    color: '#000',
+    fontWeight: '800',
+  },
+  bottomReadabilityAnchor: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 180,
+    zIndex: 1,
   },
 
   // Modal Overlay
@@ -1764,3 +1749,5 @@ const styles = StyleSheet.create({
     color: '#000',
   },
 });
+
+export default LoopDetailScreen;
