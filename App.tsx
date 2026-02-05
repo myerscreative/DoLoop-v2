@@ -16,6 +16,9 @@ import { Platform } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 
 import { ThemeProvider } from "./src/contexts/ThemeContext";
+import { AuthProvider } from "./src/contexts/AuthContext";
+import { HomeScreen } from "./src/screens/HomeScreen";
+import { LoopDetailScreen } from "./src/screens/LoopDetailScreen";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { TemplateLibraryScreen } from "./src/screens/TemplateLibraryScreen";
 import { TemplateDetailScreen } from "./src/screens/TemplateDetailScreen";
