@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Platform,
   Linking,
-  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -59,7 +58,6 @@ export const LoopDetailScreen: React.FC = () => {
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [showThemePrompt, setShowThemePrompt] = useState(false);
-  const [showResetMenu, setShowResetMenu] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [loopMembers, setLoopMembers] = useState<LoopMemberProfile[]>([]);
   const [showMemberList, setShowMemberList] = useState(false);
@@ -74,25 +72,6 @@ export const LoopDetailScreen: React.FC = () => {
   // NEW: Loop Info Modal state
   const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
 
-  // Animation for Momentum Ring Glow
-  const glowAnim = useRef(new Animated.Value(0.15)).current;
-
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowAnim, {
-          toValue: 0.4,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowAnim, {
-          toValue: 0.15,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
 
   const handleUpdateLoop = async (data: any) => {
     if (!loopData) return;
@@ -543,31 +522,7 @@ export const LoopDetailScreen: React.FC = () => {
       );
       return;
     }
-
-    if (loopData?.reset_rule === 'manual') {
-      await resetLoop();
-    } else if (showResetMenu) {
-      await resetLoop();
-    } else {
-      const now = new Date();
-      const nextResetAt = loopData?.next_reset_at;
-      const nextReset = nextResetAt ? new Date(nextResetAt) : null;
-
-      if (!nextReset || now >= nextReset) {
-        await resetLoop();
-      } else {
-        if (loopData) {
-          Alert.alert(
-            'Next Reset',
-            `This loop resets ${loopData.reset_rule}${nextReset ? ' at ' + nextReset.toLocaleTimeString() : ''}. Do you want to reset it early?`,
-            [
-              { text: 'Later', style: 'cancel' },
-              { text: 'Reset Now', onPress: () => resetLoop() }
-            ]
-          );
-        }
-      }
-    }
+    await resetLoop();
   };
 
   const resetLoop = async () => {
@@ -702,7 +657,6 @@ export const LoopDetailScreen: React.FC = () => {
       }
 
       await loadLoopData();
-      setShowResetMenu(false);
       setShowLoopInfoModal(false); // Close modal after reloop
     } catch {
       Alert.alert('Error', 'Failed to reset loop');
@@ -794,26 +748,16 @@ export const LoopDetailScreen: React.FC = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Centered Momentum Header */}
           <View style={styles.momentumHeader}>
-            <View style={styles.glowContainer}>
-              <Animated.View style={[styles.ringGlow, { opacity: glowAnim }]}>
-                <LoopIcon
-                  size={140}
-                  color={loopData.color || BRAND_GOLD}
-                  style={styles.glowIcon}
-                />
-              </Animated.View>
-              <View style={styles.ringWrapper}>
-                <LoopIcon
-                  size={120}
-                  color={loopData.color || BRAND_GOLD}
-                />
-                <View style={styles.ringCountOverlay}>
-                  <Text style={styles.ringCountText}>
-                    {loopData.completedCount}/{loopData.totalCount}
-                  </Text>
-                </View>
+            <View style={styles.ringWrapper}>
+              <LoopIcon
+                size={120}
+                color={loopData.color || BRAND_GOLD}
+              />
+              <View style={styles.ringCountOverlay}>
+                <Text style={styles.ringCountText}>
+                  {loopData.completedCount}/{loopData.totalCount}
+                </Text>
               </View>
             </View>
           </View>
@@ -875,11 +819,25 @@ export const LoopDetailScreen: React.FC = () => {
                 </Text>
 
                 <TouchableOpacity 
-                  onPress={handleReloop}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.resetLoopText}>Reset Loop</Text>
-                </TouchableOpacity>
+                   onPress={() => {
+                     if (currentProgress < 100) {
+                         Alert.alert(
+                             'Reset Incomplete Loop?',
+                             'You haven\'t finished all tasks. Do you want to reset anyway?',
+                             [
+                                 { text: 'Cancel', style: 'cancel' },
+                                 { text: 'Reset Loop', onPress: () => resetLoop() }
+                             ]
+                         );
+                     } else {
+                         resetLoop();
+                     }
+                   }}
+                   activeOpacity={0.6}
+                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                 >
+                   <Text style={styles.resetLoopText}>Reset Loop</Text>
+                 </TouchableOpacity>
               </View>
 
               {/* Individual Glassmorphic Task Cards */}
@@ -1253,27 +1211,9 @@ const styles = StyleSheet.create({
   // Momentum Header
   momentumHeader: {
     alignItems: 'center',
-    paddingTop: 30,
-    paddingBottom: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
     backgroundColor: 'transparent',
-  },
-  glowContainer: {
-    position: 'relative',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ringGlow: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glowIcon: {
-    shadowColor: BRAND_GOLD,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 1,
-    shadowRadius: 15,
   },
   ringWrapper: {
     position: 'relative',

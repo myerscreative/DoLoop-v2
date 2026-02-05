@@ -44,7 +44,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   
   // Reflection state
   const [reflectionText, setReflectionText] = useState<string>('');
-  const [loadingReflection, setLoadingReflection] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   // Sync with parent task updates
@@ -63,10 +62,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
   const loadReflection = async () => {
     if (!user) return;
-    setLoadingReflection(true);
     const text = await getTodayReflection(task.id, user.id);
     if (text) setReflectionText(text);
-    setLoadingReflection(false);
   };
 
   const handleSaveReflection = async (text: string) => {
@@ -77,8 +74,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
   const hasSubtasks = localSubtasks.length > 0;
 
-  const completedSubtasks = localSubtasks.filter(st => st.completed).length;
-  const totalSubtasks = localSubtasks.length;
   const taskStatus = task.completed ? 'done' : 'pending';
 
   // Feature indicators
@@ -89,20 +84,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   const isRecurring = !task.is_one_time;
   const hasReminder = !!task.reminder_at;
 
-  const formatDueDate = (dueDate: string) => {
-    const due = new Date(dueDate);
-    const dueMidnight = new Date(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
-    const now = new Date();
-    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const diffTime = dueMidnight.getTime() - todayMidnight.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays < 0) return `Overdue`;
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Tomorrow';
-    if (diffDays <= 7) return `${diffDays}d`;
-    return dueMidnight.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;
 
@@ -123,8 +104,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         setShowAddSubtask(false);
         onSubtaskChange?.();
       }
-    } catch (error) {
-      console.error('Error creating subtask:', error);
+    } catch {
       Alert.alert('Error', 'Failed to create subtask');
     }
   };
@@ -138,8 +118,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         ));
         onSubtaskChange?.();
       }
-    } catch (error) {
-      console.error('Error toggling subtask:', error);
+    } catch {
     }
   };
 
@@ -479,9 +458,9 @@ const styles = StyleSheet.create({
   mainRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    minHeight: 64,
+    minHeight: 54,
   },
   toggleArea: {
     flex: 1,
@@ -499,7 +478,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingVertical: 14,
+    paddingVertical: 10,
   },
   titleRow: {
     flexDirection: 'row',
