@@ -24,23 +24,22 @@ export const Colors = {
     pro: '#FFB800', // Gold (Unified brand accent)
   },
   dark: {
-    background: '#09090B', // Zinc 950
-    backgroundSecondary: '#18181B', // Zinc 900
-    surface: '#27272A', // Zinc 800
-    text: '#F4F4F5', // Zinc 100
-    textSecondary: '#A1A1AA', // Zinc 400
-    primary: '#FFB800', // Vibrant Gold
-    success: '#10B981', // Emerald 500
-    error: '#EF4444', // Red 500
-    border: '#3F3F46', // Zinc 700
+    background: '#0F1115', // Atmospheric Dark (Navy-Charcoal)
+    backgroundSecondary: '#1C1F26', // Surface Base
+    surface: 'rgba(28, 31, 38, 0.8)', // Glass Surface
+    text: '#FFFFFF', // Pure White for high contrast
+    textSecondary: '#94A3B8', // Cool Grey (Slate 400) for metadata
+    primary: '#FEC00F', // Branding Gold
+    success: '#00E5A2', // Vibrant Success
+    error: '#EF4444', 
+    border: 'rgba(255, 255, 255, 0.1)', // Subtle Shine
     
-    
-    // Vibe colors - UNIFIED GOLD BRAND
-    structure: '#312E81', // Indigo 900
-    playful: '#FFB800', // Gold
-    focus: '#FFB800', // Gold
-    family: '#FFB800', // Gold
-    pro: '#FFB800', // Gold
+    // Vibe colors
+    structure: '#312E81',
+    playful: '#FEC00F',
+    focus: '#FEC00F',
+    family: '#FEC00F',
+    pro: '#FEC00F',
   },
 };
 

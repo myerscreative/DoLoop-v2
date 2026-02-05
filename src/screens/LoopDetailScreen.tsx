@@ -33,6 +33,7 @@ import { MemberAvatars, MemberListModal } from '../components/native/MemberAvata
 import { BeeIcon } from '../components/native/BeeIcon';
 import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask, uploadAttachment } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
+import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType } from '../types/loop';
 import { StarRatingInput } from '../components/native/StarRatingInput';
@@ -698,62 +699,59 @@ export const LoopDetailScreen: React.FC = () => {
     checkPromptVisibility();
   }, [userRating, memberJoinedAt, lastDismissedPrompt]);
 
-  // Derived state
-  const recurringTasks = loopData?.tasks?.filter(t => !t.is_one_time) || [];
-  const oneTimeTasks = loopData?.tasks?.filter(t => t.is_one_time) || [];
-  const currentProgress = loopData?.totalCount && loopData.totalCount > 0
-    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
-    : 0;
-
-  if (loading || !loopData) {
+  if (loading && !refreshing && !loopData) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-        <LoopIcon size={48} color={colors.primary} />
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: 'white' }}>Loading Atmosphere...</Text>
       </View>
     );
   }
+
+  if (!loopData) return null;
+
+  // Derived state
+  const recurringTasks = loopData.tasks.filter(t => !t.is_one_time) || [];
+  const oneTimeTasks = loopData.tasks.filter(t => t.is_one_time) || [];
+  const currentProgress = loopData.totalCount && loopData.totalCount > 0
+    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
+    : 0;
 
   // Get category label
   const getCategoryLabel = () => {
     const type = loopData.category || 'personal';
     return type.charAt(0).toUpperCase() + type.slice(1);
   };
-
+  
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{
-        flex: 1,
-        maxWidth: 600,
-        width: '100%',
-        alignSelf: 'center',
-        backgroundColor: colors.background,
-      }}>
-        {/* Header Row: Back + Title + Icons */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => {
-              if (navigation.canGoBack()) {
-                navigation.goBack();
-              } else {
-                navigation.navigate('Home');
-              }
-            }}
-            style={styles.backButton}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={[styles.backChevron, { color: BRAND_GOLD }]}>‹</Text>
-            <Text style={[styles.backText, { color: BRAND_GOLD }]}>Back</Text>
-          </TouchableOpacity>
-        </View>
-
+    <View style={styles.container}>
+      <MomentumOrb />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={BRAND_GOLD} />
           }
         >
+          {/* Header Row: Back + Title + Icons */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('Home');
+                }
+              }}
+              style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={[styles.backChevron, { color: BRAND_GOLD }]}>‹</Text>
+              <Text style={[styles.backText, { color: BRAND_GOLD }]}>Back</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.momentumHeader}>
             <View style={styles.ringWrapper}>
               <LoopIcon
@@ -851,9 +849,23 @@ export const LoopDetailScreen: React.FC = () => {
                 {recurringTasks.map((task, index) => {
                   const isActive = index === recurringTasks.findIndex(t => !t.completed);
                   const isShelved = task.completed;
+                  const isLast = index === recurringTasks.length - 1;
+                  const nextTaskCompleted = index < recurringTasks.length - 1 ? recurringTasks[index + 1].completed : true;
+                  const showTrail = !isLast && (!task.completed || !nextTaskCompleted);
                   
                   return (
-                    <React.Fragment key={task.id}>
+                    <View key={task.id} style={styles.taskCardWrapper}>
+                      {showTrail && (
+                        <View 
+                          style={[
+                            styles.trailConnector,
+                            { 
+                              backgroundColor: task.completed ? BRAND_GOLD + '40' : BRAND_GOLD,
+                              opacity: task.completed ? 0.3 : 1
+                            }
+                          ]} 
+                        />
+                      )}
                       <ExpandableTaskCard
                         task={task as TaskWithDetails}
                         onPress={() => handleEditTask(task as TaskWithDetails)}
@@ -863,22 +875,7 @@ export const LoopDetailScreen: React.FC = () => {
                         isActive={isActive}
                         isShelved={isShelved}
                       />
-                      
-                      {/* The "Ketchup Slot" – persistent faint '+' button between steps */}
-                      {index < recurringTasks.length - 1 && (
-                        <TouchableOpacity 
-                          style={styles.ketchupSlot} 
-                          onPress={() => handleAddTask()}
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                        >
-                          <View style={styles.ketchupSlotLine} />
-                          <View style={styles.ketchupSlotCircle}>
-                            <Ionicons name="add" size={14} color="rgba(255, 255, 255, 0.2)" />
-                          </View>
-                          <View style={styles.ketchupSlotLine} />
-                        </TouchableOpacity>
-                      )}
-                    </React.Fragment>
+                    </View>
                   );
                 })}
               </View>
@@ -889,8 +886,15 @@ export const LoopDetailScreen: React.FC = () => {
                 onPress={openAddTaskModal}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add-circle" size={24} color={BRAND_GOLD} />
-                <Text style={styles.addStepText}>Add Step</Text>
+                <LinearGradient
+                  colors={['rgba(254, 192, 15, 0.15)', 'rgba(254, 192, 15, 0.05)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.addStepGradient}
+                >
+                  <Ionicons name="add-circle" size={24} color={BRAND_GOLD} />
+                  <Text style={styles.addStepText}>Add Step</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           )}
@@ -1210,12 +1214,16 @@ export const LoopDetailScreen: React.FC = () => {
           loading={savingLoop}
           isEditing={true}
         />
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0F1115',
+  },
   // Header
   headerRow: {
     paddingHorizontal: 20,
@@ -1277,7 +1285,7 @@ const styles = StyleSheet.create({
   loopTitle: {
     fontSize: 28,
     fontFamily: 'Outfit_700Bold',
-    color: '#000', // Override inline
+    color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: -0.5,
   },
@@ -1333,27 +1341,33 @@ const styles = StyleSheet.create({
     gap: 0, // Cards have their own marginBottom
   },
   floatingAddStepButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     alignSelf: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
     borderRadius: 20,
     marginTop: 8,
     borderWidth: 1,
-    borderColor: BRAND_GOLD + '40',
+    borderColor: BRAND_GOLD + '30',
     shadowColor: BRAND_GOLD,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  addStepGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
   addStepText: {
     fontSize: 15,
     color: BRAND_GOLD,
     fontWeight: '700',
     marginLeft: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
   // Empty State
@@ -1418,24 +1432,37 @@ const styles = StyleSheet.create({
   // FABs
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 30,
     right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: BRAND_GOLD,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(254, 192, 15, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowColor: BRAND_GOLD,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
     elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   fabText: {
-    fontSize: 28,
+    fontSize: 32,
     color: 'white',
-    fontWeight: '500',
+    fontWeight: '300',
+  },
+  taskCardWrapper: {
+    position: 'relative',
+  },
+  trailConnector: {
+    position: 'absolute',
+    left: 30, // Centered with cardboard checkbox (approx)
+    top: 60,
+    bottom: -16,
+    width: 2,
+    zIndex: -1,
   },
   synopsisFab: {
     position: 'absolute',
