@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -558,8 +558,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 6,
     paddingHorizontal: 0, // Inline feel
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc', // Override inline
     backgroundColor: 'transparent',
     borderRadius: 0,
   },
@@ -596,7 +594,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9', // Override inline
     paddingTop: 8,
   },
   attachmentRow: {

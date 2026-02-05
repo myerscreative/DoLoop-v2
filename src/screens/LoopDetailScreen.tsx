@@ -924,7 +924,7 @@ export const LoopDetailScreen: React.FC = () => {
             disabled={generatingSynopsis}
           >
             <LinearGradient
-              colors={['#f8fafc', '#f1f5f9']}
+              colors={[BRAND_GOLD + '20', BRAND_GOLD + '40']}
               style={styles.synopsisFabGradient}
             >
               <Text style={styles.synopsisFabText}>
@@ -1625,7 +1625,7 @@ const styles = StyleSheet.create({
 
   // Action Sheet in Modal
   actionSheet: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 16,
     gap: 12,
@@ -1641,12 +1641,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primarySheetButtonText: {
-    color: '#fff',
+    color: '#000',
     fontSize: 16,
     fontWeight: '800',
   },
   secondarySheetButton: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

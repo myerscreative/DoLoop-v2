@@ -1,12 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { ProgressRing } from './ProgressRing';
-import { MomentumRing } from './MomentumRing';
 import { StarRating } from './StarRating';
 import { Loop } from '../../types/loop';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface LoopCardProps {
   loop: Loop & { completedCount?: number; totalCount?: number };
@@ -23,9 +20,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   onDelete,
   isUpcoming = false,
 }) => {
-  const progress = loop.totalCount && loop.totalCount > 0 
-    ? (loop.completedCount! / loop.totalCount) * 100
-    : 0;
+  const { colors } = useTheme();
 
   const getEmoji = (rule: string, category?: string) => {
     if (category === 'goals') return '🏆';
@@ -38,16 +33,14 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   };
 
   const getBadgeColors = (rule: string, category?: string) => {
-    // Returns [BackgroundTint, TextColor]
-    const c = Colors.light;
-    
-    if (category === 'goals') return [c.focus, '#FFFFFF']; // Blue + White
+    const c = colors;
+    if (category === 'goals') return [c.accent2, '#FFFFFF']; 
     
     switch (rule) {
-      case 'daily': return [c.primary, c.text]; // Bumblebee Yellow + Black
-      case 'weekly': return [c.family, '#FFFFFF']; // Violet + White
-      case 'manual': return [c.playful, '#FFFFFF']; // Pink + White
-      default: return [c.surface, c.text]; // Grey + Black
+      case 'daily': return [c.accentYellow, '#000000']; 
+      case 'weekly': return [c.accent1, '#FFFFFF'];    
+      case 'manual': return [c.primary, '#000000'];    
+      default: return [c.surface, c.text]; 
     }
   };
   
@@ -62,9 +55,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     }
   };
 
-  const colors = getBadgeColors(loop.reset_rule || 'daily', loop.category);
-  const badgeBg = colors[0];
-  const badgeText = colors[1];
+  const [badgeBg, badgeText] = getBadgeColors(loop.reset_rule || 'daily', loop.category);
 
   return (
     <TouchableOpacity 
@@ -72,13 +63,14 @@ export const LoopCard: React.FC<LoopCardProps> = ({
       onPress={() => onPress(loop)}
       style={[
         styles.card,
-        isUpcoming && styles.upcomingCard
+        isUpcoming && styles.upcomingCard,
+        { backgroundColor: isUpcoming ? 'rgba(255, 255, 255, 0.02)' : 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)' }
       ]}
     >
       <View style={styles.leftSection}>
         {isUpcoming ? (
-          <View style={styles.calendarIconWrapper}>
-            <Ionicons name="calendar-outline" size={24} color="#94a3b8" />
+          <View style={[styles.calendarIconWrapper, { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)' }]}>
+            <Ionicons name="calendar-outline" size={24} color={colors.textSecondary} />
           </View>
         ) : (
           <View style={[styles.iconCircle, { backgroundColor: badgeBg }]}>
@@ -89,24 +81,24 @@ export const LoopCard: React.FC<LoopCardProps> = ({
         )}
         
         <View style={styles.textContainer}>
-          <Text style={[styles.title, isUpcoming && styles.upcomingTitle]}>
+          <Text style={[styles.title, { color: isUpcoming ? colors.textSecondary : colors.text }]}>
             {loop.name || 'Unnamed Loop'}
           </Text>
           {(loop.author_name || loop.source_title) && (
              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                 <Ionicons name="library" size={12} color="#FEC00F" style={{ marginRight: 4 }} />
-                 <Text style={{ fontSize: 11, color: '#64748b', fontWeight: '600' }}>
+                 <Ionicons name="library" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                 <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '600' }}>
                     {loop.author_name ? 'Expert Loop' : 'From Library'}
                  </Text>
              </View>
           )}
           {isUpcoming ? (
-             <Text style={styles.dueDateText}>
+             <Text style={[styles.dueDateText, { color: colors.primary }]}>
                {loop.due_date ? `Due ${new Date(loop.due_date).toLocaleDateString()}` : 'Future Task'}
              </Text>
           ) : (
             <View>
-              <View style={[styles.badge, { backgroundColor: loop.function_type === 'practice' ? '#FFB800' : badgeBg }]}>
+              <View style={[styles.badge, { backgroundColor: loop.function_type === 'practice' ? colors.primary : badgeBg }]}>
                 <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? '#000000' : badgeText }]}>
                   {getBadgeLabel(loop.reset_rule || 'daily', loop.category, loop.function_type)}
                 </Text>
@@ -131,7 +123,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
               }}
               style={styles.actionButton}
             >
-              <Text style={styles.editText}>Edit</Text>
+              <Text style={{ fontSize: 12, color: colors.text, fontWeight: '600' }}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               onPress={(e) => {
@@ -140,11 +132,11 @@ export const LoopCard: React.FC<LoopCardProps> = ({
               }}
               style={styles.actionButton}
             >
-              <Text style={styles.deleteText}>Delete</Text>
+              <Text style={{ fontSize: 12, color: colors.error, fontWeight: '600' }}>Delete</Text>
             </TouchableOpacity>
           </View>
         )}
-        <Ionicons name="chevron-forward" size={20} color={Colors.light.textSecondary} />
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </View>
     </TouchableOpacity>
   );
@@ -156,25 +148,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    backgroundColor: Colors.light.background,
     borderWidth: 1,
-    borderColor: Colors.light.border,
     borderRadius: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
     maxWidth: 600,
     width: '100%',
     alignSelf: 'center',
   },
   upcomingCard: {
-    backgroundColor: Colors.light.backgroundSecondary,
-    opacity: 0.7,
     borderStyle: 'dashed',
-    borderColor: Colors.light.border,
   },
   leftSection: {
     flexDirection: 'row',
@@ -186,8 +168,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: '700', // Bold
-    color: Colors.light.text, // Jet Black
+    fontWeight: '700',
     marginBottom: 4,
   },
   badge: {
@@ -205,13 +186,9 @@ const styles = StyleSheet.create({
   ratingRow: {
     marginTop: 6,
   },
-  upcomingTitle: {
-    color: '#64748b',
-  },
   dueDateText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#FFA500',
     marginTop: 2,
   },
   iconCircle: {
@@ -225,11 +202,9 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
   },
   rightSection: {
     flexDirection: 'row',
@@ -242,15 +217,5 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-  },
-  editText: {
-    fontSize: 12,
-    color: '#374151', // Dark Charcoal
-    fontWeight: '600',
-  },
-  deleteText: {
-    fontSize: 12,
-    color: '#EF4444', // Softer Red
-    fontWeight: '600',
   },
 });

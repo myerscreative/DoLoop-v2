@@ -5,16 +5,10 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Modal,
-  TextInput,
   Alert,
-  KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Pressable,
   useWindowDimensions,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -25,16 +19,14 @@ import { RootStackParamList } from '../../App';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Folder, LoopType, FOLDER_ICONS, FOLDER_COLORS } from '../types/loop';
+import { LoopType, FOLDER_COLORS } from '../types/loop';
 import { Header } from '../components/Header';
 import { LoopSelectionModal } from '../components/LoopSelectionModal';
 import { LoopCard } from '../components/native/LoopCard';
-import { StarterRecipeCard } from '../components/native/StarterRecipeCard';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { PendingInvitations } from '../components/native/PendingInvitations';
 import { ResponsiveContainer } from '../components/layout/ResponsiveContainer';
 import { WebSidebar } from '../components/layout/WebSidebar';
-import { HomeRightPanel } from '../components/dashboard/HomeRightPanel';
 import { DesktopLoopDetailPanel } from '../components/dashboard/DesktopLoopDetailPanel';
 import { DashboardGrid } from '../components/dashboard/DashboardGrid';
 
@@ -504,7 +496,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ResponsiveContainer
         sidebar={
           <WebSidebar 
@@ -525,7 +517,7 @@ export const HomeScreen: React.FC = () => {
         flex: 1,
         width: '100%',
         alignSelf: 'center',
-        backgroundColor: colors.surface,
+        backgroundColor: colors.background,
       }}>
         {isDesktop ? (
           <DashboardGrid 
