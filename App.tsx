@@ -62,7 +62,7 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 const linking = {
-  prefixes: ["http://localhost:8081", "https://doloop.app"],
+  prefixes: ["http://localhost:8081", "https://doloop.app", "https://www.doloop.app"],
   config: {
     screens: {
       Onboarding: "onboarding",
