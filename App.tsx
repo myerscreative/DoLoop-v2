@@ -19,10 +19,9 @@ import { ThemeProvider } from "./src/contexts/ThemeContext";
 import { AuthProvider } from "./src/contexts/AuthContext";
 import { HomeScreen } from "./src/screens/HomeScreen";
 import { LoopDetailScreen } from "./src/screens/LoopDetailScreen";
-import { LoginScreen } from "./src/screens/LoginScreen";
-import { TemplateLibraryScreen } from "./src/screens/TemplateLibraryScreen";
-import { TemplateDetailScreen } from "./src/screens/TemplateDetailScreen";
 import { OnboardingScreen } from "./src/screens/OnboardingScreen";
+import { LoginScreen } from "./src/screens/LoginScreen";
+import { ResetPasswordScreen } from "./src/screens/ResetPasswordScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { AdminDashboardScreen } from "./src/screens/admin/AdminDashboardScreen";
 import { AdminTemplatesScreen } from "./src/screens/admin/AdminTemplatesScreen";
@@ -38,7 +37,9 @@ import { LoopSommelierScreen } from "./src/screens/LoopSommelierScreen";
 
 export type RootStackParamList = {
   Onboarding: undefined;
+  Onboarding: undefined;
   Login: undefined;
+  ResetPassword: undefined;
   Home: undefined;
   LoopDetail: { loopId: string };
   TemplateLibrary: undefined;
@@ -65,6 +66,9 @@ const linking = {
     screens: {
       Onboarding: "onboarding",
       Login: "login",
+      Onboarding: "onboarding",
+      Login: "login",
+      ResetPassword: "reset-password",
       Home: "",
       LoopDetail: "loop/:loopId",
       TemplateLibrary: "templates",
@@ -148,7 +152,9 @@ export default function App() {
               }}
             >
               <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
               <Stack.Screen name="Home" component={HomeScreen} />
               <Stack.Screen name="LoopDetail" component={LoopDetailScreen} />
               <Stack.Screen
