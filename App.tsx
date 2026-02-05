@@ -12,6 +12,11 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
 } from "@expo-google-fonts/inter";
+import {
+  Outfit_400Regular,
+  Outfit_600SemiBold,
+  Outfit_700Bold,
+} from "@expo-google-fonts/outfit";
 import { Platform } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 
@@ -89,6 +94,9 @@ export default function App() {
     Inter_400Regular,
     Inter_600SemiBold,
     Inter_700Bold,
+    Outfit_400Regular,
+    Outfit_600SemiBold,
+    Outfit_700Bold,
   });
 
   console.log("[App] Fonts loaded:", fontsLoaded);

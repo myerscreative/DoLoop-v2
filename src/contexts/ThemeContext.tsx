@@ -41,13 +41,13 @@ const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
   const vibeColor = vibeColors[vibe];
   // Light mode colors matching the mockup exactly
   const base = isDark ? {
-    background: '#09090B',
-    surface: '#27272A',
-    text: '#F4F4F5',
-    textSecondary: '#A1A1AA',
-    border: '#3F3F46',
-    error: '#EF4444',
-    structure: '#312E81', // Indigo 900
+    background: '#121212',     // Deep dark charcoal
+    surface: 'rgba(255, 255, 255, 0.05)', // Glassmorphism surface
+    text: '#FFFFFF',           // 100% white for visual anchor
+    textSecondary: 'rgba(255, 255, 255, 0.4)', // 40% grey for "fade"
+    border: 'rgba(255, 255, 255, 0.1)',
+    error: '#DC2626',
+    structure: '#1A1A1A',
   } : {
     background: '#FFFFFF',     // Pure white for main areas
     surface: '#FAFAFA',        // Light gray for list backgrounds
@@ -71,16 +71,16 @@ const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  // Force light mode to show off the vibrant new theme
-  const [colorScheme, setColorScheme] = useState<ColorSchemeName>('light');
+  // Default to dark mode as per "Second Self" philosophy
+  const [colorScheme, setColorScheme] = useState<ColorSchemeName>('dark');
   const [vibe, setVibeState] = useState<VibeStyle>('playful'); // Default to playful (gold/bee theme)
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
 
   // Load user's theme preference from profile
   useEffect(() => {
     const loadThemePreference = async () => {
       if (!user) {
-        setLoading(false);
+        // setLoading(false);
         return;
       }
 
@@ -97,9 +97,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setVibeState(data.theme_vibe as VibeStyle);
         }
       } catch (error) {
-        console.warn('[Theme] Error loading theme preference:', error);
+        // console.warn('[Theme] Error loading theme preference:', error);
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     };
 
@@ -107,9 +107,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user]);
 
   useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
-      // Keep light mode even if system changes
-      setColorScheme('light');
+    const subscription = Appearance.addChangeListener(() => {
+      // Keep dark mode as the "Second Self" primary experience
+      setColorScheme('dark');
     });
 
     return () => subscription.remove();
@@ -134,12 +134,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         });
 
       if (error) {
-        console.warn('[Theme] Error saving theme preference:', error);
+        // console.warn('[Theme] Error saving theme preference:', error);
         // Revert on error
         setVibeState(vibe);
       }
     } catch (error) {
-      console.warn('[Theme] Error saving theme preference:', error);
+      // console.warn('[Theme] Error saving theme preference:', error);
       // Revert on error
       setVibeState(vibe);
     }

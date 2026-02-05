@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -611,6 +612,51 @@ export const HomeScreen: React.FC = () => {
               }
             >
             <View style={{ padding: 20 }}>
+              {/* Quick Add Button */}
+              <TouchableOpacity 
+                onPress={openCreateLoopModal}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.background,
+                  padding: 16,
+                  borderRadius: 16,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
+                  borderColor: colors.primary,
+                  marginBottom: 24,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 10,
+                  elevation: 2,
+                }}
+              >
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: `${colors.primary}20`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 16,
+                }}>
+                  <Ionicons name="add" size={24} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={{ 
+                    fontSize: 16, 
+                    fontWeight: '700', 
+                    color: colors.text 
+                  }}>Create a new loop</Text>
+                  <Text style={{ 
+                    fontSize: 13, 
+                    color: colors.textSecondary 
+                  }}>Track your own custom routine</Text>
+                </View>
+              </TouchableOpacity>
+
               {/* Today's Loop Section */}
               {todayLoops.length > 0 && (
                 <View style={{ marginBottom: 24 }}>
@@ -725,43 +771,57 @@ export const HomeScreen: React.FC = () => {
                 </Text>
 
                 <TouchableOpacity
-                  style={{
-                    backgroundColor: colors.structure, // Midnight Navy
-                    padding: 20,
-                    borderRadius: 16,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 8,
-                    elevation: 4,
-                    marginBottom: 16
-                  }}
+                  activeOpacity={0.9}
                   onPress={() => navigation.navigate('TemplateLibrary')}
+                  style={{ marginBottom: 16 }}
                 >
-                  <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginBottom: 8,
-                  }}>
-                    <Text style={{ fontSize: 28, marginRight: 12 }}>📚</Text>
-                    <Text style={{
-                      fontSize: 20,
-                      fontWeight: 'bold',
-                      color: '#fff',
-                      flex: 1,
+                  <LinearGradient
+                    colors={['#1e1b4b', '#312e81']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={{
+                      padding: 24,
+                      borderRadius: 20,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 12,
+                      elevation: 8,
+                    }}
+                  >
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 8,
                     }}>
-                      Loop Library
+                      <Text style={{ fontSize: 28, marginRight: 12 }}>📚</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{
+                          fontSize: 20,
+                          fontWeight: 'bold',
+                          color: '#fff',
+                        }}>
+                          Loop Library
+                        </Text>
+                        <View style={{ 
+                          height: 2, 
+                          backgroundColor: colors.primary, 
+                          width: 40, 
+                          marginTop: 4,
+                          borderRadius: 1 
+                        }} />
+                      </View>
+                      <Ionicons name="arrow-forward" size={24} color="#fff" />
+                    </View>
+                    <Text style={{
+                      fontSize: 14,
+                      color: '#fff',
+                      opacity: 0.9,
+                      lineHeight: 20,
+                    }}>
+                      Explore loops inspired by top teachers, coaches, and business leaders
                     </Text>
-                    <Text style={{ fontSize: 20, color: '#fff' }}>→</Text>
-                  </View>
-                  <Text style={{
-                    fontSize: 14,
-                    color: '#fff',
-                    opacity: 0.9,
-                    lineHeight: 20,
-                  }}>
-                    Explore loops inspired by top teachers, coaches, and business leaders
-                  </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
 
                 {/* AI Loop Recommender */}

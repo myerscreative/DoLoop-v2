@@ -11,12 +11,16 @@ interface EnhancedTaskCardProps {
   task: TaskWithDetails;
   onPress: () => void;
   onToggle: () => void;
+  isActive?: boolean;
+  isShelved?: boolean;
 }
 
 export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
   task,
   onPress,
   onToggle,
+  isActive = false,
+  isShelved = false,
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -51,13 +55,22 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;
   const hasSubtasks = task.subtasks && task.subtasks.length > 0;
-  const completedSubtasks = task.subtasks?.filter(st => st.status === 'done').length || 0;
+  const completedSubtasks = task.subtasks?.filter(st => st.completed).length || 0;
   const totalSubtasks = task.subtasks?.length || 0;
   const taskStatus = task.completed ? 'done' : 'pending';
 
   return (
     <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.surface }]}
+      style={[
+        styles.container, 
+        { 
+          backgroundColor: isShelved ? 'rgba(255, 255, 255, 0.02)' : 
+                          isActive ? 'rgba(254, 192, 15, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+          borderColor: isActive ? '#FEC00F' : 'rgba(255, 255, 255, 0.1)',
+          opacity: isShelved ? 0.4 : (isActive ? 1 : 0.6),
+          borderWidth: 1,
+        }
+      ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
@@ -88,8 +101,8 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
                 styles.description,
                 {
                   color: colors.text,
-                  textDecorationLine: taskStatus === 'done' ? 'line-through' : 'none',
-                  opacity: taskStatus === 'done' ? 0.6 : 1,
+                  fontFamily: isActive ? 'Outfit_700Bold' : 'Inter_400Regular',
+                  textDecorationLine: isShelved ? 'line-through' : 'none',
                 },
               ]}
               numberOfLines={2}

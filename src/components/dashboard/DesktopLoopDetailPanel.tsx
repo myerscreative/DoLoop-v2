@@ -535,6 +535,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                 width={10}
                 fill={currentProgress}
                 tintColor="#FEC00F"
+                backgroundColor="rgba(255, 255, 255, 0.05)"
                 >
                 <View style={styles.progressCircle}>
                 <Text style={styles.progressPercent}>{Math.round(currentProgress)}%</Text>
@@ -571,15 +572,35 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
              )}
           </View>
           
-          {recurringTasks.map((task) => (
-            <EnhancedTaskCard
-              key={task.id}
-              task={task}
-              onToggle={() => toggleTask(task)}
-              onPress={() => handleEditTask(task)}
-              user={user}
-            />
-          ))}
+          {recurringTasks.map((task, index) => {
+            const isActive = index === recurringTasks.findIndex(t => !t.completed);
+            const isShelved = task.completed;
+            
+            return (
+              <React.Fragment key={task.id}>
+                <EnhancedTaskCard
+                  task={task}
+                  onToggle={() => toggleTask(task)}
+                  onPress={() => handleEditTask(task)}
+                  isActive={isActive}
+                  isShelved={isShelved}
+                />
+                
+                {index < recurringTasks.length - 1 && (
+                  <TouchableOpacity 
+                    style={styles.ketchupSlot} 
+                    onPress={() => openAddTaskModal()}
+                  >
+                    <View style={styles.ketchupSlotLine} />
+                    <View style={styles.ketchupSlotCircle}>
+                      <Ionicons name="add" size={14} color="rgba(255, 255, 255, 0.2)" />
+                    </View>
+                    <View style={styles.ketchupSlotLine} />
+                  </TouchableOpacity>
+                )}
+              </React.Fragment>
+            );
+          })}
           
           <TouchableOpacity 
             style={styles.addTaskButton} 
@@ -600,7 +621,6 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                 task={task}
                 onToggle={() => toggleTask(task)}
                 onPress={() => handleEditTask(task)}
-                user={user}
               />
             ))}
           </View>
@@ -660,7 +680,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#121212',
   },
   header: {
     padding: 40,
@@ -680,13 +700,13 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 40,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   heroDescription: {
     fontSize: 18,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.4)',
     lineHeight: 24,
   },
   headerButtons: {
@@ -747,8 +767,12 @@ const styles = StyleSheet.create({
   },
   progressPercent: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFFFFF',
+  },
+  progressCircle: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressTextContainer: {
     flex: 1,
@@ -785,8 +809,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#1a1a1a',
+    fontFamily: 'Outfit_700Bold',
+    color: '#FFFFFF',
     marginBottom: 24,
   },
   taskContainer: {
@@ -881,5 +905,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginTop: 16,
+  },
+  ketchupSlot: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -4,
+  },
+  ketchupSlotLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  ketchupSlotCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 12,
   },
 });

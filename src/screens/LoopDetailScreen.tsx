@@ -720,13 +720,13 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#f8f9fa' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <View style={{
         flex: 1,
         maxWidth: 600,
         width: '100%',
         alignSelf: 'center',
-        backgroundColor: '#f8f9fa',
+        backgroundColor: colors.background,
       }}>
         {/* Header Row: Back + Title + Icons */}
         <View style={styles.headerRow}>
@@ -771,7 +771,7 @@ export const LoopDetailScreen: React.FC = () => {
           {/* Title Row with Eye Icon and Member Avatars */}
           <View style={styles.titleContainer}>
             <View style={styles.titleWithBadge}>
-              <Text style={styles.loopTitle}>{loopData.name}</Text>
+              <Text style={[styles.loopTitle, { fontFamily: 'Outfit_700Bold', color: colors.text }]}>{loopData.name}</Text>
               
               {/* Eye Icon - Aligned Right with Unread Badge */}
               <TouchableOpacity
@@ -846,18 +846,41 @@ export const LoopDetailScreen: React.FC = () => {
                  </TouchableOpacity>
               </View>
 
-              {/* Individual Glassmorphic Task Cards */}
+              {/* Individual Glassmorphic Task Cards with Focus Mode and Ketchup Slots */}
               <View style={styles.taskCardsGrid}>
-                {recurringTasks.map((task) => (
-                  <ExpandableTaskCard
-                    key={task.id}
-                    task={task as TaskWithDetails}
-                    onPress={() => handleEditTask(task as TaskWithDetails)}
-                    onToggle={() => toggleTask(task)}
-                    onSubtaskChange={loadLoopData}
-                    isPracticeLoop={loopData.function_type === 'practice'}
-                  />
-                ))}
+                {recurringTasks.map((task, index) => {
+                  const isActive = index === recurringTasks.findIndex(t => !t.completed);
+                  const isShelved = task.completed;
+                  
+                  return (
+                    <React.Fragment key={task.id}>
+                      <ExpandableTaskCard
+                        task={task as TaskWithDetails}
+                        onPress={() => handleEditTask(task as TaskWithDetails)}
+                        onToggle={() => toggleTask(task)}
+                        onSubtaskChange={loadLoopData}
+                        isPracticeLoop={loopData.function_type === 'practice'}
+                        isActive={isActive}
+                        isShelved={isShelved}
+                      />
+                      
+                      {/* The "Ketchup Slot" – persistent faint '+' button between steps */}
+                      {index < recurringTasks.length - 1 && (
+                        <TouchableOpacity 
+                          style={styles.ketchupSlot} 
+                          onPress={() => handleAddTask()}
+                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        >
+                          <View style={styles.ketchupSlotLine} />
+                          <View style={styles.ketchupSlotCircle}>
+                            <Ionicons name="add" size={14} color="rgba(255, 255, 255, 0.2)" />
+                          </View>
+                          <View style={styles.ketchupSlotLine} />
+                        </TouchableOpacity>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </View>
 
               {/* Add Step Button - More Vibrant */}
@@ -1487,6 +1510,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1f2937',
     fontWeight: '500',
+  },
+
+  // Ketchup Slot
+  ketchupSlot: {
+    height: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: -4,
+  },
+  ketchupSlotLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  ketchupSlotCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 12,
   },
 
   // Provenance Card

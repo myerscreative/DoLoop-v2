@@ -26,6 +26,8 @@ interface ExpandableTaskCardProps {
   onToggle: () => void;
   onSubtaskChange?: () => void; // Callback to refresh parent data
   isPracticeLoop?: boolean; // New prop for Practice Loop behavior
+  isActive?: boolean;       // Second Self: Visual anchor
+  isShelved?: boolean;      // Second Self: Completed/Minimized
 }
 
 export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
@@ -34,6 +36,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   onToggle,
   onSubtaskChange,
   isPracticeLoop = false,
+  isActive = false,
+  isShelved = false,
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -164,8 +168,11 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
       style={[
         styles.container,
         {
-          backgroundColor: taskStatus === 'done' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(254, 192, 15, 0.08)',
-          borderColor: 'rgba(255, 255, 255, 0.4)',
+          backgroundColor: isShelved ? 'rgba(255, 255, 255, 0.02)' : 
+                          isActive ? 'rgba(254, 192, 15, 0.12)' : 'rgba(255, 255, 255, 0.05)',
+          borderColor: isActive ? BRAND_GOLD : 'rgba(255, 255, 255, 0.1)',
+          opacity: isShelved ? 0.4 : (isActive ? 1 : 0.6),
+          minHeight: isShelved ? 40 : 54,
         }
       ]}
     >
@@ -208,8 +215,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                   styles.description,
                   {
                     color: colors.text,
-                    textDecorationLine: taskStatus === 'done' ? 'line-through' : 'none',
-                    opacity: taskStatus === 'done' ? 0.6 : 1,
+                    fontFamily: isActive ? 'Outfit_700Bold' : 'Inter_400Regular',
+                    textDecorationLine: isShelved ? 'line-through' : 'none',
                   },
                 ]}
                 numberOfLines={2}
