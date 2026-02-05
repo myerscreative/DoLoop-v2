@@ -87,9 +87,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (email: string) => {
     try {
       // Redirect URL should be your app's deep link or website URL where they can reset
-      // For now, using standard site URL
+      // Use window.location.origin on web to ensure we stick to the same domain (www vs non-www)
+      // to avoid redirects that strip the hash fragment.
+      let redirectTo = 'https://doloop.app/reset-password';
+      
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          redirectTo = `${window.location.origin}/reset-password`;
+      }
+
+      console.log('[Auth] Resetting password with redirect:', redirectTo);
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'https://doloop.app/reset-password',
+        redirectTo,
       });
       return { error };
     } catch (error) {
