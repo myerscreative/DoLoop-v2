@@ -20,7 +20,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Task, LoopWithTasks, TaskWithDetails, Tag, FOLDER_ICONS, LoopType } from '../../types/loop';
+import { Task, LoopWithTasks, TaskWithDetails, Tag, FOLDER_ICONS, LoopType, Subtask } from '../../types/loop';
 import { AnimatedCircularProgress } from '../native/AnimatedCircularProgress';
 import { EnhancedTaskCard } from '../native/EnhancedTaskCard';
 import { TaskEditModal } from '../native/TaskEditModal';
@@ -287,7 +287,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const handleSaveTask = async (
     taskData: Partial<TaskWithDetails>,
     pendingSubtasks?: Subtask[],
-    pendingAttachments?: any[]
+    pendingAttachments?: any[],
+    closeModal: boolean = true
   ) => {
     try {
       setSaving(true);
@@ -342,8 +343,10 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
       }
 
       await loadLoopData();
-      setModalVisible(false);
-      setEditingTask(null);
+      if (closeModal) {
+        setModalVisible(false);
+        setEditingTask(null);
+      }
     } catch (error) {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');
@@ -641,6 +644,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         user={user}
         availableTags={availableTags}
         onCreateTag={handleCreateTag}
+        existingTasks={recurringTasks}
       />
 
       <InviteModal

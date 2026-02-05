@@ -181,7 +181,7 @@ export async function getTaskSubtasks(taskId: string): Promise<Subtask[]> {
 
 export async function uploadAttachment(
   taskId: string,
-  file: { name: string; type: string; uri: string; mimeType?: string },
+  file: { name: string; type: string; uri: string; mimeType?: string; size?: number },
   userId: string
 ): Promise<Attachment | null> {
   try {

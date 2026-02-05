@@ -11,6 +11,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -65,6 +66,9 @@ export const LoopDetailScreen: React.FC = () => {
   const [savingLoop, setSavingLoop] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const [memberJoinedAt, setMemberJoinedAt] = useState<string | null>(null);
+  const [lastDismissedPrompt, setLastDismissedPrompt] = useState<number | null>(null);
 
   const handleUpdateLoop = async (data: any) => {
     if (!loopData) return;
@@ -216,6 +220,17 @@ export const LoopDetailScreen: React.FC = () => {
     setIsSubmittingRating(false);
   };
 
+  const handleDismissRating = async () => {
+    const now = Date.now();
+    try {
+      await AsyncStorage.setItem(`last_rating_dismissed_${loopId}`, now.toString());
+      setLastDismissedPrompt(now);
+      setShowRatingPrompt(false);
+    } catch (e) {
+      console.error('Error saving dismissal:', e);
+    }
+  };
+
   const loadLoopData = async () => {
     try {
       const { data: loop, error: loopError } = await supabase
@@ -282,6 +297,25 @@ export const LoopDetailScreen: React.FC = () => {
       // Load member profiles for collaboration display
       const members = await getLoopMemberProfiles(loopId);
       setLoopMembers(members);
+
+      if (user) {
+        const { data: membership } = await supabase
+          .from('loop_members')
+          .select('joined_at')
+          .eq('loop_id', loopId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (membership) {
+          setMemberJoinedAt(membership.joined_at);
+        }
+      }
+
+      // Load last dismissed from storage
+      const dismissed = await AsyncStorage.getItem(`last_rating_dismissed_${loopId}`);
+      if (dismissed) {
+        setLastDismissedPrompt(parseInt(dismissed, 10));
+      }
       
       return loopWithTasks;
     } catch (error) {
@@ -384,7 +418,8 @@ export const LoopDetailScreen: React.FC = () => {
   const handleSaveTask = async (
     taskData: Partial<TaskWithDetails>, 
     pendingSubtasks?: Subtask[],
-    pendingAttachments?: PendingAttachment[]
+    pendingAttachments?: PendingAttachment[],
+    closeModal: boolean = true
   ): Promise<string | null | void> => {
     try {
       // Resolve assignment to Loop Member ID (convert UserID -> LoopMemberID)
@@ -460,8 +495,10 @@ export const LoopDetailScreen: React.FC = () => {
       console.log('[LoopDetail] Task and subtasks/attachments saved successfully');
       await loadLoopData();
       
-      setModalVisible(false);
-      setEditingTask(null);
+      if (closeModal) {
+        setModalVisible(false);
+        setEditingTask(null);
+      }
       
       return savedTaskId;
     } catch (error) {
@@ -678,6 +715,47 @@ export const LoopDetailScreen: React.FC = () => {
     // Auto-hide after a delay
     setTimeout(() => setShowResetMenu(false), 3000);
   };
+
+  // Check prompt visibility whenever relevant data changes
+  useEffect(() => {
+    const checkPromptVisibility = () => {
+      // If user already rated, we don't show the prompt logic, 
+      // but we might still want to show the section so they can see/edit.
+      // However, the user said "not be there all the time".
+      if (userRating > 0) {
+        setShowRatingPrompt(true); // Keep it visible if rated
+        return;
+      }
+
+      if (!memberJoinedAt) {
+        setShowRatingPrompt(false);
+        return;
+      }
+
+      const joined = new Date(memberJoinedAt).getTime();
+      const now = Date.now();
+      const daysSinceJoined = (now - joined) / (1000 * 60 * 60 * 24);
+
+      // Rule: Show after 2 days (using 2.5 to be safe)
+      if (daysSinceJoined < 2) {
+        setShowRatingPrompt(false);
+        return;
+      }
+
+      // Rule: If dismissed, wait 30 days
+      if (lastDismissedPrompt) {
+        const daysSinceDismissed = (now - lastDismissedPrompt) / (1000 * 60 * 60 * 24);
+        if (daysSinceDismissed < 30) {
+          setShowRatingPrompt(false);
+          return;
+        }
+      }
+
+      setShowRatingPrompt(true);
+    };
+
+    checkPromptVisibility();
+  }, [userRating, memberJoinedAt, lastDismissedPrompt]);
 
   // Derived state
   const recurringTasks = loopData?.tasks?.filter(t => !t.is_one_time) || [];
@@ -994,20 +1072,36 @@ export const LoopDetailScreen: React.FC = () => {
           )}
 
           {/* Star Rating Section */}
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>Rate this Loop</Text>
-            <StarRatingInput 
-              value={userRating}
-              onChange={handleSubmitRating}
-              disabled={isSubmittingRating}
-              size={32}
-            />
-            {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
-              <Text style={styles.ratingStats}>
-                Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
-              </Text>
-            )}
-          </View>
+          {showRatingPrompt && (
+            <View style={styles.ratingSection}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: 8 }}>
+                <Text style={styles.ratingLabel}>Rate this Loop</Text>
+                {userRating === 0 && (
+                  <TouchableOpacity onPress={handleDismissRating} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                    <Ionicons name="close-circle-outline" size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <StarRatingInput 
+                value={userRating}
+                onChange={handleSubmitRating}
+                disabled={isSubmittingRating}
+                size={32}
+              />
+              {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
+                <Text style={styles.ratingStats}>
+                  Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
+                </Text>
+              )}
+              {userRating === 0 && (
+                <TouchableOpacity onPress={handleDismissRating} style={{ marginTop: 12 }}>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, textDecorationLine: 'underline' }}>
+                    Maybe later
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {loopData.affiliate_link && (
             <TouchableOpacity
@@ -1224,8 +1318,9 @@ export const LoopDetailScreen: React.FC = () => {
         onSave={handleSaveTask}
         task={editingTask}
         user={user}
-        onCreateTag={handleCreateTag}
         availableTags={availableTags}
+        onCreateTag={handleCreateTag}
+        existingTasks={recurringTasks}
       />
 
       {/* Invite Modal */}

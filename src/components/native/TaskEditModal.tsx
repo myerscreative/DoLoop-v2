@@ -1,20 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-} from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -42,13 +29,15 @@ interface TaskEditModalProps {
   onSave: (
     taskData: Partial<TaskWithDetails>, 
     pendingSubtasks?: Subtask[], 
-    pendingAttachments?: PendingAttachment[]
+    pendingAttachments?: PendingAttachment[],
+    closeModal?: boolean
   ) => Promise<string | null | void>; // Return ID
   task?: TaskWithDetails | null;
   user: any;
   onCreateTag?: (name: string, color: string) => Promise<Tag | null>;
   initialValues?: Partial<TaskWithDetails>;
   availableTags: Tag[];
+  existingTasks?: TaskWithDetails[];
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -59,6 +48,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   availableTags,
   onCreateTag,
   initialValues,
+  existingTasks = [],
 }) => {
   const { user } = useAuth();
 
@@ -95,9 +85,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   
   // Picker Visibilities
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showReminderPicker, setShowReminderPicker] = useState(false);
-  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
@@ -273,7 +260,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       // Pass pending subtasks (only temp ones, as existing ones are already saved)
       const pendingSubtasks = subtasks.filter(s => s.id.startsWith('temp_'));
       // Pass pending attachments to be uploaded after task is created
-      await onSave(taskData, pendingSubtasks, pendingAttachments.length > 0 ? pendingAttachments : undefined);
+      await onSave(taskData, pendingSubtasks, pendingAttachments.length > 0 ? pendingAttachments : undefined, closeModal);
       if (closeModal) {
         onClose();
         resetForm();
@@ -424,11 +411,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             </TouchableOpacity>
             
             <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>Task Details</Text>
+                <Text style={styles.headerTitle}>{task ? 'Task Details' : 'Add Steps'}</Text>
             </View>
 
             <TouchableOpacity 
-                onPress={handleSaveAndClose} 
+                onPress={() => handleSave(true)} 
                 style={[styles.saveHeaderButton, !description.trim() && { opacity: 0.5 }]}
                 disabled={saving}
             >
@@ -441,29 +428,53 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-            {/* Name Input */}
-            <View style={styles.nameSection}>
-                <TouchableOpacity style={styles.radioPlaceholder}>
-                    <View style={styles.radioCircle} />
-                </TouchableOpacity>
-                <TextInput
-                    ref={descriptionInputRef}
-                    style={styles.nameInput}
-                    placeholder="Enter Step Name..."
-                    value={description}
-                    onChangeText={setDescription}
-                    placeholderTextColor="#94a3b8"
-                    multiline={Platform.OS !== 'web'} // Allow multiline on mobile, but single line on web for easier Enter-to-save
-                    blurOnSubmit={true}
-                    returnKeyType="done"
-                    onSubmitEditing={() => handleSave(false)}
-                />
+            {/* Existing Tasks List */}
+            {!task && existingTasks.length > 0 && (
+                <View style={styles.existingTasksList}>
+                    {existingTasks.map((t) => (
+                        <View key={t.id} style={styles.existingTaskItem}>
+                            <View style={styles.existingTaskDot} />
+                            <Text style={styles.existingTaskText} numberOfLines={1}>{t.description}</Text>
+                        </View>
+                    ))}
+                </View>
+            )}
+
+            {/* Name Input Row */}
+            <View style={styles.nameInputRow}>
+                <View style={[styles.nameSection, { flex: 0.7, paddingRight: 10 }]}>
+                    <TouchableOpacity style={styles.radioPlaceholder}>
+                        <View style={styles.radioCircle} />
+                    </TouchableOpacity>
+                    <TextInput
+                        ref={descriptionInputRef}
+                        style={styles.nameInput}
+                        placeholder="Enter Step Name..."
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholderTextColor="#94a3b8"
+                        multiline={Platform.OS !== 'web'} 
+                        blurOnSubmit={true}
+                        returnKeyType="done"
+                        onSubmitEditing={() => handleSave(false)}
+                    />
+                </View>
+
+                {!showDetails && (
+                    <TouchableOpacity 
+                        style={[styles.addDetailsLink, { flex: 0.3, justifyContent: 'center' }]} 
+                        onPress={() => setShowDetails(true)}
+                    >
+                        <Ionicons name="options-outline" size={16} color="#6366f1" />
+                        <Text style={styles.addDetailsLinkText}>Add Step Details</Text>
+                    </TouchableOpacity>
+                )}
             </View>
 
             <View style={styles.subtasksContainer}>
                 {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
                 
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={styles.addSubtaskContainer}>
                     {!showSubtaskInput ? (
                         <TouchableOpacity 
                             style={styles.addSubtaskLink} 
@@ -500,16 +511,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                     </TouchableOpacity>
                             )}
                         </View>
-                    )}
-
-                    {!showDetails && (
-                        <TouchableOpacity 
-                            style={styles.addDetailsLink} 
-                            onPress={() => setShowDetails(true)}
-                        >
-                            <Ionicons name="options-outline" size={16} color="#6366f1" />
-                            <Text style={styles.addDetailsLinkText}>Add Step Details</Text>
-                        </TouchableOpacity>
                     )}
                 </View>
             </View>
@@ -769,9 +770,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         {/* Bottom Save Button - for better visibility */}
         <View style={styles.footer}>
             <TouchableOpacity 
-                style={[styles.bottomSaveButton, (!description.trim() || saving) && styles.bottomSaveButtonDisabled]}
-                onPress={handleSaveAndClose}
-                disabled={!description.trim() || saving}
+                style={[styles.bottomSaveButton, saving && styles.bottomSaveButtonDisabled]}
+                onPress={() => {
+                    if (description.trim()) {
+                        handleSave(true);
+                    } else {
+                        onClose();
+                        resetForm();
+                    }
+                }}
+                disabled={saving}
             >
                 {saving ? (
                     <ActivityIndicator size="small" color="#000" />
@@ -1174,5 +1182,36 @@ const styles = StyleSheet.create({
       fontSize: 14,
       fontWeight: '600',
       color: '#475569',
+  },
+  existingTasksList: {
+      paddingHorizontal: 20,
+      marginBottom: 16,
+      gap: 6,
+  },
+  existingTaskItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      opacity: 0.6,
+  },
+  existingTaskDot: {
+      width: 4,
+      height: 4,
+      borderRadius: 2,
+      backgroundColor: '#94a3b8',
+      marginRight: 8,
+  },
+  existingTaskText: {
+      fontSize: 14,
+      color: '#64748b',
+  },
+  nameInputRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      paddingRight: 10,
+  },
+  addSubtaskContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
   },
 });
