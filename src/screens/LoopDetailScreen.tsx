@@ -15,18 +15,17 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../../App';
 
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment } from '../types/loop';
-import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
+import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
 import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
 import { LoopIcon } from '../components/native/LoopIcon';
+import { MomentumRing } from '../components/native/MomentumRing';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
@@ -35,7 +34,7 @@ import { BeeIcon } from '../components/native/BeeIcon';
 import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask, uploadAttachment } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
-import { LoopType, FOLDER_COLORS } from '../types/loop';
+import { LoopType } from '../types/loop';
 import { LoopProvenance } from '../components/loops/LoopProvenance';
 import { StarRatingInput } from '../components/native/StarRatingInput';
 import { getUserRating, submitRating, getLoopRatingStats } from '../lib/ratingHelpers';
@@ -54,7 +53,6 @@ export const LoopDetailScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
-  const [loopProgress, setLoopProgress] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -149,7 +147,7 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
-  const checkAndShowThemePrompt = async (currentLoopData: LoopWithTasks) => {
+  const checkAndShowThemePrompt = async () => {
     // Simplified - can be enhanced later
     // For now, just return without showing prompt
     return;
@@ -335,7 +333,7 @@ export const LoopDetailScreen: React.FC = () => {
       
       // Check if this is the first loop completion and show theme prompt
       if (updatedLoopData) {
-        await checkAndShowThemePrompt(updatedLoopData);
+        await checkAndShowThemePrompt();
       }
     } catch (error) {
       console.error('Error toggling task:', error);
@@ -356,9 +354,6 @@ export const LoopDetailScreen: React.FC = () => {
       
       // We'll use the loop name and tasks to create a prompt
       const recurringTasks = loopData.tasks.filter(t => !t.is_one_time);
-      const taskList = recurringTasks.map(t => t.description).join(', ');
-      const prompt = `Describe this loop titled "${loopData.name}" which includes these tasks: ${taskList}. Keep it under 150 characters.`;
-
       // Try to use the existing edge function or a local fallback
       // For this implementation, we'll simulate a very smart local summary 
       // based on the loop name and tasks.
@@ -491,62 +486,6 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
-  const handleLongPressTask = (task: Task) => {
-    Alert.alert(
-      task.description,
-      'Choose an action',
-      [
-        {
-          text: 'Edit',
-          onPress: () => {
-            setEditingTask(task);
-            setModalVisible(true);
-          },
-        },
-        {
-          text: 'Delete',
-          onPress: () => handleDeleteTask(task),
-          style: 'destructive',
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ]
-    );
-  };
-
-  const handleDeleteTask = async (task: Task) => {
-    Alert.alert(
-      'Delete Task',
-      `Are you sure you want to delete "${task.description}"?`,
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('tasks')
-                .delete()
-                .eq('id', task.id);
-
-              if (error) throw error;
-
-              await loadLoopData();
-            } catch (error) {
-              console.error('Error deleting task:', error);
-              Alert.alert('Error', 'Failed to delete task');
-            }
-          },
-        },
-      ]
-    );
-  };
 
   const handleReloop = async () => {
     // If loop is incomplete, ask for confirmation
@@ -866,120 +805,7 @@ export const LoopDetailScreen: React.FC = () => {
                     : `Resets ${loopData.reset_rule} • Next: ${formatNextReset(loopData.next_reset_at || null)}`)}
             </Text>
           </TouchableOpacity>
-
-          {/* Member Avatars - Show collaborators */}
-          {loopMembers.length > 0 && (
-            <View style={{ marginTop: 16, alignItems: 'center' }}>
-              <MemberAvatars
-                members={loopMembers}
-                maxVisible={4}
-                size={36}
-                onPress={() => setShowMemberList(true)}
-              />
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
-                {loopMembers.length} member{loopMembers.length !== 1 ? 's' : ''} • Tap to view
-              </Text>
-            </View>
-          )}
-
-          {/* Compact Invite Button - Only for loop owners */}
-          {loopData.owner_id === user?.id && (
-             <TouchableOpacity
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 12,
-              }}
-              onPress={() => setShowInviteModal(true)}
-            >
-              <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
-               <Text style={{ 
-                fontSize: 14, 
-                fontWeight: '600', 
-                color: colors.primary, // Using primary color ("Invite Collaborator" purple/gold depending on theme, using primary for now) or specific purple from before
-                marginLeft: 6
-              }}>
-                Invite Collaborator
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Synopsis / Description */}
-          {loopData.description ? (
-            <View style={styles.synopsisContainer}>
-              <View style={styles.synopsisHeader}>
-                <Text style={styles.synopsisLabel}>AI SYNOPSIS</Text>
-                <TouchableOpacity onPress={handleGenerateSynopsis} disabled={generatingSynopsis}>
-                  <Text style={styles.regenerateText}>{generatingSynopsis ? '...' : '🔄 Regenerate'}</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.synopsisText}>{loopData.description}</Text>
-            </View>
-          ) : (
-            recurringTasks.length > 0 && (
-              <TouchableOpacity
-                style={styles.generateButton}
-                onPress={handleGenerateSynopsis}
-                disabled={generatingSynopsis}
-              >
-                <LinearGradient
-                  colors={['#f8fafc', '#f1f5f9']}
-                  style={styles.generateButtonGradient}
-                >
-                  <Text style={styles.generateButtonText}>
-                    {generatingSynopsis ? 'Generating...' : '✨ Create AI Synopsis'}
-                  </Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )
-          )}
-
-          {loopData.affiliate_link && (
-            <TouchableOpacity
-              style={styles.orderButton}
-              onPress={() => {
-                Linking.openURL(loopData.affiliate_link!).catch(err => 
-                  console.error('Error opening affiliate link:', err)
-                );
-              }}
-            >
-              <LinearGradient
-                colors={['#FFD700', '#FFA500']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.orderButtonGradient}
-              >
-                <Text style={styles.orderButtonText}>📖 Order Book / Training</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-
-          {/* PROVENANCE SECTION */}
-          <LoopProvenance
-            authorName={loopData.author_name}
-            authorBio={loopData.author_bio}
-            authorImageUrl={loopData.author_image_url}
-            sourceTitle={loopData.source_title}
-            sourceLink={loopData.source_link}
-            endGoalDescription={loopData.end_goal_description}
-          />
-
-          {/* Star Rating Section */}
-          <View style={styles.ratingSection}>
-            <Text style={styles.ratingLabel}>Rate this Loop</Text>
-            <StarRatingInput 
-              value={userRating}
-              onChange={handleSubmitRating}
-              disabled={isSubmittingRating}
-              size={32}
-            />
-            {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
-              <Text style={styles.ratingStats}>
-                Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
-              </Text>
-            )}
           </View>
-        </View>
 
         {/* Recurring Tasks or Empty State */}
         {recurringTasks.length === 0 ? (
@@ -1045,7 +871,7 @@ export const LoopDetailScreen: React.FC = () => {
               color: colors.text,
               marginBottom: 12,
             }}>
-              Tasks ({loopData.completedCount}/{loopData.totalCount})
+              Steps ({loopData.completedCount}/{loopData.totalCount})
             </Text>
 
             <View style={{
@@ -1060,7 +886,7 @@ export const LoopDetailScreen: React.FC = () => {
                 shadowRadius: 8,
                 elevation: 2,
             }}>
-                {recurringTasks.map((task, index) => (
+                {recurringTasks.map((task) => (
                 <View key={task.id}>
                     <ExpandableTaskCard
                         task={task as TaskWithDetails}
@@ -1135,6 +961,126 @@ export const LoopDetailScreen: React.FC = () => {
           </View>
         )}
 
+        {/* AI Synopsis & Rating Section - Now after tasks */}
+        <View style={{ paddingHorizontal: 20, alignItems: 'center' }}>
+          {/* Synopsis / Description */}
+          {loopData.description ? (
+            <View style={styles.synopsisContainer}>
+              <View style={styles.synopsisHeader}>
+                <Text style={styles.synopsisLabel}>AI SYNOPSIS</Text>
+                <TouchableOpacity onPress={handleGenerateSynopsis} disabled={generatingSynopsis}>
+                  <Text style={styles.regenerateText}>{generatingSynopsis ? '...' : '🔄 Regenerate'}</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.synopsisText}>{loopData.description}</Text>
+            </View>
+          ) : (
+            recurringTasks.length > 0 && (
+              <TouchableOpacity
+                style={styles.generateButton}
+                onPress={handleGenerateSynopsis}
+                disabled={generatingSynopsis}
+              >
+                <LinearGradient
+                  colors={['#f8fafc', '#f1f5f9']}
+                  style={styles.generateButtonGradient}
+                >
+                  <Text style={styles.generateButtonText}>
+                    {generatingSynopsis ? 'Generating...' : '✨ Create AI Synopsis'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )
+          )}
+
+          {/* Star Rating Section */}
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingLabel}>Rate this Loop</Text>
+            <StarRatingInput 
+              value={userRating}
+              onChange={handleSubmitRating}
+              disabled={isSubmittingRating}
+              size={32}
+            />
+            {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
+              <Text style={styles.ratingStats}>
+                Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
+              </Text>
+            )}
+          </View>
+
+          {loopData.affiliate_link && (
+            <TouchableOpacity
+              style={styles.orderButton}
+              onPress={() => {
+                Linking.openURL(loopData.affiliate_link!).catch(err => 
+                  console.error('Error opening affiliate link:', err)
+                );
+              }}
+            >
+              <LinearGradient
+                colors={['#FFD700', '#FFA500']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.orderButtonGradient}
+              >
+                <Text style={styles.orderButtonText}>📖 Order Book / Training</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+
+          {/* PROVENANCE SECTION */}
+          <View style={{ width: '100%', marginTop: 24 }}>
+            <LoopProvenance
+              authorName={loopData.author_name}
+              authorBio={loopData.author_bio}
+              authorImageUrl={loopData.author_image_url}
+              sourceTitle={loopData.source_title}
+              sourceLink={loopData.source_link}
+              endGoalDescription={loopData.end_goal_description}
+            />
+          </View>
+        </View>
+
+        {/* Collaborators Section - Now at the bottom */}
+        <View style={{ alignItems: 'center', paddingVertical: 40, paddingHorizontal: 20 }}>
+          {/* Member Avatars - Show collaborators */}
+          {loopMembers.length > 0 && (
+            <View style={{ marginBottom: 16, alignItems: 'center' }}>
+              <MemberAvatars
+                members={loopMembers}
+                maxVisible={4}
+                size={36}
+                onPress={() => setShowMemberList(true)}
+              />
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+                {loopMembers.length} member{loopMembers.length !== 1 ? 's' : ''} • Tap to view
+              </Text>
+            </View>
+          )}
+
+          {/* Compact Invite Button - Only for loop owners */}
+          {loopData.owner_id === user?.id && (
+            <TouchableOpacity
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+              onPress={() => setShowInviteModal(true)}
+            >
+              <Ionicons name="checkbox-outline" size={20} color={colors.primary} />
+              <Text style={{ 
+                fontSize: 14, 
+                fontWeight: '600', 
+                color: colors.primary, 
+                marginLeft: 6
+              }}>
+                Invite Collaborator
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         </ScrollView>
 
         {/* Reloop Button */}
@@ -1147,7 +1093,6 @@ export const LoopDetailScreen: React.FC = () => {
           }}>
             {(() => {
               const isManual = loopData?.reset_rule === 'manual';
-              const isPractice = loopData?.function_type === 'practice';
               const canReset = true; // Always allow reset now
               
               const buttonText = showResetMenu ? 'Reset Now' : (isManual ? 'Complete Checklist' : (currentProgress >= 100 ? 'Reloop' : 'Reloop Early'));

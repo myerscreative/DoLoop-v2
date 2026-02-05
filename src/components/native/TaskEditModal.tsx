@@ -8,24 +8,27 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
+import { FadeIn, FadeOut, Layout } from 'react-native-reanimated';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { AssigneeDot } from '../ui/AssigneeDot';
-import { TaskWithDetails, TaskPriority, PRIORITY_LABELS, Tag, FOLDER_COLORS, ResetRule, RESET_RULE_DESCRIPTIONS, Attachment, Subtask, PendingAttachment } from '../../types/loop';
-import LoopTypeToggle from './LoopTypeToggle';
+import { 
+  TaskWithDetails, 
+  TaskPriority, 
+  Tag, 
+  Attachment, 
+  Subtask, 
+  PendingAttachment 
+} from '../../types/loop';
 import { TaskTag } from './TaskTag';
-import { createSubtask, deleteSubtask } from '../../lib/taskHelpers';
+import { deleteSubtask } from '../../lib/taskHelpers';
 
 // Conditionally import DateTimePicker only for native platforms
 let DateTimePicker: any;
@@ -57,7 +60,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onCreateTag,
   initialValues,
 }) => {
-  const { colors } = useTheme();
   const { user } = useAuth();
 
   // Ref for input to re-focus after saving
@@ -91,7 +93,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   // Interactive State
   const [saving, setSaving] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   
   // Picker Visibilities
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -446,300 +447,321 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     <View style={styles.radioCircle} />
                 </TouchableOpacity>
                 <TextInput
+                    ref={descriptionInputRef}
                     style={styles.nameInput}
                     placeholder="Enter Step Name..."
                     value={description}
                     onChangeText={setDescription}
                     placeholderTextColor="#94a3b8"
-                    multiline
+                    multiline={Platform.OS !== 'web'} // Allow multiline on mobile, but single line on web for easier Enter-to-save
+                    blurOnSubmit={true}
+                    returnKeyType="done"
+                    onSubmitEditing={() => handleSave(false)}
                 />
             </View>
 
             <View style={styles.subtasksContainer}>
                 {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
                 
-                {!showSubtaskInput ? (
-                    <TouchableOpacity 
-                        style={styles.addSubtaskLink} 
-                        onPress={() => setShowSubtaskInput(true)}
-                    >
-                        <Ionicons name="add" size={18} color="#64748b" />
-                        <Text style={styles.addSubtaskLinkText}>Add Sub-Step/Sub-Task</Text>
-                    </TouchableOpacity>
-                ) : (
-                    <View style={styles.addSubtaskRow}>
-                        <View style={styles.addSubtaskInputContainer}>
-                            <TextInput
-                                style={styles.addSubtaskInput}
-                                placeholder="Sub-Step description..."
-                                value={newSubtaskText}
-                                onChangeText={setNewSubtaskText}
-                                onSubmitEditing={handleAddSubtask}
-                                blurOnSubmit={false} 
-                                autoFocus
-                                placeholderTextColor="#94a3b8"
-                                onKeyPress={({ nativeEvent }) => {
-                                    if (nativeEvent.key === 'Enter') {
-                                        handleAddSubtask();
-                                    }
-                                }}
-                            />
-                        </View>
-                        <TouchableOpacity onPress={() => setShowSubtaskInput(false)} style={styles.cancelSubtask}>
-                            <Ionicons name="close-circle" size={24} color="#94a3b8" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {!showSubtaskInput ? (
+                        <TouchableOpacity 
+                            style={styles.addSubtaskLink} 
+                            onPress={() => setShowSubtaskInput(true)}
+                        >
+                            <Ionicons name="add" size={18} color="#64748b" />
+                            <Text style={styles.addSubtaskLinkText}>Add Sub-Step/Sub-Task</Text>
                         </TouchableOpacity>
-                        {newSubtaskText.length > 0 && (
-                                <TouchableOpacity onPress={handleAddSubtask} style={styles.addSubtaskConfirm}>
-                                    <Ionicons name="checkmark-circle" size={24} color="#FEC00F" />
-                                </TouchableOpacity>
-                        )}
-                    </View>
-                )}
-            </View>
-
-            <View style={styles.divider} />
-
-            {/* Options List */}
-            
-            {/* Loop Type */}
-            <OptionRow
-                icon="sync" // or refresh
-                label="Set as Loop item or one time task"
-                value={isOneTime ? "One time task" : "Loop item"}
-                onPress={() => setIsOneTime(!isOneTime)}
-                // No clear for this, it's a toggle
-            />
-            <View style={styles.separator} />
-
-            {/* Due Date */}
-            <OptionRow
-                icon="calendar-outline"
-                label="Add Due Date"
-                value={dueDate ? dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null}
-                onPress={() => setShowDatePicker(!showDatePicker)}
-                onClear={() => setDueDate(undefined)}
-                isBlue
-            />
-            {showDatePicker && (
-                <View style={styles.datePickerContainer}>
-                    {Platform.OS === 'web' ? (
-                        <View style={styles.webInputContainer}>
-                           <Text style={styles.webLabel}>Select Date:</Text>
-                           <input 
-                               type="date" 
-                               value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
-                               onChange={(e) => {
-                                   if (e.target.valueAsDate) {
-                                       setDueDate(e.target.valueAsDate);
-                                   } else {
-                                       setDueDate(undefined);
-                                   }
-                                   setShowDatePicker(false);
-                               }}
-                               style={{ padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 16, width: '100%', fontFamily: 'inherit' }}
-                           />
-                        </View>
                     ) : (
-                         DateTimePicker && (
-                            <DateTimePicker
-                                value={dueDate || new Date()}
-                                mode="date"
-                                display="inline"
-                                onChange={(e: any, d?: Date) => {
-                                    setShowDatePicker(false);
-                                    if (d) setDueDate(d);
-                                }}
-                                style={{ height: 300 }}
-                            />
-                         )
+                        <View style={styles.addSubtaskRow}>
+                            <View style={styles.addSubtaskInputContainer}>
+                                <TextInput
+                                    style={styles.addSubtaskInput}
+                                    placeholder="Sub-Step description..."
+                                    value={newSubtaskText}
+                                    onChangeText={setNewSubtaskText}
+                                    onSubmitEditing={handleAddSubtask}
+                                    blurOnSubmit={false} 
+                                    autoFocus
+                                    placeholderTextColor="#94a3b8"
+                                    onKeyPress={({ nativeEvent }) => {
+                                        if (nativeEvent.key === 'Enter') {
+                                            handleAddSubtask();
+                                        }
+                                    }}
+                                />
+                            </View>
+                            <TouchableOpacity onPress={() => setShowSubtaskInput(false)} style={styles.cancelSubtask}>
+                                <Ionicons name="close-circle" size={24} color="#94a3b8" />
+                            </TouchableOpacity>
+                            {newSubtaskText.length > 0 && (
+                                    <TouchableOpacity onPress={handleAddSubtask} style={styles.addSubtaskConfirm}>
+                                        <Ionicons name="checkmark-circle" size={24} color="#FEC00F" />
+                                    </TouchableOpacity>
+                            )}
+                        </View>
+                    )}
+
+                    {!showDetails && (
+                        <TouchableOpacity 
+                            style={styles.addDetailsLink} 
+                            onPress={() => setShowDetails(true)}
+                        >
+                            <Ionicons name="options-outline" size={16} color="#6366f1" />
+                            <Text style={styles.addDetailsLinkText}>Add Step Details</Text>
+                        </TouchableOpacity>
                     )}
                 </View>
-            )}
-            <View style={styles.separator} />
+            </View>
 
-            {/* Assign To */}
-            <View>
-                <OptionRow
-                    icon="person-outline"
-                    label="Assign to"
-                    value={assignedTo ? (assignedTo === user?.id ? 'Me' : assignedTo) : null} 
-                    onPress={() => setShowAssignInput(!showAssignInput)} 
-                    onClear={() => setAssignedTo(null)}
-                    isBlue
-                />
-                {showAssignInput && (
-                    <View style={styles.assignInputContainer}>
-                        <TouchableOpacity 
-                            style={styles.assignOption} 
-                            onPress={() => {
-                                setAssignedTo(user?.id || 'me');
-                                setShowAssignInput(false);
-                            }}
-                        >
-                            <View style={[styles.avatarPlaceholder, { backgroundColor: '#FEC00F' }]}>
-                                <Text style={{ color: 'white', fontWeight: 'bold' }}>M</Text>
-                            </View>
-                            <Text style={styles.assignOptionText}>Assign to Me</Text>
-                        </TouchableOpacity>
-                        
-                        <View style={styles.emailInputRow}>
-                             <TextInput
-                                style={styles.emailInput}
-                                placeholder="Enter email address"
-                                value={assignInput}
-                                onChangeText={setAssignInput}
-                                placeholderTextColor="#94a3b8"
-                             />
-                             <TouchableOpacity 
-                                onPress={() => {
-                                    if(assignInput.trim()) {
-                                        // TODO: Resolve user ID from email. For now, just setting it if we could.
-                                        // Since we can't look up reliably without an edge function, we will show alert.
-                                        Alert.alert('Coming Soon', 'Inviting via email will be available shortly. Assigned to you for now.');
-                                        setAssignedTo(user?.id || 'me'); // Fallback
+            {showDetails ? (
+                <View>
+                    <View style={styles.divider} />
+
+                    {/* Options List */}
+                    
+                    {/* Loop Type */}
+                    <OptionRow
+                        icon="sync" // or refresh
+                        label="Set as Loop item or one time task"
+                        value={isOneTime ? "One time task" : "Loop item"}
+                        onPress={() => setIsOneTime(!isOneTime)}
+                        // No clear for this, it's a toggle
+                    />
+                    <View style={styles.separator} />
+
+                    {/* Due Date */}
+                    <OptionRow
+                        icon="calendar-outline"
+                        label="Add Due Date"
+                        value={dueDate ? dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null}
+                        onPress={() => setShowDatePicker(!showDatePicker)}
+                        onClear={() => setDueDate(undefined)}
+                        isBlue
+                    />
+                    {showDatePicker && (
+                        <View style={styles.datePickerContainer}>
+                            {Platform.OS === 'web' ? (
+                                <View style={styles.webInputContainer}>
+                                   <Text style={styles.webLabel}>Select Date:</Text>
+                                   <input 
+                                       type="date" 
+                                       value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
+                                       onChange={(e) => {
+                                           if (e.target.valueAsDate) {
+                                               setDueDate(e.target.valueAsDate);
+                                           } else {
+                                               setDueDate(undefined);
+                                           }
+                                           setShowDatePicker(false);
+                                       }}
+                                       style={{ padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 16, width: '100%', fontFamily: 'inherit' }}
+                                   />
+                                </View>
+                            ) : (
+                                 DateTimePicker && (
+                                    <DateTimePicker
+                                        value={dueDate || new Date()}
+                                        mode="date"
+                                        display="inline"
+                                        onChange={(e: any, d?: Date) => {
+                                            setShowDatePicker(false);
+                                            if (d) setDueDate(d);
+                                        }}
+                                        style={{ height: 300 }}
+                                    />
+                                 )
+                            )}
+                        </View>
+                    )}
+                    <View style={styles.separator} />
+
+                    {/* Assign To */}
+                    <View>
+                        <OptionRow
+                            icon="person-outline"
+                            label="Assign to"
+                            value={assignedTo ? (assignedTo === user?.id ? 'Me' : assignedTo) : null} 
+                            onPress={() => setShowAssignInput(!showAssignInput)} 
+                            onClear={() => setAssignedTo(null)}
+                            isBlue
+                        />
+                        {showAssignInput && (
+                            <View style={styles.assignInputContainer}>
+                                <TouchableOpacity 
+                                    style={styles.assignOption} 
+                                    onPress={() => {
+                                        setAssignedTo(user?.id || 'me');
                                         setShowAssignInput(false);
-                                        setAssignInput('');
-                                    }
-                                }}
-                                style={styles.assignConfirmButton}
-                             >
-                                 <Text style={styles.assignConfirmText}>Assign</Text>
-                             </TouchableOpacity>
+                                    }}
+                                >
+                                    <View style={[styles.avatarPlaceholder, { backgroundColor: '#FEC00F' }]}>
+                                        <Text style={{ color: 'white', fontWeight: 'bold' }}>M</Text>
+                                    </View>
+                                    <Text style={styles.assignOptionText}>Assign to Me</Text>
+                                </TouchableOpacity>
+                                
+                                <View style={styles.emailInputRow}>
+                                     <TextInput
+                                        style={styles.emailInput}
+                                        placeholder="Enter email address"
+                                        value={assignInput}
+                                        onChangeText={setAssignInput}
+                                        placeholderTextColor="#94a3b8"
+                                     />
+                                     <TouchableOpacity 
+                                        onPress={() => {
+                                            if(assignInput.trim()) {
+                                                // TODO: Resolve user ID from email. For now, just setting it if we could.
+                                                // Since we can't look up reliably without an edge function, we will show alert.
+                                                Alert.alert('Coming Soon', 'Inviting via email will be available shortly. Assigned to you for now.');
+                                                setAssignedTo(user?.id || 'me'); // Fallback
+                                                setShowAssignInput(false);
+                                                setAssignInput('');
+                                            }
+                                        }}
+                                        style={styles.assignConfirmButton}
+                                     >
+                                         <Text style={styles.assignConfirmText}>Assign</Text>
+                                     </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+                    </View>
+                    <View style={styles.separator} />
+
+                    {/* Tags */}
+                    <OptionRow
+                        icon="pricetag-outline"
+                        label="Add Tag"
+                        value={selectedTags.length > 0 ? selectedTags.map(t => t.name).join(', ') : null}
+                        onPress={() => setShowTagInput(!showTagInput)} // Simplified interaction
+                        onClear={() => setSelectedTags([])}
+                    />
+                    {showTagInput && (
+                         <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
+                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                                {availableTags.map(tag => (
+                                    <TouchableOpacity key={tag.id} onPress={() => toggleTag(tag)}>
+                                        <TaskTag tag={tag} selected={selectedTags.some(t => t.id === tag.id)} />
+                                    </TouchableOpacity>
+                                ))}
+                             </View>
+                             
+                             {/* Create New Tag UI */}
+                             <View style={styles.createTagRow}>
+                                 <TextInput
+                                     style={styles.createTagInput}
+                                     placeholder="New Tag Name"
+                                     value={newTagName}
+                                     onChangeText={setNewTagName}
+                                     placeholderTextColor="#94a3b8"
+                                     onSubmitEditing={handleCreateTag}
+                                 />
+                                 <TouchableOpacity 
+                                     onPress={handleCreateTag} 
+                                     style={[styles.createTagButton, !newTagName.trim() && { opacity: 0.5 }]}
+                                     disabled={!newTagName.trim()}
+                                 >
+                                     <Ionicons name="add" size={20} color="white" />
+                                 </TouchableOpacity>
+                             </View>
+                         </View>
+                    )}
+                    <View style={styles.separator} />
+
+                    {/* Attach File */}
+                    <OptionRow
+                        icon="attach-outline"
+                        label="Attach File"
+                        value={(existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length) > 0 
+                          ? `${existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length} files` 
+                          : null}
+                        onPress={handlePickDocument}
+                        isBlue
+                    />
+                    {/* Existing Files List */}
+                    {existingAttachments.filter(a => !a.file_type?.startsWith('image/')).map(att => (
+                       <View key={att.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
+                          <Ionicons name="document-outline" size={16} color="#64748b" />
+                          <Text style={{ flex: 1, fontSize: 13, color: '#64748b' }} numberOfLines={1}>{att.file_name}</Text>
+                          <TouchableOpacity onPress={() => handleDeleteExistingAttachment(att.id)}>
+                            <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                          </TouchableOpacity>
+                       </View>
+                    ))}
+                    {/* Pending Files List */}
+                    {pendingAttachments.filter(a => a.type === 'file').map((att, i) => (
+                       <View key={`pending-file-${i}`} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
+                          <Ionicons name="document-outline" size={16} color="#94a3b8" />
+                          <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }} numberOfLines={1}>{att.name}</Text>
+                          <TouchableOpacity onPress={() => removeAttachment(i)}>
+                            <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                          </TouchableOpacity>
+                       </View>
+                    ))}
+                    <View style={styles.separator} />
+
+                    {/* Attach Image */}
+                    <OptionRow
+                        icon="image-outline"
+                        label="Attach image"
+                        value={(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length) > 0 
+                          ? `${existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length} images` 
+                          : null}
+                        onPress={handlePickImage}
+                    />
+                     {/* Combined Images Strip */}
+                     {(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length > 0 || pendingAttachments.filter(a => a.type === 'image').length > 0) && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingBottom: 10, gap: 8 }}>
+                            {existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(att => (
+                                <View key={att.id} style={{ position: 'relative' }}>
+                                    <Image source={{ uri: att.file_url }} style={{ width: 45, height: 45, borderRadius: 6 }} />
+                                    <TouchableOpacity 
+                                      onPress={() => handleDeleteExistingAttachment(att.id)}
+                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                                    >
+                                        <Ionicons name="close-circle" size={18} color="#ef4444" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                            {pendingAttachments.filter(a => a.type === 'image').map((att, i) => (
+                                <View key={`pending-${i}`} style={{ position: 'relative' }}>
+                                    <Image source={{ uri: att.uri }} style={{ width: 45, height: 45, borderRadius: 6, opacity: 0.7 }} />
+                                    <TouchableOpacity 
+                                      onPress={() => removeAttachment(i)}
+                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                                    >
+                                        <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                                    </TouchableOpacity>
+                                </View>
+                            ))}
+                        </View>
+                     )}
+
+
+                    <View style={styles.separator} />
+
+                    {/* Note */}
+                    <View style={styles.noteSection}>
+                        <View style={[styles.optionRow, { borderBottomWidth: 0, alignItems: 'flex-start' }]}>
+                             <View style={[styles.optionIconContainer, { marginTop: 12 }]}>
+                                  <Ionicons name="chatbox-outline" size={22} color="#0f172a" />
+                             </View>
+                             <TextInput 
+                                 style={[styles.noteInput, !!notes && { color: '#0EA5E9' }]}
+                                 placeholder="Add Note" 
+                                 placeholderTextColor="#94a3b8"
+                                 value={notes}
+                                 onChangeText={setNotes}
+                                 multiline
+                             />
                         </View>
                     </View>
-                )}
-            </View>
-            <View style={styles.separator} />
-
-            {/* Tags */}
-            <OptionRow
-                icon="pricetag-outline"
-                label="Add Tag"
-                value={selectedTags.length > 0 ? selectedTags.map(t => t.name).join(', ') : null}
-                onPress={() => setShowTagInput(!showTagInput)} // Simplified interaction
-                onClear={() => setSelectedTags([])}
-            />
-            {showTagInput && (
-                 <View style={{ paddingHorizontal: 20, paddingBottom: 10 }}>
-                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-                        {availableTags.map(tag => (
-                            <TouchableOpacity key={tag.id} onPress={() => toggleTag(tag)}>
-                                <TaskTag tag={tag} selected={selectedTags.some(t => t.id === tag.id)} />
-                            </TouchableOpacity>
-                        ))}
-                     </View>
-                     
-                     {/* Create New Tag UI */}
-                     <View style={styles.createTagRow}>
-                         <TextInput
-                             style={styles.createTagInput}
-                             placeholder="New Tag Name"
-                             value={newTagName}
-                             onChangeText={setNewTagName}
-                             placeholderTextColor="#94a3b8"
-                             onSubmitEditing={handleCreateTag}
-                         />
-                         <TouchableOpacity 
-                             onPress={handleCreateTag} 
-                             style={[styles.createTagButton, !newTagName.trim() && { opacity: 0.5 }]}
-                             disabled={!newTagName.trim()}
-                         >
-                             <Ionicons name="add" size={20} color="white" />
-                         </TouchableOpacity>
-                     </View>
-                 </View>
-            )}
-            <View style={styles.separator} />
-
-            {/* Attach File */}
-            <OptionRow
-                icon="attach-outline"
-                label="Attach File"
-                value={(existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length) > 0 
-                  ? `${existingAttachments.filter(a => !a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'file').length} files` 
-                  : null}
-                onPress={handlePickDocument}
-                isBlue
-            />
-            {/* Existing Files List */}
-            {existingAttachments.filter(a => !a.file_type?.startsWith('image/')).map(att => (
-               <View key={att.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
-                  <Ionicons name="document-outline" size={16} color="#64748b" />
-                  <Text style={{ flex: 1, fontSize: 13, color: '#64748b' }} numberOfLines={1}>{att.file_name}</Text>
-                  <TouchableOpacity onPress={() => handleDeleteExistingAttachment(att.id)}>
-                    <Ionicons name="close-circle" size={18} color="#94a3b8" />
-                  </TouchableOpacity>
-               </View>
-            ))}
-            {/* Pending Files List */}
-            {pendingAttachments.filter(a => a.type === 'file').map((att, i) => (
-               <View key={`pending-file-${i}`} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
-                  <Ionicons name="document-outline" size={16} color="#94a3b8" />
-                  <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }} numberOfLines={1}>{att.name}</Text>
-                  <TouchableOpacity onPress={() => removeAttachment(i)}>
-                    <Ionicons name="close-circle" size={18} color="#94a3b8" />
-                  </TouchableOpacity>
-               </View>
-            ))}
-            <View style={styles.separator} />
-
-            {/* Attach Image */}
-            <OptionRow
-                icon="image-outline"
-                label="Attach image"
-                value={(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length) > 0 
-                  ? `${existingAttachments.filter(a => a.file_type?.startsWith('image/')).length + pendingAttachments.filter(a => a.type === 'image').length} images` 
-                  : null}
-                onPress={handlePickImage}
-            />
-             {/* Combined Images Strip */}
-             {(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length > 0 || pendingAttachments.filter(a => a.type === 'image').length > 0) && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingBottom: 10, gap: 8 }}>
-                    {existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(att => (
-                        <View key={att.id} style={{ position: 'relative' }}>
-                            <Image source={{ uri: att.file_url }} style={{ width: 45, height: 45, borderRadius: 6 }} />
-                            <TouchableOpacity 
-                              onPress={() => handleDeleteExistingAttachment(att.id)}
-                              style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
-                            >
-                                <Ionicons name="close-circle" size={18} color="#ef4444" />
-                            </TouchableOpacity>
-                        </View>
-                    ))}
-                    {pendingAttachments.filter(a => a.type === 'image').map((att, i) => (
-                        <View key={`pending-${i}`} style={{ position: 'relative' }}>
-                            <Image source={{ uri: att.uri }} style={{ width: 45, height: 45, borderRadius: 6, opacity: 0.7 }} />
-                            <TouchableOpacity 
-                              onPress={() => removeAttachment(i)}
-                              style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
-                            >
-                                <Ionicons name="close-circle" size={18} color="#94a3b8" />
-                            </TouchableOpacity>
-                        </View>
-                    ))}
                 </View>
-             )}
-
+            ) : null}
 
             <View style={styles.separator} />
-
-            {/* Note */}
-            <View style={styles.noteSection}>
-                <View style={[styles.optionRow, { borderBottomWidth: 0, alignItems: 'flex-start' }]}>
-                     <View style={[styles.optionIconContainer, { marginTop: 12 }]}>
-                          <Ionicons name="chatbox-outline" size={22} color="#0f172a" />
-                     </View>
-                     <TextInput 
-                         style={[styles.noteInput, !!notes && { color: '#0EA5E9' }]}
-                         placeholder="Add Note" 
-                         placeholderTextColor="#94a3b8"
-                         value={notes}
-                         onChangeText={setNotes}
-                         multiline
-                     />
-                </View>
-            </View>
-             <View style={styles.separator} />
 
 
         </ScrollView>
@@ -771,14 +793,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white',
     alignItems: Platform.OS === 'web' ? 'center' : undefined,
-    justifyContent: Platform.OS === 'web' ? 'center' : undefined,
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end', // On mobile, slide from bottom
   },
   modalContentWrapper: {
       width: Platform.OS === 'web' ? '70%' : '100%',
       maxWidth: 800,
-      height: Platform.OS === 'web' ? '90%' : '100%',
+      maxHeight: Platform.OS === 'web' ? '90%' : '95%', // Use maxHeight to avoid gap
       backgroundColor: 'white',
       borderRadius: Platform.OS === 'web' ? 16 : 0,
+      borderTopLeftRadius: 20, // Nice rounded corners for mobile bottom sheet feel
+      borderTopRightRadius: 20,
       overflow: 'hidden',
   },
   header: {
@@ -814,7 +838,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
-    flex: 1,
     paddingTop: 20,
   },
   nameSection: {
@@ -1029,7 +1052,6 @@ const styles = StyleSheet.create({
       fontSize: 15,
       color: '#0f172a',
       paddingVertical: 8,
-      outlineStyle: 'none',
   },
   addSubtaskLink: {
       flexDirection: 'row',
@@ -1041,6 +1063,18 @@ const styles = StyleSheet.create({
       fontSize: 14,
       color: '#64748b',
       fontWeight: '500',
+      textDecorationLine: 'underline',
+  },
+  addDetailsLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 8,
+      gap: 6,
+  },
+  addDetailsLinkText: {
+      fontSize: 14,
+      color: '#6366f1', // Indigo
+      fontWeight: '600',
       textDecorationLine: 'underline',
   },
   cancelSubtask: {
@@ -1096,7 +1130,6 @@ const styles = StyleSheet.create({
       paddingHorizontal: 12,
       paddingVertical: 8,
       fontSize: 15,
-      outlineStyle: 'none',
   },
   assignConfirmButton: {
       backgroundColor: '#f1f5f9',
@@ -1118,7 +1151,6 @@ const styles = StyleSheet.create({
       paddingVertical: 6,
       fontSize: 14,
       color: '#0f172a',
-      outlineStyle: 'none',
   },
   createTagButton: {
       width: 32,
@@ -1127,5 +1159,20 @@ const styles = StyleSheet.create({
       backgroundColor: '#FEC00F',
       alignItems: 'center',
       justifyContent: 'center',
+  },
+  noteInput: {
+      flex: 1,
+      fontSize: 15,
+      color: '#475569',
+      paddingVertical: 8,
+      minHeight: 100,
+  },
+  webInputContainer: {
+      marginTop: 8,
+  },
+  assignConfirmText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#475569',
   },
 });

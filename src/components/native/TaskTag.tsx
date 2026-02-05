@@ -7,6 +7,7 @@ interface TaskTagProps {
   onPress?: () => void;
   onRemove?: () => void;
   size?: 'small' | 'medium';
+  selected?: boolean;
 }
 
 export const TaskTag: React.FC<TaskTagProps> = ({
@@ -14,6 +15,7 @@ export const TaskTag: React.FC<TaskTagProps> = ({
   onPress,
   onRemove,
   size = 'medium',
+  selected = false,
 }) => {
   const fontSize = size === 'small' ? 11 : 13;
   const paddingVertical = size === 'small' ? 3 : 5;
@@ -27,7 +29,7 @@ export const TaskTag: React.FC<TaskTagProps> = ({
       style={[
         styles.tag,
         {
-          backgroundColor: `${tag.color}20`,
+          backgroundColor: selected ? tag.color : `${tag.color}20`,
           borderColor: tag.color,
           paddingVertical,
           paddingHorizontal: onRemove ? paddingHorizontal - 2 : paddingHorizontal,
@@ -38,7 +40,7 @@ export const TaskTag: React.FC<TaskTagProps> = ({
         style={[
           styles.text,
           {
-            color: tag.color,
+            color: selected ? 'white' : tag.color,
             fontSize,
           },
         ]}
