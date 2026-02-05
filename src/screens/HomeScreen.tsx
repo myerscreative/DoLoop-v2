@@ -511,6 +511,7 @@ export const HomeScreen: React.FC = () => {
             onSelectFilter={setSelectedFilter}
             onNavigateToLibrary={() => navigation.navigate('TemplateLibrary')}
             onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
+            onNavigateToSettings={() => navigation.navigate('Settings')}
             counts={counts}
             onCreatePress={openCreateLoopModal}
             activeItem={selectedFilter}

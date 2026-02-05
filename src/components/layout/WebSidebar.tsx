@@ -14,6 +14,7 @@ interface WebSidebarProps {
   onSelectFilter: (filter: FilterType) => void;
   onNavigateToLibrary: () => void;
   onNavigateToSommelier: () => void;
+  onNavigateToSettings: () => void;
   counts: {
     all: number;
     manual: number;
@@ -29,6 +30,7 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
   onSelectFilter,
   onNavigateToLibrary,
   onNavigateToSommelier,
+  onNavigateToSettings,
   counts,
   onCreatePress,
   activeItem,
@@ -166,7 +168,10 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
       </ScrollView>
 
       {/* Footer Settings */}
-      <TouchableOpacity style={styles.settingsButton}>
+      <TouchableOpacity 
+        style={styles.settingsButton}
+        onPress={onNavigateToSettings}
+      >
         <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
         <Text style={[styles.settingsText, { color: colors.textSecondary }]}>Settings</Text>
       </TouchableOpacity>
