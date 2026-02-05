@@ -164,10 +164,31 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
     );
   };
 
+  const getTaskIcon = (desc: string) => {
+    const d = desc.toLowerCase();
+    if (d.includes('water') || d.includes('drink')) return 'water-outline';
+    if (d.includes('pill') || d.includes('gumm') || d.includes('med') || d.includes('odactra')) return 'medical-outline';
+    if (d.includes('read') || d.includes('book')) return 'book-outline';
+    if (d.includes('exercise') || d.includes('gym') || d.includes('run') || d.includes('workout')) return 'fitness-outline';
+    if (d.includes('mail') || d.includes('email')) return 'mail-outline';
+    if (d.includes('call') || d.includes('phone')) return 'call-outline';
+    if (d.includes('clean') || d.includes('tidy')) return 'sparkles-outline';
+    if (d.includes('food') || d.includes('eat') || d.includes('meal')) return 'restaurant-outline';
+    return 'ellipse-outline'; // Default soft dot
+  };
+
+  const BRAND_GOLD = '#FEC00F';
+
   return (
     <Animated.View
       layout={Layout.springify()}
-      style={[styles.container, { backgroundColor: colors.surface }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: taskStatus === 'done' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(254, 192, 15, 0.08)',
+          borderColor: 'rgba(255, 255, 255, 0.4)',
+        }
+      ]}
     >
       {/* Main Task Row */}
       <View style={styles.mainRow}>
@@ -177,8 +198,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
           style={[
             styles.checkbox,
             {
-              borderColor: taskStatus === 'done' ? colors.primary : colors.border,
-              backgroundColor: taskStatus === 'done' ? colors.primary : 'transparent',
+              borderColor: taskStatus === 'done' ? BRAND_GOLD : colors.border,
+              backgroundColor: taskStatus === 'done' ? BRAND_GOLD : 'transparent',
             },
           ]}
         >
@@ -189,8 +210,15 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
         {/* Task Content */}
         <TouchableOpacity style={styles.content} onPress={onPress} activeOpacity={0.7}>
-          {/* Title Row */}
+          {/* Icon + Title Row */}
           <View style={styles.titleRow}>
+            <View style={styles.taskIconContainer}>
+              <Ionicons 
+                name={getTaskIcon(task.description)} 
+                size={20} 
+                color={taskStatus === 'done' ? '#94a3b8' : BRAND_GOLD} 
+              />
+            </View>
             <Text
               style={[
                 styles.description,
@@ -421,16 +449,24 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+    overflow: 'hidden',
+    // Elevation for Android
+    elevation: 2,
+    // Shadow for iOS
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
   },
   mainRow: {
     flexDirection: 'row',
-    alignItems: 'center', // Center vertically
-    paddingVertical: 12,
+    alignItems: 'center',
+    paddingVertical: 14,
     paddingHorizontal: 16,
-    minHeight: 56,
+    minHeight: 64,
   },
   checkbox: {
     width: 24,
@@ -451,12 +487,20 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 8,
+    gap: 10,
+  },
+  taskIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   description: {
     fontSize: 16,
-    fontWeight: '500',
-    marginRight: 8,
+    fontWeight: '600',
+    flex: 1,
     lineHeight: 22,
   },
   iconsRow: {

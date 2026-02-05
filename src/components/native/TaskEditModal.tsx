@@ -88,6 +88,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [showTagInput, setShowTagInput] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
+  const [showPriorityPicker, setShowPriorityPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
 
   const isProcessingSubtask = useRef(false);
 
@@ -428,15 +431,23 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
-            {/* Existing Tasks List */}
+            {/* Horizontal Trail of Existing Steps */}
             {!task && existingTasks.length > 0 && (
-                <View style={styles.existingTasksList}>
-                    {existingTasks.map((t) => (
-                        <View key={t.id} style={styles.existingTaskItem}>
-                            <View style={styles.existingTaskDot} />
-                            <Text style={styles.existingTaskText} numberOfLines={1}>{t.description}</Text>
-                        </View>
-                    ))}
+                <View style={styles.trailContainer}>
+                    <Text style={styles.trailLabel}>Existing Steps:</Text>
+                    <ScrollView 
+                        horizontal 
+                        showsHorizontalScrollIndicator={false} 
+                        style={styles.existingTasksTrail}
+                        contentContainerStyle={styles.trailContent}
+                    >
+                        {existingTasks.map((t) => (
+                            <View key={t.id} style={styles.trailItem}>
+                                <View style={styles.trailDot} />
+                                <Text style={styles.trailText}>{t.description}</Text>
+                            </View>
+                        ))}
+                    </ScrollView>
                 </View>
             )}
 
@@ -1183,26 +1194,46 @@ const styles = StyleSheet.create({
       fontWeight: '600',
       color: '#475569',
   },
-  existingTasksList: {
+  // Trail Styles
+  trailContainer: {
       paddingHorizontal: 20,
-      marginBottom: 16,
-      gap: 6,
+      marginBottom: 12,
   },
-  existingTaskItem: {
+  trailLabel: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: '#94a3b8',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 6,
+  },
+  existingTasksTrail: {
+      flexGrow: 0,
+  },
+  trailContent: {
+      gap: 12,
+      paddingRight: 20,
+  },
+  trailItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      opacity: 0.6,
+      backgroundColor: '#f1f5f9',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 12,
+      opacity: 0.8,
   },
-  existingTaskDot: {
+  trailDot: {
       width: 4,
       height: 4,
       borderRadius: 2,
       backgroundColor: '#94a3b8',
-      marginRight: 8,
+      marginRight: 6,
   },
-  existingTaskText: {
-      fontSize: 14,
+  trailText: {
+      fontSize: 12,
       color: '#64748b',
+      fontWeight: '600',
   },
   nameInputRow: {
       flexDirection: 'row',

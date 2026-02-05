@@ -46,7 +46,7 @@ export const PriorityBadge: React.FC<PriorityBadgeProps> = ({
 
 const styles = StyleSheet.create({
   badge: {
-    borderRadius: 12,
+    borderRadius: 20,
     borderWidth: 1,
     alignSelf: 'flex-start',
   },

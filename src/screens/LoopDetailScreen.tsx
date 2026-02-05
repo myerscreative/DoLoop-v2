@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   StyleSheet,
   Platform,
   Linking,
+  Animated,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
@@ -72,6 +73,26 @@ export const LoopDetailScreen: React.FC = () => {
 
   // NEW: Loop Info Modal state
   const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
+
+  // Animation for Momentum Ring Glow
+  const glowAnim = useRef(new Animated.Value(0.15)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 0.4,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0.15,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   const handleUpdateLoop = async (data: any) => {
     if (!loopData) return;
@@ -774,35 +795,44 @@ export const LoopDetailScreen: React.FC = () => {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {/* Centered Progress Ring */}
-          <View style={styles.ringContainer}>
-            <View style={styles.ringWrapper}>
-              <LoopIcon
-                size={100}
-                color={loopData.color || BRAND_GOLD}
-              />
-              <View style={styles.ringCountOverlay}>
-                <Text style={styles.ringCountText}>
-                  {loopData.completedCount}/{loopData.totalCount}
-                </Text>
+          {/* Centered Momentum Header */}
+          <View style={styles.momentumHeader}>
+            <View style={styles.glowContainer}>
+              <Animated.View style={[styles.ringGlow, { opacity: glowAnim }]} />
+              <View style={styles.ringWrapper}>
+                <LoopIcon
+                  size={120}
+                  color={loopData.color || BRAND_GOLD}
+                />
+                <View style={styles.ringCountOverlay}>
+                  <Text style={styles.ringCountText}>
+                    {loopData.completedCount}/{loopData.totalCount}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
 
           {/* Title Row with Eye Icon and Member Avatars */}
           <View style={styles.titleContainer}>
-            <Text style={styles.loopTitle}>{loopData.name}</Text>
-
-            <View style={styles.titleActions}>
-              {/* Eye Icon - Opens Loop Info Modal */}
+            <View style={styles.titleWithBadge}>
+              <Text style={styles.loopTitle}>{loopData.name}</Text>
+              
+              {/* Eye Icon - Aligned Right with Unread Badge */}
               <TouchableOpacity
                 onPress={() => setShowLoopInfoModal(true)}
                 style={styles.eyeButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="eye-outline" size={22} color="#6b7280" />
+                <Ionicons name="eye-outline" size={24} color={BRAND_GOLD} />
+                {/* Simulated Unread Badge if loop has a description/notes */}
+                {loopData.description && (
+                  <View style={styles.unreadBadge} />
+                )}
               </TouchableOpacity>
+            </View>
 
+            <View style={styles.titleActions}>
               {/* Member Avatars */}
               {loopMembers.length > 0 && (
                 <MemberAvatars
@@ -833,32 +863,32 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           ) : (
             <View style={styles.stepsSection}>
-              <Text style={styles.stepsHeader}>
-                Steps ({loopData.completedCount}/{loopData.totalCount})
+              <Text style={styles.sectionHeader}>
+                Steps 
+                <Text style={styles.sectionHeaderCount}> ({loopData.completedCount}/{loopData.totalCount})</Text>
               </Text>
 
-              {/* Glassmorphic Task Cards Container */}
-              <View style={styles.taskCardsContainer}>
+              {/* Individual Glassmorphic Task Cards */}
+              <View style={styles.taskCardsGrid}>
                 {recurringTasks.map((task) => (
-                  <View key={task.id}>
-                    <ExpandableTaskCard
-                      task={task as TaskWithDetails}
-                      onPress={() => handleEditTask(task as TaskWithDetails)}
-                      onToggle={() => toggleTask(task)}
-                      onSubtaskChange={loadLoopData}
-                      isPracticeLoop={loopData.function_type === 'practice'}
-                    />
-                  </View>
+                  <ExpandableTaskCard
+                    key={task.id}
+                    task={task as TaskWithDetails}
+                    onPress={() => handleEditTask(task as TaskWithDetails)}
+                    onToggle={() => toggleTask(task)}
+                    onSubtaskChange={loadLoopData}
+                    isPracticeLoop={loopData.function_type === 'practice'}
+                  />
                 ))}
               </View>
 
-              {/* Add Step Button */}
+              {/* Add Step Button - More Vibrant */}
               <TouchableOpacity
-                style={styles.addStepButton}
+                style={styles.floatingAddStepButton}
                 onPress={openAddTaskModal}
                 activeOpacity={0.7}
               >
-                <Ionicons name="add" size={20} color={BRAND_GOLD} />
+                <Ionicons name="add-circle" size={24} color={BRAND_GOLD} />
                 <Text style={styles.addStepText}>Add Step</Text>
               </TouchableOpacity>
             </View>
@@ -867,8 +897,8 @@ export const LoopDetailScreen: React.FC = () => {
           {/* One-time Tasks */}
           {oneTimeTasks.length > 0 && (
             <View style={styles.stepsSection}>
-              <Text style={styles.stepsHeader}>One-time Tasks</Text>
-              <View style={styles.taskCardsContainer}>
+              <Text style={styles.sectionHeader}>One-time Tasks</Text>
+              <View style={styles.taskCardsGrid}>
                 {oneTimeTasks.map((task) => (
                   <ExpandableTaskCard
                     key={task.id}
@@ -882,18 +912,7 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           )}
 
-          {/* Invite Collaborator Link - Compact */}
-          {loopData.owner_id === user?.id && (
-            <View style={styles.inviteSection}>
-              <TouchableOpacity
-                style={styles.inviteLink}
-                onPress={() => setShowInviteModal(true)}
-              >
-                <Ionicons name="checkbox-outline" size={18} color={BRAND_GOLD} />
-                <Text style={styles.inviteLinkText}>Invite Collaborator</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+
         </ScrollView>
 
         {/* AI Synopsis FAB - Sparkle Button */}
@@ -1032,6 +1051,36 @@ export const LoopDetailScreen: React.FC = () => {
                   </View>
                 </View>
 
+                {/* Reloop Early & Invite Section - Consistent with plan */}
+                <View style={styles.actionSheet}>
+                  {recurringTasks.length > 0 && (
+                    <TouchableOpacity
+                      style={styles.primarySheetButton}
+                      onPress={handleReloop}
+                    >
+                      <Ionicons name="refresh-circle-outline" size={24} color="white" />
+                      <Text style={styles.primarySheetButtonText}>
+                        {loopData.reset_rule === 'manual'
+                          ? 'Complete Checklist'
+                          : (currentProgress >= 100 ? 'Reloop Now' : 'Reloop Early')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {loopData.owner_id === user?.id && (
+                    <TouchableOpacity
+                      style={styles.secondarySheetButton}
+                      onPress={() => {
+                        setShowLoopInfoModal(false);
+                        setShowInviteModal(true);
+                      }}
+                    >
+                      <Ionicons name="person-add-outline" size={20} color={BRAND_GOLD} />
+                      <Text style={styles.secondarySheetButtonText}>Invite Collaborator</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 {/* Rating Section */}
                 {showRatingPrompt && (
                   <View style={styles.infoSection}>
@@ -1043,11 +1092,6 @@ export const LoopDetailScreen: React.FC = () => {
                         disabled={isSubmittingRating}
                         size={32}
                       />
-                      {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
-                        <Text style={styles.ratingStats}>
-                          Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} ratings)
-                        </Text>
-                      )}
                     </View>
                   </View>
                 )}
@@ -1063,20 +1107,6 @@ export const LoopDetailScreen: React.FC = () => {
                   <Ionicons name="settings-outline" size={18} color="#6b7280" />
                   <Text style={styles.editLoopButtonText}>Edit Loop Settings</Text>
                 </TouchableOpacity>
-
-                {/* Reloop Early Button - Moved here */}
-                {recurringTasks.length > 0 && (
-                  <TouchableOpacity
-                    style={styles.reloopButton}
-                    onPress={handleReloop}
-                  >
-                    <Text style={styles.reloopButtonText}>
-                      {loopData.reset_rule === 'manual'
-                        ? 'Complete Checklist'
-                        : (currentProgress >= 100 ? 'Reloop' : 'Reloop Early')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
               </ScrollView>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -1207,16 +1237,37 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Ring
-  ringContainer: {
+  // Momentum Header
+  momentumHeader: {
     alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingTop: 30,
+    paddingBottom: 30,
+    backgroundColor: 'transparent',
+  },
+  glowContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ringGlow: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: BRAND_GOLD,
+    opacity: 0.15,
+    // Note: React Native shadow can also create this glow
+    shadowColor: BRAND_GOLD,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 20,
   },
   ringWrapper: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
+    width: 130,
+    height: 130,
   },
   ringCountOverlay: {
     position: 'absolute',
@@ -1224,26 +1275,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ringCountText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#374151',
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#1f2937',
   },
 
   // Title
   titleContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  titleWithBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 24,
-    gap: 12,
+    gap: 8,
   },
   loopTitle: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#1f2937',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
     textAlign: 'center',
-    flex: 1,
+    letterSpacing: -0.5,
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   titleActions: {
     flexDirection: 'row',
@@ -1256,39 +1321,46 @@ const styles = StyleSheet.create({
 
   // Steps
   stepsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
+    paddingHorizontal: 16,
+    marginBottom: 24,
   },
-  stepsHeader: {
-    fontSize: 16,
-    fontWeight: '700',
+  sectionHeader: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#1f2937',
-    marginBottom: 12,
+    marginBottom: 16,
+    marginLeft: 4,
   },
-  taskCardsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: 16,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(226, 232, 240, 0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+  sectionHeaderCount: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '600',
   },
-  addStepButton: {
+  taskCardsGrid: {
+    gap: 0, // Cards have their own marginBottom
+  },
+  floatingAddStepButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    marginTop: 12,
+    backgroundColor: '#fff',
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: BRAND_GOLD + '40',
+    shadowColor: BRAND_GOLD,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addStepText: {
-    fontSize: 16,
-    color: '#6b7280',
-    fontWeight: '500',
-    marginLeft: 8,
+    fontSize: 15,
+    color: BRAND_GOLD,
+    fontWeight: '700',
+    marginLeft: 10,
   },
 
   // Empty State
@@ -1531,7 +1603,45 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Reloop Button
+  // Action Sheet in Modal
+  actionSheet: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 16,
+    gap: 12,
+    marginBottom: 20,
+  },
+  primarySheetButton: {
+    backgroundColor: BRAND_GOLD,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 14,
+    gap: 10,
+  },
+  primarySheetButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  secondarySheetButton: {
+    backgroundColor: '#fff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: BRAND_GOLD + '40',
+    gap: 10,
+  },
+  secondarySheetButtonText: {
+    color: BRAND_GOLD,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
   reloopButton: {
     backgroundColor: BRAND_GOLD,
     paddingVertical: 16,
