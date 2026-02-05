@@ -9,6 +9,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error?: any }>;
   signUp: (email: string, password: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error?: any }>;
   devModeLogin: () => void;
 }
 
@@ -83,6 +84,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      // Redirect URL should be your app's deep link or website URL where they can reset
+      // For now, using standard site URL
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://doloop-v2.vercel.app/reset-password',
+      });
+      return { error };
+    } catch (error) {
+      return { error };
+    }
+  };
+
   // Development mode - auto login with test account
   const devModeLogin = async () => {
     console.log('[Auth] Dev Mode Login - Creating/logging in test account');
@@ -101,6 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signIn,
         signUp,
         signOut,
+        resetPassword,
         devModeLogin,
       }}
     >

@@ -31,28 +31,47 @@ const showAlert = (title: string, message: string) => {
 
 export const LoginScreen: React.FC = () => {
   const { colors } = useTheme();
-  const { signIn, signUp, devModeLogin } = useAuth();
+  const { signIn, signUp, resetPassword, devModeLogin } = useAuth();
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [error, setError] = useState('');
 
   const handleAuth = async () => {
     setError('');
     
-    if (!email || !password) {
-      setError('Please fill in all fields');
-      return;
+    if (authMode === 'forgot') {
+      if (!email) {
+        setError('Please enter your email address');
+        return;
+      }
+    } else {
+      if (!email || !password) {
+        setError('Please fill in all fields');
+        return;
+      }
     }
 
     setLoading(true);
     try {
-      const { error } = isSignUp
-        ? await signUp(email, password)
-        : await signIn(email, password);
+      let result;
+      
+      if (authMode === 'forgot') {
+        result = await resetPassword(email);
+        if (!result.error) {
+          showAlert('Success', 'Password reset instructions have been sent to your email.');
+          setAuthMode('login');
+        }
+      } else if (authMode === 'signup') {
+        result = await signUp(email, password);
+      } else {
+        result = await signIn(email, password);
+      }
+      
+      const { error } = result;
 
       if (error) {
         console.error('[Login] Auth error:', error);
@@ -196,24 +215,26 @@ export const LoginScreen: React.FC = () => {
             autoCorrect={false}
           />
 
-          <TextInput
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-              borderRadius: 8,
-              padding: 16,
-              fontSize: 16,
-              color: colors.text,
-            }}
-            placeholder="Password"
-            placeholderTextColor={colors.textSecondary}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+          {authMode !== 'forgot' && (
+            <TextInput
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 8,
+                padding: 16,
+                fontSize: 16,
+                color: colors.text,
+              }}
+              placeholder="Password"
+              placeholderTextColor={colors.textSecondary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          )}
         </View>
 
         <TouchableOpacity
@@ -232,24 +253,50 @@ export const LoginScreen: React.FC = () => {
             fontSize: 16,
             fontWeight: 'bold',
           }}>
-            {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={{ alignItems: 'center' }}
-          onPress={() => setIsSignUp(!isSignUp)}
-        >
-          <Text style={{
-            color: colors.textSecondary,
-            fontSize: 14,
-          }}>
-            {isSignUp
-              ? 'Already have an account? Sign In'
-              : "Don't have an account? Sign Up"
+            {loading 
+              ? 'Loading...' 
+              : authMode === 'forgot' 
+                ? 'Send Reset Link' 
+                : authMode === 'signup' 
+                  ? 'Sign Up' 
+                  : 'Sign In'
             }
           </Text>
         </TouchableOpacity>
+
+        {/* Auth Mode Switcher */}
+        <View style={{ alignItems: 'center', gap: 12 }}>
+          {authMode === 'login' && (
+            <>
+              <TouchableOpacity onPress={() => setAuthMode('signup')}>
+                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                  Don't have an account? Sign Up
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setAuthMode('forgot')}>
+                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {authMode === 'signup' && (
+            <TouchableOpacity onPress={() => setAuthMode('login')}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                Already have an account? Sign In
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {authMode === 'forgot' && (
+            <TouchableOpacity onPress={() => setAuthMode('login')}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                Back to Sign In
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Development Mode Section */}
         <View style={{ marginTop: 32, alignItems: 'center' }}>
