@@ -105,6 +105,8 @@ export function TemplateLibraryScreen({ navigation }: Props) {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
 
   useEffect(() => {
@@ -529,6 +531,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
           }}
           onNavigateToLibrary={() => {}}
           onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
+          onNavigateToSettings={() => navigation.navigate('Settings')}
         />
       }
       rightPanel={
@@ -717,6 +720,9 @@ export function TemplateLibraryScreen({ navigation }: Props) {
                   onPress={() => {
                     if (Platform.OS !== 'web') {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }
+                    
+                    if (!isDesktop) {
                       navigation.navigate('TemplateDetail', { templateId: item.id });
                     } else {
                       setSelectedTemplateId(item.id);
