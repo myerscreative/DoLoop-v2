@@ -435,6 +435,117 @@ export async function updateTaskExtended(
  * Collaboration Helpers
  */
 
+/**
+ * Reorder tasks within a loop (batch update order_index and parent_task_id)
+ */
+export async function reorderTasks(
+  loopId: string,
+  orderedIds: { id: string; order_index: number; parent_task_id: string | null }[]
+): Promise<boolean> {
+  try {
+    const updates = orderedIds.map(({ id, order_index, parent_task_id }) =>
+      supabase
+        .from('tasks')
+        .update({ order_index, parent_task_id, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('loop_id', loopId)
+    );
+
+    const results = await Promise.all(updates);
+    const hasError = results.some(r => r.error);
+    if (hasError) {
+      console.error('Error in batch reorder:', results.filter(r => r.error));
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error('Error reordering tasks:', error);
+    return false;
+  }
+}
+
+/**
+ * Nest a task under a parent (set parent_task_id)
+ */
+export async function nestTask(
+  taskId: string,
+  parentTaskId: string,
+  newOrderIndex: number
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        parent_task_id: parentTaskId,
+        order_index: newOrderIndex,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', taskId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error nesting task:', error);
+    return false;
+  }
+}
+
+/**
+ * Promote a child task to top-level (remove parent_task_id)
+ */
+export async function promoteTask(
+  taskId: string,
+  newOrderIndex: number
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('tasks')
+      .update({
+        parent_task_id: null,
+        order_index: newOrderIndex,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', taskId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error promoting task:', error);
+    return false;
+  }
+}
+
+/**
+ * Toggle parent task completed state, cascading to children
+ */
+export async function toggleTaskWithChildren(
+  taskId: string,
+  newCompleted: boolean
+): Promise<boolean> {
+  try {
+    const completedAt = newCompleted ? new Date().toISOString() : null;
+
+    const { error: parentError } = await supabase
+      .from('tasks')
+      .update({ completed: newCompleted, completed_at: completedAt })
+      .eq('id', taskId);
+
+    if (parentError) throw parentError;
+
+    // Cascade to all children
+    const { error: childError } = await supabase
+      .from('tasks')
+      .update({ completed: newCompleted, completed_at: completedAt })
+      .eq('parent_task_id', taskId);
+
+    if (childError) throw childError;
+    return true;
+  } catch (error) {
+    console.error('Error toggling task with children:', error);
+    return false;
+  }
+}
+
 export async function ensureLoopMember(userId: string, loopId: string): Promise<string | null> {
   try {
     // 1. Check if member exists

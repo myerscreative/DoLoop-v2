@@ -93,6 +93,7 @@ export interface Task {
   is_one_time: boolean;
   is_critical?: boolean; // Must be completed before Loop can be marked done
   order_index?: number;
+  parent_task_id?: string | null;  // null = top-level, UUID = child of another task
   created_at: string;
   updated_at: string;
 
@@ -306,6 +307,7 @@ export interface MomentumData {
 export interface TaskWithDetails extends Task {
   // Extended properties are now part of the base Task interface
   assigned_user_id?: string;
+  children?: TaskWithDetails[];  // Child tasks loaded via parent_task_id
 }
 
 export interface LoopWithTasks extends Loop {

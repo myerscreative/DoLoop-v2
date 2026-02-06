@@ -3,6 +3,7 @@ import "react-native-url-polyfill/auto";
 import "./src/web-polyfills";
 import React from "react";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -157,6 +158,7 @@ export default function App() {
   console.log("[App] Rendering Navigator");
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider>
@@ -229,5 +231,6 @@ export default function App() {
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

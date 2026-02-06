@@ -36,6 +36,9 @@ interface ExpandableTaskCardProps {
   isPracticeLoop?: boolean;
   isActive?: boolean;
   isShelved?: boolean;
+  isBeingDragged?: boolean;
+  isDropTarget?: boolean;
+  isNested?: boolean;
 }
 
 const BRAND_GOLD = '#FEC00F';
@@ -49,6 +52,9 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   isPracticeLoop = false,
   isActive = false,
   isShelved = false,
+  isBeingDragged = false,
+  isDropTarget = false,
+  isNested = false,
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -377,7 +383,10 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         styles.cardContainer,
         animatedStyle,
         isActive && styles.activeCard,
-        isShelved && { opacity: 0.4 }
+        isShelved && { opacity: 0.4 },
+        isBeingDragged && { opacity: 0.4 },
+        isDropTarget && styles.dropTargetCard,
+        isNested && styles.nestedCard,
       ]}
     >
       <TouchableOpacity
@@ -388,8 +397,10 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
       >
         <BlurView intensity={24} tint="dark" style={styles.glassContainer}>
           <LinearGradient
-            colors={isActive 
-              ? ['rgba(254, 192, 15, 0.15)', 'rgba(28, 31, 38, 0.8)'] 
+            colors={isDropTarget
+              ? ['rgba(254, 192, 15, 0.25)', 'rgba(28, 31, 38, 0.8)']
+              : isActive
+              ? ['rgba(254, 192, 15, 0.15)', 'rgba(28, 31, 38, 0.8)']
               : ['rgba(255, 255, 255, 0.05)', 'rgba(28, 31, 38, 0.8)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -548,5 +559,19 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  dropTargetCard: {
+    borderColor: '#FEC00F',
+    borderWidth: 2,
+    shadowColor: '#FEC00F',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    transform: [{ scale: 1.02 }],
+  },
+  nestedCard: {
+    marginBottom: 8,
+    borderRadius: 16,
   },
 });

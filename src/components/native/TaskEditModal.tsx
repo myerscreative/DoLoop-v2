@@ -26,8 +26,8 @@ interface TaskEditModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (
-    taskData: Partial<TaskWithDetails>, 
-    pendingSubtasks?: Subtask[], 
+    taskData: Partial<TaskWithDetails>,
+    pendingSubtasks?: Subtask[],
     pendingAttachments?: PendingAttachment[],
     closeModal?: boolean
   ) => Promise<string | null | void>; // Return ID
@@ -36,6 +36,7 @@ interface TaskEditModalProps {
   onCreateTag?: (name: string, color: string) => Promise<Tag | null>;
   initialValues?: Partial<TaskWithDetails>;
   availableTags: Tag[];
+  onPromote?: () => void;
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -46,6 +47,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   availableTags,
   onCreateTag,
   initialValues,
+  onPromote,
 }) => {
   const { user } = useAuth();
 
@@ -405,6 +407,14 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 )}
             </TouchableOpacity>
         </View>
+
+        {/* Promote to top-level button (only for nested/child tasks) */}
+        {task?.parent_task_id && onPromote && (
+          <TouchableOpacity style={styles.promoteButton} onPress={onPromote}>
+            <Ionicons name="arrow-up-circle-outline" size={20} color="#FEC00F" />
+            <Text style={styles.promoteButtonText}>Promote to Top-Level Step</Text>
+          </TouchableOpacity>
+        )}
 
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Name Input Row */}
@@ -1212,5 +1222,20 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+  },
+  promoteButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      backgroundColor: 'rgba(254, 192, 15, 0.08)',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e2e8f0',
+  },
+  promoteButtonText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: '#FEC00F',
   },
 });

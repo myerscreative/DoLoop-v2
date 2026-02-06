@@ -24,14 +24,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
-import { ExpandableTaskCard } from '../components/native/ExpandableTaskCard';
+import { DraggableTaskList } from '../components/native/DraggableTaskList';
 import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskSubtasks, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, createSubtask, uploadAttachment } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
@@ -93,27 +93,60 @@ export const LoopDetailScreen: React.FC = () => {
           )
         `)
         .eq('loop_id', loopId)
+        .order('order_index', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (tasksError) throw tasksError;
 
+      // Build tree: separate top-level tasks from children
+      const allTasks = tasks || [];
+      const topLevelTasks = allTasks.filter((t: any) => !t.parent_task_id);
+      const childTaskMap = new Map<string, any[]>();
+      for (const task of allTasks) {
+        if (task.parent_task_id) {
+          const siblings = childTaskMap.get(task.parent_task_id) || [];
+          siblings.push(task);
+          childTaskMap.set(task.parent_task_id, siblings);
+        }
+      }
+
+      // Hydrate top-level tasks with children, tags, attachments
       const tasksWithDetails = await Promise.all(
-        (tasks || []).map(async (task: any) => {
-          const [tags, subtasks, attachments] = await Promise.all([
+        topLevelTasks.map(async (task: any) => {
+          const childTasks = childTaskMap.get(task.id) || [];
+          const [tags, attachments] = await Promise.all([
             getTaskTags(task.id),
-            getTaskSubtasks(task.id),
             getTaskAttachments(task.id),
           ]);
+
+          // Hydrate children with their own tags/attachments
+          const hydratedChildren = await Promise.all(
+            childTasks.map(async (child: any) => {
+              const [childTags, childAttachments] = await Promise.all([
+                getTaskTags(child.id),
+                getTaskAttachments(child.id),
+              ]);
+              return {
+                ...child,
+                tag_details: childTags,
+                attachments: childAttachments,
+                assigned_user_id: child.assigned_member?.user_id,
+              };
+            })
+          );
+
           return {
             ...task,
             tag_details: tags,
-            subtasks,
+            subtasks: hydratedChildren,  // backward compat with ExpandableTaskCard
+            children: hydratedChildren,
             attachments,
-            assigned_user_id: task.assigned_member?.user_id
+            assigned_user_id: task.assigned_member?.user_id,
           };
         })
       );
 
+      // Count only top-level tasks for loop progress
       const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
       const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
 
@@ -305,12 +338,9 @@ export const LoopDetailScreen: React.FC = () => {
     try {
       const newCompleted = !task.completed;
 
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed: newCompleted })
-        .eq('id', task.id);
-
-      if (error) throw error;
+      // Use cascading toggle that also updates children
+      const success = await toggleTaskWithChildren(task.id, newCompleted);
+      if (!success) throw new Error('Toggle failed');
 
       if (newCompleted) {
         await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
@@ -324,6 +354,7 @@ export const LoopDetailScreen: React.FC = () => {
           completed_at: new Date().toISOString(),
         });
 
+        // Children cascade via ON DELETE CASCADE
         await supabase.from('tasks').delete().eq('id', task.id);
       }
 
@@ -396,6 +427,8 @@ export const LoopDetailScreen: React.FC = () => {
         });
         savedTaskId = editingTask.id;
       } else {
+        // Calculate order_index for new top-level task
+        const topLevelCount = loopData?.tasks.filter(t => !t.parent_task_id).length || 0;
         const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
@@ -407,6 +440,7 @@ export const LoopDetailScreen: React.FC = () => {
           notes: taskData.notes,
           time_estimate_minutes: taskData.time_estimate_minutes,
           reminder_at: taskData.reminder_at,
+          order_index: topLevelCount,
         })
         .select('id')
         .single();
@@ -422,9 +456,18 @@ export const LoopDetailScreen: React.FC = () => {
       }
 
       if (savedTaskId) {
+        // Create child tasks (replaces old subtasks table)
         if (pendingSubtasks && pendingSubtasks.length > 0) {
             for (const sub of pendingSubtasks) {
-                await createSubtask(savedTaskId, sub.description, sub.order_index);
+                await supabase.from('tasks').insert({
+                  loop_id: loopId,
+                  description: sub.description,
+                  completed: false,
+                  is_one_time: taskData.is_one_time ?? false,
+                  priority: 'none',
+                  parent_task_id: savedTaskId,
+                  order_index: sub.order_index,
+                });
             }
         }
 
@@ -456,6 +499,22 @@ export const LoopDetailScreen: React.FC = () => {
       console.error('Error saving task:', error);
       Alert.alert('Error', 'Failed to save task');
       return null;
+    }
+  };
+
+  const handlePromoteTask = async (taskId: string) => {
+    try {
+      const topLevelCount = loopData?.tasks.filter(t => !t.parent_task_id).length || 0;
+      const success = await promoteTask(taskId, topLevelCount);
+      if (success) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+        setModalVisible(false);
+        setEditingTask(null);
+        await loadLoopData();
+      }
+    } catch (error) {
+      console.error('Error promoting task:', error);
+      Alert.alert('Error', 'Failed to promote task');
     }
   };
 
@@ -807,41 +866,18 @@ export const LoopDetailScreen: React.FC = () => {
                  </TouchableOpacity>
               </View>
 
-              {/* Individual Glassmorphic Task Cards with Focus Mode and Ketchup Slots */}
-              <View style={styles.taskCardsGrid}>
-                {recurringTasks.map((task, index) => {
-                  const isActive = index === recurringTasks.findIndex(t => !t.completed);
-                  const isShelved = task.completed;
-                  const isLast = index === recurringTasks.length - 1;
-                  const nextTaskCompleted = index < recurringTasks.length - 1 ? recurringTasks[index + 1].completed : true;
-                  const showTrail = !isLast && (!task.completed || !nextTaskCompleted);
-                  
-                  return (
-                    <View key={task.id} style={styles.taskCardWrapper}>
-                      {showTrail && (
-                        <View 
-                          style={[
-                            styles.trailConnector,
-                            { 
-                              backgroundColor: task.completed ? colors.primary + '40' : colors.primary,
-                              opacity: task.completed ? 0.3 : 1
-                            }
-                          ]} 
-                        />
-                      )}
-                      <ExpandableTaskCard
-                        task={task as TaskWithDetails}
-                        onPress={() => handleEditTask(task as TaskWithDetails)}
-                        onToggle={() => toggleTask(task)}
-                        onSubtaskChange={loadLoopData}
-                        isPracticeLoop={loopData.function_type === 'practice'}
-                        isActive={isActive}
-                        isShelved={isShelved}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
+              {/* Draggable Task Cards with reorder and nesting */}
+              <DraggableTaskList
+                tasks={recurringTasks as TaskWithDetails[]}
+                loopId={loopId}
+                isPracticeLoop={loopData.function_type === 'practice'}
+                showTrail={true}
+                onEditTask={handleEditTask}
+                onToggleTask={toggleTask}
+                onSubtaskChange={loadLoopData}
+                loadLoopData={loadLoopData}
+                colors={colors}
+              />
 
               {/* Add Step Button - More Vibrant */}
               <TouchableOpacity
@@ -866,17 +902,17 @@ export const LoopDetailScreen: React.FC = () => {
           {oneTimeTasks.length > 0 && (
             <View style={styles.stepsSection}>
               <Text style={styles.sectionHeader}>One-time Tasks</Text>
-              <View style={styles.taskCardsGrid}>
-                {oneTimeTasks.map((task) => (
-                  <ExpandableTaskCard
-                    key={task.id}
-                    task={task as TaskWithDetails}
-                    onPress={() => handleEditTask(task as TaskWithDetails)}
-                    onToggle={() => toggleTask(task)}
-                    onSubtaskChange={loadLoopData}
-                  />
-                ))}
-              </View>
+              <DraggableTaskList
+                tasks={oneTimeTasks as TaskWithDetails[]}
+                loopId={loopId}
+                isPracticeLoop={false}
+                showTrail={false}
+                onEditTask={handleEditTask}
+                onToggleTask={toggleTask}
+                onSubtaskChange={loadLoopData}
+                loadLoopData={loadLoopData}
+                colors={colors}
+              />
             </View>
           )}
 
@@ -1146,6 +1182,7 @@ export const LoopDetailScreen: React.FC = () => {
           user={user}
           availableTags={availableTags}
           onCreateTag={handleCreateTag}
+          onPromote={editingTask?.parent_task_id ? () => handlePromoteTask(editingTask.id) : undefined}
         />
 
         {/* Invite Modal */}
