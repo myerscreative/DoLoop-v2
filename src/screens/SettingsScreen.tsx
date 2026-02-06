@@ -3,19 +3,20 @@
  * Theme customization and app settings
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Switch,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 
 import { RootStackParamList } from '../../App';
 import { useTheme } from '../contexts/ThemeContext';
@@ -27,10 +28,14 @@ import { Colors } from '../constants/Colors';
 type SettingsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Settings'>;
 
 export const SettingsScreen: React.FC = () => {
-  const { colors, vibe, setVibe } = useTheme();
+  const { colors, vibe, setVibe, isDark, setColorScheme } = useTheme();
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdmin();
   const navigation = useNavigation<SettingsScreenNavigationProp>();
+
+  // Local state for notification preferences (would be persisted to DB in production)
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
 
   const vibeOptions: Array<{ id: VibeStyle; label: string; emoji: string; description: string }> = [
     { id: 'playful', label: 'Playful', emoji: '🐝', description: 'Gold & bee theme (default)' },
@@ -41,6 +46,14 @@ export const SettingsScreen: React.FC = () => {
 
   const handleVibeSelect = async (selectedVibe: VibeStyle) => {
     await setVibe(selectedVibe);
+  };
+
+  const handleThemeToggle = async () => {
+    await setColorScheme(isDark ? 'light' : 'dark');
+  };
+
+  const openLink = (url: string) => {
+    Linking.openURL(url).catch(err => console.error('Failed to open URL:', err));
   };
 
   return (
@@ -61,9 +74,40 @@ export const SettingsScreen: React.FC = () => {
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Theme & Appearance Section */}
+        {/* Appearance Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Theme & Appearance</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Appearance</Text>
+          
+          {/* Light/Dark Mode Toggle */}
+          <View style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.settingLeft}>
+              <Ionicons 
+                name={isDark ? "moon" : "sunny"} 
+                size={24} 
+                color={colors.primary} 
+                style={styles.settingIcon}
+              />
+              <View>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  {isDark ? 'Dark Mode' : 'Light Mode'}
+                </Text>
+                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                  {isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={isDark}
+              onValueChange={handleThemeToggle}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
+        {/* Theme & Vibe Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Theme Style</Text>
           <Text style={[styles.sectionDescription, { color: colors.textSecondary }]}>
             Choose a theme that matches your style
           </Text>
@@ -125,6 +169,61 @@ export const SettingsScreen: React.FC = () => {
           </View>
         </View>
 
+        {/* Notifications Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Notifications</Text>
+          
+          <View style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={styles.settingLeft}>
+              <Ionicons 
+                name="notifications" 
+                size={24} 
+                color={colors.primary} 
+                style={styles.settingIcon}
+              />
+              <View>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  Push Notifications
+                </Text>
+                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                  Get notified about loop reminders
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={pushNotifications}
+              onValueChange={setPushNotifications}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          <View style={[styles.settingRow, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: 12 }]}>
+            <View style={styles.settingLeft}>
+              <Ionicons 
+                name="mail" 
+                size={24} 
+                color={colors.primary} 
+                style={styles.settingIcon}
+              />
+              <View>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>
+                  Email Notifications
+                </Text>
+                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                  Receive updates via email
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={emailNotifications}
+              onValueChange={setEmailNotifications}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
         {/* Admin Section - Only visible to admins */}
         {isAdmin && (
           <View style={styles.section}>
@@ -153,15 +252,45 @@ export const SettingsScreen: React.FC = () => {
             </View>
           )}
           <TouchableOpacity
-            style={[styles.signOutButton, { borderColor: colors.border }]}
+            style={[styles.signOutButton, { borderColor: colors.error, backgroundColor: `${colors.error}10` }]}
             onPress={signOut}
             accessible={true}
             accessibilityRole="button"
             accessibilityLabel="Sign out"
           >
+            <Ionicons name="log-out-outline" size={20} color={colors.error} style={{ marginRight: 8 }} />
             <Text style={[styles.signOutText, { color: colors.error }]}>Sign Out</Text>
           </TouchableOpacity>
         </View>
+
+        {/* About Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>About</Text>
+          
+          <View style={[styles.accountRow, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.accountLabel, { color: colors.textSecondary }]}>Version</Text>
+            <Text style={[styles.accountValue, { color: colors.text }]}>2.0.0</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.linkRow, { borderBottomColor: colors.border }]}
+            onPress={() => openLink('https://doloop.app/terms')}
+          >
+            <Text style={[styles.linkLabel, { color: colors.text }]}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.linkRow, { borderBottomColor: colors.border }]}
+            onPress={() => openLink('https://doloop.app/privacy')}
+          >
+            <Text style={[styles.linkLabel, { color: colors.text }]}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom Padding */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -205,6 +334,32 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 14,
     marginBottom: 20,
+    fontFamily: 'Inter_400Regular',
+  },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  settingLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  settingIcon: {
+    marginRight: 16,
+  },
+  settingLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter_600SemiBold',
+    marginBottom: 2,
+  },
+  settingDescription: {
+    fontSize: 13,
     fontFamily: 'Inter_400Regular',
   },
   vibeGrid: {
@@ -274,8 +429,10 @@ const styles = StyleSheet.create({
     marginTop: 20,
     paddingVertical: 16,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   signOutText: {
     fontSize: 16,
@@ -297,6 +454,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter_600SemiBold',
     color: '#fff',
+  },
+  linkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  linkLabel: {
+    fontSize: 14,
+    fontFamily: 'Inter_400Regular',
   },
 });
 

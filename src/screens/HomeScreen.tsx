@@ -36,7 +36,7 @@ type FilterType = 'all' | 'manual' | 'daily' | 'weekly';
 
 export const HomeScreen: React.FC = () => {
   const { colors } = useTheme();
-  const { user, signOut, loading } = useAuth();
+  const { user, loading } = useAuth();
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [loops, setLoops] = useState<any[]>([]);
   const [todayLoops, setTodayLoops] = useState<any[]>([]);
@@ -203,11 +203,6 @@ export const HomeScreen: React.FC = () => {
 
   const handleLoopPress = (loop: any) => {
     navigation.navigate('LoopDetail', { loopId: loop.id });
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigation.replace('Login');
   };
 
   const openCreateLoopModal = () => {
@@ -859,19 +854,6 @@ export const HomeScreen: React.FC = () => {
             </View>
             </ScrollView>
             
-            {/* Sign Out Button (temporary) - Mobile Only */}
-            <TouchableOpacity
-              style={{
-                position: 'absolute',
-                top: 60,
-                right: 20,
-                padding: 8,
-              }}
-              onPress={handleSignOut}
-            >
-              <Text style={{ color: colors.textSecondary }}>Sign Out</Text>
-            </TouchableOpacity>
-
             {/* FAB - Floating Action Button */}
             <TouchableOpacity
               style={{

@@ -9,6 +9,7 @@ interface ThemeContextType {
   isDark: boolean;
   vibe: VibeStyle;
   setVibe: (vibe: VibeStyle) => Promise<void>;
+  setColorScheme: (scheme: 'light' | 'dark') => Promise<void>;
   colors: {
     background: string;
     surface: string;
@@ -87,14 +88,19 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       try {
         const { data, error } = await supabase
           .from('user_profiles')
-          .select('theme_vibe')
+          .select('theme_vibe, theme_mode')
           .eq('id', user.id)
           .single();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
           console.warn('[Theme] Error loading theme preference:', error);
-        } else if (data?.theme_vibe) {
-          setVibeState(data.theme_vibe as VibeStyle);
+        } else if (data) {
+          if (data.theme_vibe) {
+            setVibeState(data.theme_vibe as VibeStyle);
+          }
+          if (data.theme_mode) {
+            setColorScheme(data.theme_mode as ColorSchemeName);
+          }
         }
       } catch (error) {
         // console.warn('[Theme] Error loading theme preference:', error);
@@ -107,9 +113,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [user]);
 
   useEffect(() => {
-    const subscription = Appearance.addChangeListener(() => {
-      // Keep dark mode as the "Second Self" primary experience
-      setColorScheme('dark');
+    const subscription = Appearance.addChangeListener(({ colorScheme: systemScheme }) => {
+      // Respect system theme preference if user hasn't set a manual preference
+      if (systemScheme) {
+        setColorScheme(systemScheme);
+      }
     });
 
     return () => subscription.remove();
@@ -145,11 +153,42 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
+  // Update color scheme preference in database
+  const setColorSchemeFunc = async (scheme: 'light' | 'dark') => {
+    const previousScheme = colorScheme;
+    setColorScheme(scheme);
+    
+    if (!user) return;
+
+    try {
+      // Upsert user profile with new theme mode
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({
+          id: user.id,
+          theme_mode: scheme,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'id',
+        });
+
+      if (error) {
+        console.warn('[Theme] Error saving theme mode preference:', error);
+        // Revert on error
+        setColorScheme(previousScheme);
+      }
+    } catch (error) {
+      console.warn('[Theme] Error saving theme mode preference:', error);
+      // Revert on error
+      setColorScheme(previousScheme);
+    }
+  };
+
   const isDark = colorScheme === 'dark';
   const colors = getColorsForVibe(vibe, isDark);
 
   return (
-    <ThemeContext.Provider value={{ colorScheme, isDark, vibe, setVibe, colors }}>
+    <ThemeContext.Provider value={{ colorScheme, isDark, vibe, setVibe, setColorScheme: setColorSchemeFunc, colors }}>
       {children}
     </ThemeContext.Provider>
   );
