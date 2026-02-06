@@ -694,7 +694,7 @@ export const LoopDetailScreen: React.FC = () => {
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={BRAND_GOLD} />
+            <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={colors.primary} />
           }
         >
           {/* Header Row: Back + Title + Icons */}
@@ -710,8 +710,8 @@ export const LoopDetailScreen: React.FC = () => {
               style={styles.backButton}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={[styles.backChevron, { color: BRAND_GOLD }]}>‹</Text>
-              <Text style={[styles.backText, { color: BRAND_GOLD }]}>Back</Text>
+              <Text style={[styles.backChevron, { color: colors.primary }]}>‹</Text>
+              <Text style={[styles.backText, { color: colors.primary }]}>Back</Text>
             </TouchableOpacity>
           </View>
 
@@ -719,7 +719,7 @@ export const LoopDetailScreen: React.FC = () => {
             <View style={styles.ringWrapper}>
               <LoopIcon
                 size={120}
-                color={loopData.color || BRAND_GOLD}
+                color={loopData.color || colors.primary}
               />
               <View style={styles.ringCountOverlay}>
                 <Text style={[styles.ringCountText, { color: colors.text }]}>
@@ -740,7 +740,7 @@ export const LoopDetailScreen: React.FC = () => {
                 style={styles.eyeButton}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <Ionicons name="eye-outline" size={24} color={BRAND_GOLD} />
+                <Ionicons name="eye-outline" size={24} color={colors.primary} />
                 {/* Simulated Unread Badge if loop has a description/notes */}
                 {loopData.description && (
                   <View style={styles.unreadBadge} />
@@ -823,7 +823,7 @@ export const LoopDetailScreen: React.FC = () => {
                           style={[
                             styles.trailConnector,
                             { 
-                              backgroundColor: task.completed ? BRAND_GOLD + '40' : BRAND_GOLD,
+                              backgroundColor: task.completed ? colors.primary + '40' : colors.primary,
                               opacity: task.completed ? 0.3 : 1
                             }
                           ]} 
@@ -850,12 +850,12 @@ export const LoopDetailScreen: React.FC = () => {
                 activeOpacity={0.7}
               >
                 <LinearGradient
-                  colors={['rgba(254, 192, 15, 0.15)', 'rgba(254, 192, 15, 0.05)']}
+                  colors={[colors.primary + '26', colors.primary + '0D']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.addStepGradient}
                 >
-                  <Ionicons name="add-circle" size={24} color={BRAND_GOLD} />
+                  <Ionicons name="add-circle" size={24} color={colors.primary} />
                   <Text style={styles.addStepText}>Add Step</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -898,7 +898,7 @@ export const LoopDetailScreen: React.FC = () => {
             disabled={generatingSynopsis}
           >
             <LinearGradient
-              colors={[BRAND_GOLD + '60', BRAND_GOLD + '90']} // Increased opacity
+              colors={[colors.primary + '60', colors.primary + '90']}
               style={styles.synopsisFabGradient}
             >
               <Text style={[styles.synopsisFabText, { color: '#000', fontWeight: '900' }]}>
@@ -982,7 +982,7 @@ export const LoopDetailScreen: React.FC = () => {
                     <Text style={styles.infoSectionTitle}>Provenance (Expert System)</Text>
                     <View style={styles.provenanceCard}>
                       <View style={styles.provenanceContent}>
-                        <Ionicons name="book-outline" size={24} color={BRAND_GOLD} />
+                        <Ionicons name="book-outline" size={24} color={colors.primary} />
                         <View style={{ flex: 1, marginLeft: 12 }}>
                           <Text style={styles.provenanceStreakText}>
                             Current Streak: {loopData.currentStreak || 0} days
@@ -1050,7 +1050,7 @@ export const LoopDetailScreen: React.FC = () => {
                         setShowInviteModal(true);
                       }}
                     >
-                      <Ionicons name="person-add-outline" size={20} color={BRAND_GOLD} />
+                      <Ionicons name="person-add-outline" size={20} color={colors.primary} />
                       <Text style={styles.secondarySheetButtonText}>Invite Collaborator</Text>
                     </TouchableOpacity>
                   )}
@@ -1119,7 +1119,7 @@ export const LoopDetailScreen: React.FC = () => {
                   onPress={handleThemePromptCustomize}
                 >
                   <LinearGradient
-                    colors={[BRAND_GOLD, '#ffa500']}
+                    colors={[colors.primary, colors.secondary]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.themeModalButtonGradient}

@@ -79,11 +79,11 @@ export const ReflectionInput: React.FC<ReflectionInputProps> = ({
               <Text style={styles.savedText}>Saved</Text>
             </View>
           ) : hasChanges ? (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleSave}
-              style={styles.saveButton}
+              style={[styles.saveButton, { backgroundColor: colors.primary }]}
             >
-              <Text style={styles.saveButtonText}>Save</Text> 
+              <Text style={[styles.saveButtonText, { color: colors.textOnPrimary }]}>Save</Text> 
             </TouchableOpacity>
           ) : null}
         </View>
@@ -117,13 +117,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButton: {
-    backgroundColor: '#FEC00F',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   saveButtonText: {
-    color: 'black',
     fontWeight: '600',
     fontSize: 12,
   },

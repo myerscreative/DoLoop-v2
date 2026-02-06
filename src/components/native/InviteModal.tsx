@@ -195,17 +195,18 @@ export const InviteModal: React.FC<InviteModalProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.sendButton,
+                    { backgroundColor: colors.primary },
                     (!email.trim() || sending) && styles.sendButtonDisabled,
                   ]}
                   onPress={handleSend}
                   disabled={!email.trim() || sending}
                 >
                   {sending ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
                   ) : (
                     <>
-                      <Ionicons name="paper-plane" size={18} color="#000" />
-                      <Text style={styles.sendButtonText}>Send Invitation</Text>
+                      <Ionicons name="paper-plane" size={18} color={colors.textOnPrimary} />
+                      <Text style={[styles.sendButtonText, { color: colors.textOnPrimary }]}>Send Invitation</Text>
                     </>
                   )}
                 </TouchableOpacity>
@@ -340,7 +341,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEC00F',
     borderRadius: 12,
     padding: 16,
     gap: 8,

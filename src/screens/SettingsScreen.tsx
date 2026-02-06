@@ -115,11 +115,12 @@ export const SettingsScreen: React.FC = () => {
           <View style={styles.vibeGrid}>
             {vibeOptions.map((option) => {
               const isSelected = vibe === option.id;
+              const themeColors = isDark ? Colors.dark : Colors.light;
               const vibeConfig = {
-                playful: { bg: Colors.light.playful, accent: '#FF5252' },
-                focus: { bg: Colors.light.focus, accent: '#475569' },
-                family: { bg: Colors.light.family, accent: '#FB923C' },
-                pro: { bg: Colors.light.pro, accent: '#059669' },
+                playful: { bg: themeColors.playful, textOnBg: '#000000' },
+                focus: { bg: themeColors.focus, textOnBg: '#FFFFFF' },
+                family: { bg: themeColors.family, textOnBg: '#FFFFFF' },
+                pro: { bg: themeColors.pro, textOnBg: '#FFFFFF' },
               }[option.id];
 
               return (
@@ -147,7 +148,7 @@ export const SettingsScreen: React.FC = () => {
                   {/* Preview Header */}
                   <View style={[styles.vibePreviewHeader, { backgroundColor: vibeConfig.bg }]}>
                     <Text style={styles.vibeEmoji}>{option.emoji}</Text>
-                    <Text style={styles.vibeTitle}>{option.label}</Text>
+                    <Text style={[styles.vibeTitle, { color: vibeConfig.textOnBg }]}>{option.label}</Text>
                   </View>
 
                   {/* Description */}
@@ -160,7 +161,7 @@ export const SettingsScreen: React.FC = () => {
                   {/* Selected Badge */}
                   {isSelected && (
                     <View style={[styles.selectedBadge, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.selectedText}>✓ Selected</Text>
+                      <Text style={[styles.selectedText, { color: colors.textOnPrimary }]}>✓ Selected</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -385,7 +386,6 @@ const styles = StyleSheet.create({
   vibeTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#FFF',
     fontFamily: 'Inter_700Bold',
   },
   vibeContent: {
@@ -405,7 +405,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   selectedText: {
-    color: '#000',
     fontSize: 12,
     fontWeight: 'bold',
     fontFamily: 'Inter_700Bold',

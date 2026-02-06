@@ -40,10 +40,10 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
     <Animated.View
       entering={SlideInRight.duration(300)}
       exiting={SlideOutLeft.duration(300)}
-      style={styles.card}
+      style={[styles.card, { borderColor: colors.primary }]}
     >
       <View style={styles.cardHeader}>
-        <View style={[styles.iconCircle, { backgroundColor: invitation.loop?.color || '#FEC00F' }]}>
+        <View style={[styles.iconCircle, { backgroundColor: invitation.loop?.color || colors.primary }]}>
           <Ionicons name="repeat" size={20} color="#fff" />
         </View>
         <View style={styles.cardInfo}>
@@ -79,16 +79,16 @@ const InvitationCard: React.FC<InvitationCardProps> = ({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.acceptButton}
+          style={[styles.acceptButton, { backgroundColor: colors.primary }]}
           onPress={onAccept}
           disabled={accepting || declining}
         >
           {accepting ? (
-            <ActivityIndicator size="small" color="#000" />
+            <ActivityIndicator size="small" color={colors.textOnPrimary} />
           ) : (
             <>
-              <Ionicons name="checkmark" size={18} color="#000" />
-              <Text style={styles.acceptButtonText}>Join Loop</Text>
+              <Ionicons name="checkmark" size={18} color={colors.textOnPrimary} />
+              <Text style={[styles.acceptButtonText, { color: colors.textOnPrimary }]}>Join Loop</Text>
             </>
           )}
         </TouchableOpacity>
@@ -183,10 +183,10 @@ export const PendingInvitations: React.FC<PendingInvitationsProps> = ({
   return (
     <Animated.View entering={FadeIn} style={styles.container}>
       <View style={styles.header}>
-        <Ionicons name="mail-unread" size={20} color="#FEC00F" />
+        <Ionicons name="mail-unread" size={20} color={colors.primary} />
         <Text style={styles.headerTitle}>Pending Invitations</Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{invitations.length}</Text>
+        <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.badgeText, { color: colors.textOnPrimary }]}>{invitations.length}</Text>
         </View>
       </View>
 
@@ -226,7 +226,6 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   badge: {
-    backgroundColor: '#FEC00F',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -234,7 +233,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#000',
   },
   card: {
     backgroundColor: '#ffffff',
@@ -247,7 +245,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#FEC00F',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -313,7 +310,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FEC00F',
     borderRadius: 10,
     paddingVertical: 12,
     gap: 6,
@@ -321,6 +317,5 @@ const styles = StyleSheet.create({
   acceptButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000',
   },
 });

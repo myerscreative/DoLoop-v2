@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Appearance, ColorSchemeName } from 'react-native';
+import { ColorSchemeName } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 import { VibeStyle } from '../types/onboarding';
@@ -24,49 +24,65 @@ interface ThemeContextType {
     border: string;
     error: string;
     structure: string;
+    textOnPrimary: string;
   };
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Vibe-based color schemes
-// UNIFIED GOLD BRAND: All vibes use the gold palette from mockup
-const vibeColors: Record<VibeStyle, { primary: string; accent: string }> = {
-  playful: { primary: '#FFB800', accent: '#FFD700' }, // Honey Gold + Bright Gold
-  focus: { primary: '#FFB800', accent: '#FFD700' },   // Unified
-  family: { primary: '#FFB800', accent: '#FFD700' },  // Unified
-  pro: { primary: '#FFB800', accent: '#FFD700' },     // Unified
+// Vibe-based color schemes — each theme has a distinct personality
+const vibeColors: Record<VibeStyle, {
+  light: { primary: string; accent: string; textOnPrimary: string };
+  dark: { primary: string; accent: string; textOnPrimary: string };
+}> = {
+  playful: {
+    light: { primary: '#FFB800', accent: '#FFD700', textOnPrimary: '#000000' }, // Honey Gold
+    dark:  { primary: '#FEC00F', accent: '#FFD700', textOnPrimary: '#000000' },
+  },
+  focus: {
+    light: { primary: '#475569', accent: '#334155', textOnPrimary: '#FFFFFF' }, // Slate & Professional
+    dark:  { primary: '#64748B', accent: '#475569', textOnPrimary: '#FFFFFF' },
+  },
+  family: {
+    light: { primary: '#E8723A', accent: '#D4622E', textOnPrimary: '#FFFFFF' }, // Warm Terracotta
+    dark:  { primary: '#FB923C', accent: '#F97316', textOnPrimary: '#000000' },
+  },
+  pro: {
+    light: { primary: '#0D9488', accent: '#0F766E', textOnPrimary: '#FFFFFF' }, // Mint & Modern
+    dark:  { primary: '#14B8A6', accent: '#0D9488', textOnPrimary: '#FFFFFF' },
+  },
 };
 
 const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
-  const vibeColor = vibeColors[vibe];
-  // Light mode colors matching the mockup exactly
+  const vibeColor = vibeColors[vibe][isDark ? 'dark' : 'light'];
+
   const base = isDark ? {
-    background: '#121212',     // Deep dark charcoal
-    surface: 'rgba(255, 255, 255, 0.05)', // Glassmorphism surface
-    text: '#FFFFFF',           // 100% white for visual anchor
-    textSecondary: 'rgba(255, 255, 255, 0.4)', // 40% grey for "fade"
+    background: '#121212',
+    surface: 'rgba(255, 255, 255, 0.05)',
+    text: '#FFFFFF',
+    textSecondary: 'rgba(255, 255, 255, 0.4)',
     border: 'rgba(255, 255, 255, 0.1)',
     error: '#DC2626',
     structure: '#1A1A1A',
   } : {
-    background: '#FFFFFF',     // Pure white for main areas
-    surface: '#FAFAFA',        // Light gray for list backgrounds
-    text: '#1A1A1A',           // Almost black for primary text
-    textSecondary: '#666666',  // Medium gray for secondary text
-    border: '#E5E5E5',         // Light border
+    background: '#FFFFFF',
+    surface: '#FAFAFA',
+    text: '#1A1A1A',
+    textSecondary: '#666666',
+    border: '#E5E5E5',
     error: '#DC2626',
-    structure: '#F5F5F5',      // Lighter gray for input backgrounds
+    structure: '#F5F5F5',
   };
 
   return {
     ...base,
-    primary: vibeColor.primary,      // #FFB800 - Main gold
-    success: '#059669', 
-    secondary: vibeColor.accent,      // #FFD700 - Bright gold
-    accent1: '#00CED1',               // Bright Teal (Weekly)
-    accent2: '#8A2BE2',               // Blue Violet (Goals)
-    accentYellow: '#FFB800',          // Vibrant Gold (Daily)
+    primary: vibeColor.primary,
+    success: '#059669',
+    secondary: vibeColor.accent,
+    accent1: '#00CED1',              // Bright Teal (Weekly loops)
+    accent2: '#8A2BE2',              // Blue Violet (Goals)
+    accentYellow: '#FFB800',         // Gold (Daily loops — always gold)
+    textOnPrimary: vibeColor.textOnPrimary,
   };
 };
 
@@ -112,16 +128,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loadThemePreference();
   }, [user]);
 
-  useEffect(() => {
-    const subscription = Appearance.addChangeListener(({ colorScheme: systemScheme }) => {
-      // Respect system theme preference if user hasn't set a manual preference
-      if (systemScheme) {
-        setColorScheme(systemScheme);
-      }
-    });
-
-    return () => subscription.remove();
-  }, []);
+  // Note: We intentionally do NOT listen to system appearance changes here
+  // because we want to respect the user's manual theme selection.
+  // The theme preference is loaded from the database on mount and persisted
+  // when the user changes it via the Settings screen.
 
   // Update vibe preference in database
   const setVibe = async (newVibe: VibeStyle) => {

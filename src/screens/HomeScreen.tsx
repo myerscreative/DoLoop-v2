@@ -449,13 +449,13 @@ export const HomeScreen: React.FC = () => {
                Choose a loop from the list to view details, manage tasks, and track progress.
              </Text>
 
-             <TouchableOpacity 
-               style={{ 
-                 paddingVertical: 14, 
-                 paddingHorizontal: 32, 
-                 backgroundColor: '#FEC00F', 
+             <TouchableOpacity
+               style={{
+                 paddingVertical: 14,
+                 paddingHorizontal: 32,
+                 backgroundColor: colors.primary,
                  borderRadius: 12,
-                 shadowColor: '#FEC00F',
+                 shadowColor: colors.primary,
                  shadowOffset: { width: 0, height: 4 },
                  shadowOpacity: 0.3,
                  shadowRadius: 10,
@@ -463,7 +463,7 @@ export const HomeScreen: React.FC = () => {
                }}
                onPress={openCreateLoopModal}
              >
-               <Text style={{ color: '#111827', fontWeight: '700', fontSize: 16 }}>Create New Loop</Text>
+               <Text style={{ color: colors.textOnPrimary, fontWeight: '700', fontSize: 16 }}>Create New Loop</Text>
              </TouchableOpacity>
           </View>
       )

@@ -39,7 +39,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     switch (rule) {
       case 'daily': return [c.accentYellow, '#000000']; 
       case 'weekly': return [c.accent1, '#FFFFFF'];    
-      case 'manual': return [c.primary, '#000000'];    
+      case 'manual': return [c.primary, c.textOnPrimary];    
       default: return [c.surface, c.text]; 
     }
   };
@@ -99,7 +99,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
           ) : (
             <View>
               <View style={[styles.badge, { backgroundColor: loop.function_type === 'practice' ? colors.primary : badgeBg }]}>
-                <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? '#000000' : badgeText }]}>
+                <Text style={[styles.badgeText, { color: loop.function_type === 'practice' ? colors.textOnPrimary : badgeText }]}>
                   {getBadgeLabel(loop.reset_rule || 'daily', loop.category, loop.function_type)}
                 </Text>
               </View>
