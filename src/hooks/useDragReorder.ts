@@ -42,6 +42,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
   const lastHoveredIdRef = useRef<string | null>(null);
 
   const registerLayout = useCallback((id: string, layout: { y: number; height: number }, parentTaskId: string | null, hasChildren: boolean) => {
+    console.log(`Registering layout for ${id}:`, { y: layout.y, height: layout.height, parentTaskId, hasChildren });
     cardLayoutsRef.current.set(id, { ...layout, id, parentTaskId, hasChildren });
   }, []);
 
@@ -68,7 +69,10 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     if (!activeId) return;
 
     const activeLayout = cardLayoutsRef.current.get(activeId);
-    if (!activeLayout) return;
+    if (!activeLayout) {
+      console.log('No active layout found for:', activeId);
+      return;
+    }
 
     const activeTask = tasks.find(t => t.id === activeId) ||
                        tasks.flatMap(t => t.children || []).find(c => c.id === activeId);
@@ -77,6 +81,8 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
 
     // Calculate the current center Y position: initial absolute center + translation
     const activeCenterY = activeLayout.y + activeLayout.height / 2 + translationY;
+
+    console.log('Drag move - activeCenterY:', activeCenterY, 'translationY:', translationY, 'layouts count:', cardLayoutsRef.current.size);
 
     let closestId: string | null = null;
     let closestAction: HoverAction = null;
@@ -96,6 +102,8 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
       const targetTop = layout.y;
       const targetBottom = layout.y + layout.height;
       const targetCenter = layout.y + layout.height / 2;
+
+      console.log(`Checking ${id}: top=${targetTop}, bottom=${targetBottom}, activeCenterY=${activeCenterY}, overlaps=${activeCenterY >= targetTop && activeCenterY <= targetBottom}`);
 
       // Skip if not strictly overlapping vertically with the target's bounds
       if (activeCenterY < targetTop || activeCenterY > targetBottom) return;
@@ -125,6 +133,8 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
       }
     });
 
+    console.log('Closest found:', closestId, 'action:', closestAction);
+
     // Trigger haptic when entering a new drop target
     if (closestId !== lastHoveredIdRef.current && closestId !== null) {
       lastHoveredIdRef.current = closestId;
@@ -132,6 +142,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     }
 
     if (closestId !== dragStateRef.current.hoveredId || closestAction !== dragStateRef.current.hoveredAction) {
+      console.log('Updating drag state:', { hoveredId: closestId, hoveredAction: closestAction });
       const newState = {
         ...dragStateRef.current,
         hoveredId: closestId,
@@ -292,7 +303,9 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
   const getVerticalShift = useCallback((taskId: string, index: number): number => {
     const { activeId, activeIndex, hoveredId, hoveredAction } = dragStateRef.current;
 
-    if (!activeId || !hoveredId) return 0;
+    if (!activeId || !hoveredId) {
+      return 0;
+    }
 
     // If this is the active card, it doesn't shift (it drags)
     if (taskId === activeId) return 0;
@@ -302,7 +315,10 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
 
     // We need the height of the active card to know how much to shift
     const activeLayout = cardLayoutsRef.current.get(activeId);
-    if (!activeLayout) return 0;
+    if (!activeLayout) {
+      console.log(`getVerticalShift: No active layout for ${activeId}`);
+      return 0;
+    }
 
     const shiftAmount = activeLayout.height;
 
