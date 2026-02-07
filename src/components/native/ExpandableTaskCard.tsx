@@ -97,7 +97,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
   const hasSubtasks = localSubtasks.length > 0;
   const taskStatus = task.completed ? 'done' : 'pending';
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && !task.completed;
 
   // Animation Styles
   const animatedStyle = useAnimatedStyle(() => {
@@ -176,15 +175,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
     );
   };
 
-  const getTaskIcon = (desc: string) => {
-    const d = desc.toLowerCase();
-    if (d.includes('water') || d.includes('drink')) return 'water-outline';
-    if (d.includes('pill') || d.includes('gumm') || d.includes('med')) return 'medical-outline';
-    if (d.includes('read') || d.includes('book')) return 'book-outline';
-    if (d.includes('exercise') || d.includes('gym') || d.includes('run') || d.includes('workout')) return 'fitness-outline';
-    return 'ellipse-outline';
-  };
-
   const cardContent = (
     <>
       <View style={styles.mainRow}>
@@ -209,13 +199,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
           <View style={styles.content}>
             <View style={styles.titleRow}>
-              <View style={[styles.taskIconContainer, { backgroundColor: isActive ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.08)' }]}>
-                <Ionicons 
-                  name={getTaskIcon(task.description)} 
-                  size={20} 
-                  color={taskStatus === 'done' ? COOL_GREY : BRAND_GOLD} 
-                />
-              </View>
               <Text
                 style={[
                   styles.description,
@@ -226,7 +209,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                     opacity: taskStatus === 'done' ? 0.6 : 1,
                   },
                 ]}
-                numberOfLines={2}
+                numberOfLines={1}
               >
                 {task.description}
               </Text>
@@ -234,27 +217,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                 <PriorityBadge priority={task.priority} size="small" />
               )}
             </View>
-
-            <View style={styles.metadataRow}>
-              {task.due_date && (
-                <Text style={[styles.metadataText, { color: isOverdue ? '#EF4444' : COOL_GREY }]}>
-                  <Ionicons name="calendar-outline" size={12} /> {new Date(task.due_date).toLocaleDateString()}
-                </Text>
-              )}
-              {task.time_estimate_minutes && (
-                <Text style={[styles.metadataText, { color: COOL_GREY }]}>
-                  <Ionicons name="time-outline" size={12} /> {task.time_estimate_minutes}m
-                </Text>
-              )}
-              {!task.is_one_time && (
-                <Ionicons name="sync-outline" size={12} color={COOL_GREY} />
-              )}
-            </View>
           </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={onPress} style={styles.editButton}>
-          <Ionicons name="pencil-outline" size={18} color={COOL_GREY} />
         </TouchableOpacity>
 
         <TouchableOpacity onPress={handleToggleExpand} style={styles.expandButton}>
@@ -416,18 +379,19 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    marginBottom: 16,
-    borderRadius: 20,
+    marginBottom: 6,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   glassContainer: {
-    borderRadius: 20,
+    borderRadius: 14,
   },
   gradient: {
-    padding: 16,
-    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
   },
   activeCard: {
     borderColor: BRAND_GOLD,
@@ -447,13 +411,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkbox: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 10,
   },
   content: {
     flex: 1,
@@ -461,42 +425,21 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  taskIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 8,
   },
   description: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     flex: 1,
     lineHeight: 22,
   },
-  metadataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-    marginTop: 8,
-    paddingLeft: 44,
-  },
-  metadataText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  editButton: {
-    padding: 10,
-  },
   expandButton: {
-    padding: 10,
+    padding: 6,
   },
   expandedSection: {
-    marginTop: 16,
-    paddingLeft: 44,
-    gap: 12,
+    marginTop: 10,
+    paddingLeft: 34,
+    gap: 8,
   },
   subtaskRow: {
     flexDirection: 'row',

@@ -792,50 +792,46 @@ export const LoopDetailScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.momentumHeader}>
-            <View style={styles.ringWrapper}>
+          {/* Compact Header: Icon + Title + Actions in one row */}
+          <View style={styles.compactHeader}>
+            <View style={styles.compactRingWrapper}>
               <LoopIcon
-                size={120}
+                size={48}
                 color={loopData.color || colors.primary}
               />
               <View style={styles.ringCountOverlay}>
-                <Text style={[styles.ringCountText, { color: colors.text }]}>
+                <Text style={[styles.compactRingCountText, { color: colors.text }]}>
                   {loopData.completedCount}/{loopData.totalCount}
                 </Text>
               </View>
             </View>
-          </View>
 
-          {/* Title Row with Eye Icon and Member Avatars */}
-          <View style={styles.titleContainer}>
-            <View style={styles.titleWithBadge}>
-              <Text style={[styles.loopTitle, { fontFamily: 'Outfit_700Bold', color: colors.text }]}>{loopData.name}</Text>
-              
-              {/* Eye Icon - Aligned Right with Unread Badge */}
-              <TouchableOpacity
-                onPress={() => setShowLoopInfoModal(true)}
-                style={styles.eyeButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons name="eye-outline" size={24} color={colors.primary} />
-                {/* Simulated Unread Badge if loop has a description/notes */}
-                {loopData.description && (
-                  <View style={styles.unreadBadge} />
+            <View style={styles.compactTitleArea}>
+              <Text style={[styles.compactLoopTitle, { fontFamily: 'Outfit_700Bold', color: colors.text }]} numberOfLines={1}>
+                {loopData.name}
+              </Text>
+              <View style={styles.compactTitleActions}>
+                {loopMembers.length > 0 && (
+                  <MemberAvatars
+                    members={loopMembers}
+                    maxVisible={3}
+                    size={22}
+                    onPress={() => setShowMemberList(true)}
+                  />
                 )}
-              </TouchableOpacity>
+              </View>
             </View>
 
-            <View style={styles.titleActions}>
-              {/* Member Avatars */}
-              {loopMembers.length > 0 && (
-                <MemberAvatars
-                  members={loopMembers}
-                  maxVisible={3}
-                  size={28}
-                  onPress={() => setShowMemberList(true)}
-                />
+            <TouchableOpacity
+              onPress={() => setShowLoopInfoModal(true)}
+              style={styles.eyeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="eye-outline" size={22} color={colors.primary} />
+              {loopData.description && (
+                <View style={styles.unreadBadge} />
               )}
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Steps Section */}
@@ -1276,49 +1272,43 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Momentum Header
-  momentumHeader: {
+  // Compact Header
+  compactHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 20,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 12,
   },
-  ringWrapper: {
+  compactRingWrapper: {
     position: 'relative',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 130,
-    height: 130,
+    width: 48,
+    height: 48,
   },
   ringCountOverlay: {
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  ringCountText: {
-    fontSize: 22,
+  compactRingCountText: {
+    fontSize: 11,
     fontWeight: '800',
-    color: '#000', // Override inline
   },
-
-  // Title
-  titleContainer: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 24,
+  compactTitleArea: {
+    flex: 1,
   },
-  titleWithBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  loopTitle: {
-    fontSize: 28,
+  compactLoopTitle: {
+    fontSize: 20,
     fontFamily: 'Outfit_700Bold',
     color: '#FFFFFF',
-    textAlign: 'center',
     letterSpacing: -0.5,
+  },
+  compactTitleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
   },
   unreadBadge: {
     position: 'absolute',
