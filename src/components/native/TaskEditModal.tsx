@@ -37,6 +37,8 @@ interface TaskEditModalProps {
   initialValues?: Partial<TaskWithDetails>;
   availableTags: Tag[];
   onPromote?: () => void;
+  availableParentTasks?: TaskWithDetails[];
+  onNestUnder?: (parentTaskId: string) => void;
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -48,6 +50,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onCreateTag,
   initialValues,
   onPromote,
+  availableParentTasks,
+  onNestUnder,
 }) => {
   const { user } = useAuth();
 
@@ -414,6 +418,25 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             <Ionicons name="arrow-up-circle-outline" size={20} color="#FEC00F" />
             <Text style={styles.promoteButtonText}>Promote to Top-Level Step</Text>
           </TouchableOpacity>
+        )}
+
+        {/* Nest under parent (only for existing top-level tasks with available parents) */}
+        {task && !task.parent_task_id && onNestUnder && availableParentTasks && availableParentTasks.length > 0 && (
+          <View style={styles.nestUnderSection}>
+            <Text style={styles.nestUnderLabel}>Nest under:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.nestUnderScroll}>
+              {availableParentTasks.map(parent => (
+                <TouchableOpacity
+                  key={parent.id}
+                  style={styles.nestUnderChip}
+                  onPress={() => onNestUnder(parent.id)}
+                >
+                  <Ionicons name="return-down-forward-outline" size={14} color="#FEC00F" />
+                  <Text style={styles.nestUnderChipText} numberOfLines={1}>{parent.description}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -1237,5 +1260,39 @@ const styles = StyleSheet.create({
       fontSize: 14,
       fontWeight: '600',
       color: '#FEC00F',
+  },
+  nestUnderSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 8,
+      backgroundColor: 'rgba(254, 192, 15, 0.05)',
+      borderBottomWidth: 1,
+      borderBottomColor: '#e2e8f0',
+      gap: 8,
+  },
+  nestUnderLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#64748b',
+  },
+  nestUnderScroll: {
+      flex: 1,
+  },
+  nestUnderChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      backgroundColor: 'rgba(254, 192, 15, 0.12)',
+      borderRadius: 8,
+      marginRight: 8,
+  },
+  nestUnderChipText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: '#0f172a',
+      maxWidth: 150,
   },
 });

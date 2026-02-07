@@ -31,7 +31,7 @@ import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
@@ -515,6 +515,24 @@ export const LoopDetailScreen: React.FC = () => {
     } catch (error) {
       console.error('Error promoting task:', error);
       Alert.alert('Error', 'Failed to promote task');
+    }
+  };
+
+  const handleNestTask = async (parentTaskId: string) => {
+    if (!editingTask) return;
+    try {
+      const parentTask = loopData?.tasks.find(t => t.id === parentTaskId) as TaskWithDetails | undefined;
+      const childCount = parentTask?.children?.length || 0;
+      const success = await nestTask(editingTask.id, parentTaskId, childCount);
+      if (success) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+        setModalVisible(false);
+        setEditingTask(null);
+        await loadLoopData();
+      }
+    } catch (error) {
+      console.error('Error nesting task:', error);
+      Alert.alert('Error', 'Failed to nest task');
     }
   };
 
@@ -1183,6 +1201,12 @@ export const LoopDetailScreen: React.FC = () => {
           availableTags={availableTags}
           onCreateTag={handleCreateTag}
           onPromote={editingTask?.parent_task_id ? () => handlePromoteTask(editingTask.id) : undefined}
+          availableParentTasks={
+            editingTask && !editingTask.parent_task_id
+              ? (loopData?.tasks.filter(t => t.id !== editingTask.id && !t.parent_task_id) as TaskWithDetails[])
+              : undefined
+          }
+          onNestUnder={editingTask && !editingTask.parent_task_id ? handleNestTask : undefined}
         />
 
         {/* Invite Modal */}
