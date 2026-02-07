@@ -32,9 +32,10 @@ interface UseDragReorderProps {
   tasks: TaskWithDetails[];
   loopId: string;
   loadLoopData: () => Promise<any>;
+  onOptimisticUpdate?: (newTasks: TaskWithDetails[]) => void;
 }
 
-export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderProps) {
+export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate }: UseDragReorderProps) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
   const dragStateRef = useRef<DragState>(initialDragState);
   const cardLayoutsRef = useRef<Map<string, CardLayout>>(new Map());
@@ -69,7 +70,11 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
     const activeLayout = cardLayoutsRef.current.get(activeId);
     if (!activeLayout) return;
 
-    const activeTask = tasks.find(t => t.id === activeId);
+    const activeTask = tasks.find(t => t.id === activeId) ||
+                       tasks.flatMap(t => t.children || []).find(c => c.id === activeId);
+
+    if (!activeTask) return;
+
     const activeCenterY = activeLayout.y + activeLayout.height / 2 + translationY;
 
     let closestId: string | null = null;
@@ -77,13 +82,21 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
     let closestDistance = Infinity;
 
     cardLayoutsRef.current.forEach((layout, id) => {
+      // Skip self
       if (id === activeId) return;
+
+      // Skip if parent/child relationship exists to prevent weird nesting issues during drag
+      // (Simplified: only allow reordering within same level/parent for now to fix basic DnD)
+      if (activeLayout.parentTaskId !== layout.parentTaskId) {
+         // Allow nesting if target is a potential parent (top-level) and active is top-level
+         if (activeLayout.parentTaskId || layout.parentTaskId) return;
+      }
 
       const targetTop = layout.y;
       const targetBottom = layout.y + layout.height;
       const targetCenter = layout.y + layout.height / 2;
 
-      // Skip if not overlapping vertically
+      // Skip if not strictly overlapping vertically with the target's bounds
       if (activeCenterY < targetTop || activeCenterY > targetBottom) return;
 
       const distance = Math.abs(activeCenterY - targetCenter);
@@ -129,8 +142,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
   }, [tasks, safeHaptic]);
 
   const handleDragEnd = useCallback(async () => {
-    // Read from ref to avoid stale closure — React may not have
-    // re-rendered since the last handleDragMove setState call.
+    // Read from ref to avoid stale closure
     const { activeId, hoveredId, hoveredAction } = dragStateRef.current;
 
     if (!activeId || !hoveredId || !hoveredAction) {
@@ -140,60 +152,195 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
       return;
     }
 
+    // 1. Optimistic Update
+    // Clone the tasks tree
+    let newTasks = JSON.parse(JSON.stringify(tasks));
+
+    // Find the active task and remove it from its current position
+    // We need to handle both top-level and nested tasks
+    let activeTask: any = null;
+
+    // Search top-level
+    const sourceIndex = newTasks.findIndex((t: any) => t.id === activeId);
+    if (sourceIndex !== -1) {
+        activeTask = newTasks[sourceIndex];
+        newTasks.splice(sourceIndex, 1);
+    } else {
+        // Search children
+        for (const parent of newTasks) {
+            if (parent.children) {
+                const childIdx = parent.children.findIndex((c: any) => c.id === activeId);
+                if (childIdx !== -1) {
+                    activeTask = parent.children[childIdx];
+                    parent.children.splice(childIdx, 1);
+                    break;
+                }
+            }
+        }
+    }
+
+    if (!activeTask) {
+        // console.error('Could not find active task for optimistic update');
+        dragStateRef.current = initialDragState;
+        setDragState(initialDragState);
+        return;
+    }
+
+    // Insert into new position
+    if (hoveredAction === 'nest') {
+        // Find target parent
+        const targetParent = newTasks.find((t: any) => t.id === hoveredId);
+        if (targetParent) {
+            if (!targetParent.children) targetParent.children = [];
+            targetParent.children.push({ ...activeTask, parent_task_id: hoveredId });
+             // Also update the task itself to reflect the new parent
+             activeTask.parent_task_id = hoveredId;
+        }
+    } else {
+        // Reorder
+        // Find target list and index
+        let targetList: any[] = newTasks;
+        let targetIndex = -1;
+
+        // Try top-level first
+        targetIndex = newTasks.findIndex((t: any) => t.id === hoveredId);
+
+        if (targetIndex === -1) {
+             // Try children
+             for (const parent of newTasks) {
+                if (parent.children) {
+                    const childIdx = parent.children.findIndex((c: any) => c.id === hoveredId);
+                    if (childIdx !== -1) {
+                        targetList = parent.children;
+                        targetIndex = childIdx;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (targetIndex !== -1) {
+            const insertIndex = hoveredAction === 'reorder-above' ? targetIndex : targetIndex + 1;
+            targetList.splice(insertIndex, 0, activeTask);
+        }
+    }
+
+    // Trigger optimistic UI update
+    if (onOptimisticUpdate) {
+        onOptimisticUpdate(newTasks);
+    }
+
+    // Reset drag state immediately so UI reflects "dropped" state
+    dragStateRef.current = initialDragState;
+    setDragState(initialDragState);
+    lastHoveredIdRef.current = null;
+
+    // 2. Perform Async Server Update
     try {
       if (hoveredAction === 'nest') {
-        // Count existing children of the target to determine order_index
         const targetTask = tasks.find(t => t.id === hoveredId);
         const childCount = targetTask?.children?.length || 0;
         await nestTask(activeId, hoveredId, childCount);
-        await safeHaptic(Haptics.ImpactFeedbackStyle.Heavy);
+        // await safeHaptic(Haptics.ImpactFeedbackStyle.Heavy);
       } else {
-        // Reorder: compute new order for all top-level tasks
-        const topLevel = tasks.filter(t => !t.parent_task_id);
-        const activeIndex = topLevel.findIndex(t => t.id === activeId);
-        let targetIndex = topLevel.findIndex(t => t.id === hoveredId);
+        // Re-fetch fresh data to ensure we have the correct indices before calculating reorder
+        // (Optimistic update handles the UI, this handles the DB)
 
-        if (activeIndex === -1 || targetIndex === -1) {
-          dragStateRef.current = initialDragState;
-          setDragState(initialDragState);
-          lastHoveredIdRef.current = null;
-          return;
+        // Reconstruct the ordered list of IDs for the affecting list (top-level or child list)
+        // For simplicity in this implementation, we re-use the 'newTasks' structure we just built
+        // to determine the new order_index for everyone in that list.
+
+        // Flatten the list to find where the active task ended up
+        let updatedList: any[] = [];
+
+        // Check if it's now top-level
+        if (newTasks.find((t: any) => t.id === activeId)) {
+            updatedList = newTasks;
+        } else {
+            // Check children
+             for (const parent of newTasks) {
+                if (parent.children && parent.children.find((c: any) => c.id === activeId)) {
+                    updatedList = parent.children;
+                    break;
+                }
+            }
         }
 
-        // Remove active from list
-        const reordered = [...topLevel];
-        const [moved] = reordered.splice(activeIndex, 1);
-
-        // Recalculate target index after removal
-        targetIndex = reordered.findIndex(t => t.id === hoveredId);
-        const insertIndex = hoveredAction === 'reorder-above' ? targetIndex : targetIndex + 1;
-        reordered.splice(insertIndex, 0, moved);
-
-        const orderedIds = reordered.map((t, i) => ({
+        const orderedIds = updatedList.map((t, i) => ({
           id: t.id,
           order_index: i,
           parent_task_id: t.parent_task_id || null,
         }));
 
         await reorderTasks(loopId, orderedIds);
-        await safeHaptic(Haptics.ImpactFeedbackStyle.Light);
+        // await safeHaptic(Haptics.ImpactFeedbackStyle.Light);
       }
-
+    } catch (_error) {
+      // console.error('Error completing drag:', _error);
       await loadLoopData();
-    } catch (error) {
-      console.error('Error completing drag:', error);
     }
-
-    dragStateRef.current = initialDragState;
-    setDragState(initialDragState);
-    lastHoveredIdRef.current = null;
-  }, [tasks, loopId, loadLoopData, safeHaptic]);
+  }, [tasks, loopId, loadLoopData, safeHaptic, onOptimisticUpdate]);
 
   const cancelDrag = useCallback(() => {
     dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     lastHoveredIdRef.current = null;
   }, []);
+
+  // Helper to calculate visual shift for a task
+  const getVerticalShift = useCallback((taskId: string, index: number): number => {
+    const { activeId, activeIndex, hoveredId, hoveredAction } = dragStateRef.current;
+    
+    if (!activeId || !hoveredId || !activeId) return 0;
+    
+    // If this is the active card, it doesn't shift (it drags)
+    if (taskId === activeId) return 0;
+    
+    // If nesting, no shift
+    if (hoveredAction === 'nest') return 0;
+
+    // We need the height of the active card to know how much to shift
+    const activeLayout = cardLayoutsRef.current.get(activeId);
+    if (!activeLayout) return 0;
+    
+    const shiftAmount = activeLayout.height;
+
+    // Find the index of the hovered item
+    // Note: We need to know if we are looking at top-level or subtasks
+    // For now, we assume we are reordering the list that 'tasks' represents.
+    // If we are mixing top-level and subtasks in the same visual list, this needs to be smarter.
+    // Assuming 'tasks' passed to this hook is the linear list of items being rendered.
+    
+    const hoveredIndex = tasks.findIndex(t => t.id === hoveredId);
+    if (hoveredIndex === -1) return 0;
+
+    // Dragging Down
+    if (activeIndex < hoveredIndex) {
+        // Items between active and hovered should shift UP
+        // If reorder-below: shift items up to and including hoveredIndex
+        // If reorder-above: shift items up to hoveredIndex - 1
+        
+        const limitIndex = hoveredAction === 'reorder-below' ? hoveredIndex : hoveredIndex - 1;
+        
+        if (index > activeIndex && index <= limitIndex) {
+            return -shiftAmount;
+        }
+    } 
+    // Dragging Up
+    else if (activeIndex > hoveredIndex) {
+        // Items between hovered and active should shift DOWN
+        // If reorder-above: shift items from hoveredIndex
+        // If reorder-below: shift items from hoveredIndex + 1
+        
+        const startIndex = hoveredAction === 'reorder-above' ? hoveredIndex : hoveredIndex + 1;
+        
+        if (index >= startIndex && index < activeIndex) {
+            return shiftAmount;
+        }
+    }
+    
+    return 0;
+  }, [tasks]);
 
   return {
     dragState,
@@ -202,5 +349,6 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
     handleDragEnd,
     cancelDrag,
     registerLayout,
+    getVerticalShift,
   };
 }

@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 import { TaskWithDetails, Task } from '../../types/loop';
 import { DraggableTaskCard } from './DraggableTaskCard';
 import { useDragReorder } from '../../hooks/useDragReorder';
-
 
 interface DraggableTaskListProps {
   tasks: TaskWithDetails[];
@@ -15,6 +15,7 @@ interface DraggableTaskListProps {
   onSubtaskChange: () => void;
   loadLoopData: () => Promise<any>;
   colors: any;
+  onOptimisticUpdate?: (tasks: TaskWithDetails[]) => void;
 }
 
 export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
@@ -27,6 +28,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
   onSubtaskChange,
   loadLoopData,
   colors,
+  onOptimisticUpdate,
 }) => {
   const {
     dragState,
@@ -34,7 +36,8 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
     handleDragMove,
     handleDragEnd,
     registerLayout,
-  } = useDragReorder({ tasks, loopId, loadLoopData });
+    getVerticalShift
+  } = useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate });
 
   const handleRegisterLayout = useCallback(
     (id: string, layout: { y: number; height: number }) => {
@@ -61,9 +64,10 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
         const isShelved = task.completed;
         const isDragging = dragState.activeId === task.id;
         const isDropTarget = dragState.hoveredId === task.id;
+        const verticalShift = getVerticalShift(task.id, index);
 
         return (
-          <View key={task.id}>
+          <View key={task.id} style={{ zIndex: isDragging ? 100 : 1 }}>
             {/* Trail connector */}
             {showTrail && (
               <View style={styles.taskCardWrapper}>
@@ -92,6 +96,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                 isDropTarget={isDropTarget}
                 isNested={false}
                 isPracticeLoop={isPracticeLoop}
+                verticalShift={verticalShift}
                 onDragStart={handleDragStart}
                 onDragMove={handleDragMove}
                 onDragEnd={handleDragEnd}
@@ -110,6 +115,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                   {task.children.map((child, childIndex) => {
                     const childIsDragging = dragState.activeId === child.id;
                     const childIsDropTarget = dragState.hoveredId === child.id;
+                    const childVerticalShift = getVerticalShift(child.id, childIndex); // Note: Indexing for children needs care if list is flattened in getVerticalShift logic
 
                     return (
                       <DraggableTaskCard
@@ -122,6 +128,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                         isDropTarget={childIsDropTarget}
                         isNested={true}
                         isPracticeLoop={isPracticeLoop}
+                        verticalShift={childVerticalShift} // Currently logic might calculate 0 if it assumes flattened list.
                         onDragStart={handleDragStart}
                         onDragMove={handleDragMove}
                         onDragEnd={handleDragEnd}

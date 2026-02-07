@@ -19,6 +19,7 @@ interface DraggableTaskCardProps {
   isDropTarget: boolean;
   isNested: boolean;
   isPracticeLoop: boolean;
+  verticalShift?: number;
   onDragStart: (id: string, index: number) => void;
   onDragMove: (translationY: number) => void;
   onDragEnd: () => void;
@@ -37,6 +38,7 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   isDropTarget,
   isNested,
   isPracticeLoop,
+  verticalShift = 0,
   onDragStart,
   onDragMove,
   onDragEnd,
@@ -46,11 +48,21 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   onLayout,
 }) => {
   const translateY = useSharedValue(0);
+  const shiftY = useSharedValue(0);
   const scale = useSharedValue(1);
   const zIndex = useSharedValue(0);
   const isDragActive = useSharedValue(false);
 
+  // Sync shiftY with prop
+  // We use a useEffect or useAnimatedReaction equivalent logic
+  // But since proper react-native-reanimated usage inside FC usually relies on dependency array for shared values updates 
+  // if they come from props, we can set it here.
+  React.useEffect(() => {
+    shiftY.value = withSpring(verticalShift, { damping: 20, stiffness: 150 });
+  }, [verticalShift]);
+
   const triggerDragStart = useCallback(() => {
+    // Determine vibration based on platform
     onDragStart(task.id, index);
   }, [onDragStart, task.id, index]);
 
@@ -64,11 +76,11 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
 
   // Single pan gesture that activates after long press
   const panGesture = Gesture.Pan()
-    .activateAfterLongPress(400)
+    .activateAfterLongPress(300)
     .onStart(() => {
       'worklet';
       isDragActive.value = true;
-      scale.value = withSpring(0.95, { damping: 15, stiffness: 200 });
+      scale.value = withSpring(1.05, { damping: 15, stiffness: 200 });
       zIndex.value = 1000;
       runOnJS(triggerDragStart)();
     })
@@ -100,7 +112,7 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
 
   const animatedDragStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateY: translateY.value },
+      { translateY: translateY.value + shiftY.value },
       { scale: scale.value },
     ],
     zIndex: zIndex.value,
