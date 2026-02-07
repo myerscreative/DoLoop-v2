@@ -91,7 +91,7 @@ const linking = {
 };
 
 export default function App() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
     Inter_700Bold,
@@ -100,7 +100,23 @@ export default function App() {
     Outfit_700Bold,
   });
 
-  console.log("[App] Fonts loaded:", fontsLoaded);
+  // Timeout: proceed without custom fonts after 5s (Safari can stall on font loading)
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  useEffect(() => {
+    if (fontsLoaded || fontError) return;
+    const timer = setTimeout(() => {
+      console.warn("[App] Font loading timed out after 5s, proceeding with system fonts");
+      setFontTimedOut(true);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded, fontError]);
+
+  if (fontError) {
+    console.warn("[App] Font loading error:", fontError);
+  }
+
+  const fontsReady = fontsLoaded || fontError || fontTimedOut;
+  console.log("[App] Fonts loaded:", fontsLoaded, "error:", !!fontError, "timedOut:", fontTimedOut);
 
   // ==== Navigation state persistence ====
   const NAV_STATE_KEY = "NAV_STATE_v1";
@@ -150,7 +166,7 @@ export default function App() {
     }
   }, []);
 
-  if (!fontsLoaded || !isNavReady) {
+  if (!fontsReady || !isNavReady) {
     console.log("[App] Rendering Loading Placeholder (null)");
     return null; // or loading spinner
   }
