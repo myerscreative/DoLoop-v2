@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { TaskWithDetails, Task } from '../../types/loop';
@@ -39,18 +39,47 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
     getVerticalShift
   } = useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate });
 
-  const handleRegisterLayout = useCallback(
-    (id: string, layout: { y: number; height: number }) => {
+  // Track wrapper Y positions (relative to list container) for correct hit detection.
+  // Card onLayout reports y relative to its immediate parent (~0), which is useless
+  // for comparing cards across the list. Wrapper onLayout gives correct y in container coords.
+  const wrapperYRef = useRef<Map<string, number>>(new Map());
+  const cardLayoutCacheRef = useRef<Map<string, { y: number; height: number }>>(new Map());
+
+  const registerTaskLayout = useCallback(
+    (id: string) => {
+      const cached = cardLayoutCacheRef.current.get(id);
+      if (!cached) return;
+
       const task = tasks.find(t => t.id === id) ||
         tasks.flatMap(t => t.children || []).find(c => c.id === id);
+
+      // For top-level tasks, use the wrapper's Y (relative to list container)
+      // For children, their onLayout Y is relative to their shared childrenList parent,
+      // which is correct for sibling comparison within the same parent.
+      let y = cached.y;
+      if (!task?.parent_task_id) {
+        const wrapperY = wrapperYRef.current.get(id);
+        if (wrapperY !== undefined) {
+          y = wrapperY;
+        }
+      }
+
       registerLayout(
         id,
-        layout,
+        { y, height: cached.height },
         task?.parent_task_id || null,
         (task?.children?.length || 0) > 0
       );
     },
     [tasks, registerLayout]
+  );
+
+  const handleRegisterLayout = useCallback(
+    (id: string, layout: { y: number; height: number }) => {
+      cardLayoutCacheRef.current.set(id, layout);
+      registerTaskLayout(id);
+    },
+    [registerTaskLayout]
   );
 
 
@@ -67,7 +96,14 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
         const verticalShift = getVerticalShift(task.id, index);
 
         return (
-          <View key={task.id} style={{ zIndex: isDragging ? 100 : 1 }}>
+          <View
+            key={task.id}
+            style={{ zIndex: isDragging ? 100 : 1 }}
+            onLayout={(event) => {
+              wrapperYRef.current.set(task.id, event.nativeEvent.layout.y);
+              registerTaskLayout(task.id);
+            }}
+          >
             {/* Trail connector */}
             {showTrail && (
               <View style={styles.taskCardWrapper}>
