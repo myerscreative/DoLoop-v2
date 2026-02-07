@@ -31,7 +31,7 @@ import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+import { getUserTags, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
@@ -90,7 +90,11 @@ export const LoopDetailScreen: React.FC = () => {
           *,
           assigned_member:assigned_to (
             user_id
-          )
+          ),
+          task_tags (
+            tags (*)
+          ),
+          attachments (*)
         `)
         .eq('loop_id', loopId)
         .order('order_index', { ascending: true })
@@ -102,6 +106,8 @@ export const LoopDetailScreen: React.FC = () => {
       const allTasks = tasks || [];
       const topLevelTasks = allTasks.filter((t: any) => !t.parent_task_id);
       const childTaskMap = new Map<string, any[]>();
+      
+      // First pass: map children to parents
       for (const task of allTasks) {
         if (task.parent_task_id) {
           const siblings = childTaskMap.get(task.parent_task_id) || [];
@@ -110,41 +116,35 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      // Hydrate top-level tasks with children, tags, attachments
-      const tasksWithDetails = await Promise.all(
-        topLevelTasks.map(async (task: any) => {
-          const childTasks = childTaskMap.get(task.id) || [];
-          const [tags, attachments] = await Promise.all([
-            getTaskTags(task.id),
-            getTaskAttachments(task.id),
-          ]);
-
-          // Hydrate children with their own tags/attachments
-          const hydratedChildren = await Promise.all(
-            childTasks.map(async (child: any) => {
-              const [childTags, childAttachments] = await Promise.all([
-                getTaskTags(child.id),
-                getTaskAttachments(child.id),
-              ]);
-              return {
-                ...child,
-                tag_details: childTags,
-                attachments: childAttachments,
-                assigned_user_id: child.assigned_member?.user_id,
-              };
-            })
-          );
-
+      // Hydrate from embedded data (no more N+1 queries)
+      const tasksWithDetails = topLevelTasks.map((task: any) => {
+        // Extract tags from junction table
+        const tags = task.task_tags?.map((tt: any) => tt.tags).filter(Boolean) || [];
+        const attachments = task.attachments || [];
+        
+        const childTasks = childTaskMap.get(task.id) || [];
+        
+        const hydratedChildren = childTasks.map((child: any) => {
+          const childTags = child.task_tags?.map((tt: any) => tt.tags).filter(Boolean) || [];
+          const childAttachments = child.attachments || [];
+          
           return {
-            ...task,
-            tag_details: tags,
-            subtasks: hydratedChildren,  // backward compat with ExpandableTaskCard
-            children: hydratedChildren,
-            attachments,
-            assigned_user_id: task.assigned_member?.user_id,
+            ...child,
+            tag_details: childTags,
+            attachments: childAttachments,
+            assigned_user_id: child.assigned_member?.user_id,
           };
-        })
-      );
+        });
+
+        return {
+          ...task,
+          tag_details: tags,
+          subtasks: hydratedChildren,
+          children: hydratedChildren,
+          attachments,
+          assigned_user_id: task.assigned_member?.user_id,
+        };
+      });
 
       // Count only top-level tasks for loop progress
       const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
