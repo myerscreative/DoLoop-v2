@@ -36,6 +36,7 @@ interface UseDragReorderProps {
 
 export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderProps) {
   const [dragState, setDragState] = useState<DragState>(initialDragState);
+  const dragStateRef = useRef<DragState>(initialDragState);
   const cardLayoutsRef = useRef<Map<string, CardLayout>>(new Map());
   const lastHoveredIdRef = useRef<string | null>(null);
 
@@ -50,17 +51,19 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
   }, []);
 
   const handleDragStart = useCallback((id: string, index: number) => {
-    setDragState({
+    const newState = {
       activeId: id,
       activeIndex: index,
       hoveredId: null,
       hoveredAction: null,
-    });
+    };
+    dragStateRef.current = newState;
+    setDragState(newState);
     safeHaptic(Haptics.ImpactFeedbackStyle.Medium);
   }, [safeHaptic]);
 
   const handleDragMove = useCallback((translationY: number) => {
-    const { activeId } = dragState;
+    const { activeId } = dragStateRef.current;
     if (!activeId) return;
 
     const activeLayout = cardLayoutsRef.current.get(activeId);
@@ -114,19 +117,24 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
       safeHaptic(Haptics.ImpactFeedbackStyle.Light);
     }
 
-    if (closestId !== dragState.hoveredId || closestAction !== dragState.hoveredAction) {
-      setDragState(prev => ({
-        ...prev,
+    if (closestId !== dragStateRef.current.hoveredId || closestAction !== dragStateRef.current.hoveredAction) {
+      const newState = {
+        ...dragStateRef.current,
         hoveredId: closestId,
         hoveredAction: closestAction,
-      }));
+      };
+      dragStateRef.current = newState;
+      setDragState(newState);
     }
-  }, [dragState, tasks, safeHaptic]);
+  }, [tasks, safeHaptic]);
 
   const handleDragEnd = useCallback(async () => {
-    const { activeId, hoveredId, hoveredAction } = dragState;
+    // Read from ref to avoid stale closure — React may not have
+    // re-rendered since the last handleDragMove setState call.
+    const { activeId, hoveredId, hoveredAction } = dragStateRef.current;
 
     if (!activeId || !hoveredId || !hoveredAction) {
+      dragStateRef.current = initialDragState;
       setDragState(initialDragState);
       lastHoveredIdRef.current = null;
       return;
@@ -146,6 +154,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
         let targetIndex = topLevel.findIndex(t => t.id === hoveredId);
 
         if (activeIndex === -1 || targetIndex === -1) {
+          dragStateRef.current = initialDragState;
           setDragState(initialDragState);
           lastHoveredIdRef.current = null;
           return;
@@ -175,11 +184,13 @@ export function useDragReorder({ tasks, loopId, loadLoopData }: UseDragReorderPr
       console.error('Error completing drag:', error);
     }
 
+    dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     lastHoveredIdRef.current = null;
-  }, [dragState, tasks, loopId, loadLoopData, safeHaptic]);
+  }, [tasks, loopId, loadLoopData, safeHaptic]);
 
   const cancelDrag = useCallback(() => {
+    dragStateRef.current = initialDragState;
     setDragState(initialDragState);
     lastHoveredIdRef.current = null;
   }, []);
