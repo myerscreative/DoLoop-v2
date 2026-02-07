@@ -103,33 +103,41 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
       const targetBottom = layout.y + layout.height;
       const targetCenter = layout.y + layout.height / 2;
 
-      console.log(`Checking ${id}: top=${targetTop}, bottom=${targetBottom}, activeCenterY=${activeCenterY}, overlaps=${activeCenterY >= targetTop && activeCenterY <= targetBottom}`);
-
-      // Skip if not strictly overlapping vertically with the target's bounds
-      if (activeCenterY < targetTop || activeCenterY > targetBottom) return;
-
+      // Find CLOSEST item by distance to center, not strict overlap
       const distance = Math.abs(activeCenterY - targetCenter);
+
+      console.log(`Checking ${id}: center=${targetCenter}, activeCenterY=${activeCenterY}, distance=${distance}`);
+
       if (distance >= closestDistance) return;
 
       closestDistance = distance;
       closestId = id;
 
-      // Determine action based on vertical position within target
-      const relativePos = (activeCenterY - targetTop) / layout.height;
-
-      // Can we nest here?
-      const canNest =
-        !layout.parentTaskId &&                  // Target is top-level
-        !activeTask?.parent_task_id &&           // Active is top-level
-        !(activeTask?.children && activeTask.children.length > 0) && // Active has no children
-        relativePos >= 0.3 && relativePos <= 0.7; // Center zone
-
-      if (canNest) {
-        closestAction = 'nest';
-      } else if (relativePos < 0.5) {
+      // Determine action based on vertical position relative to target
+      if (activeCenterY < targetTop) {
+        // Above the target
         closestAction = 'reorder-above';
-      } else {
+      } else if (activeCenterY > targetBottom) {
+        // Below the target
         closestAction = 'reorder-below';
+      } else {
+        // Inside the target bounds
+        const relativePos = (activeCenterY - targetTop) / layout.height;
+
+        // Can we nest here?
+        const canNest =
+          !layout.parentTaskId &&                  // Target is top-level
+          !activeTask?.parent_task_id &&           // Active is top-level
+          !(activeTask?.children && activeTask.children.length > 0) && // Active has no children
+          relativePos >= 0.3 && relativePos <= 0.7; // Center zone
+
+        if (canNest) {
+          closestAction = 'nest';
+        } else if (relativePos < 0.5) {
+          closestAction = 'reorder-above';
+        } else {
+          closestAction = 'reorder-below';
+        }
       }
     });
 
@@ -351,6 +359,8 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     const hoveredGlobalIndex = hoveredItem.globalIndex;
     const currentGlobalIndex = currentItem.globalIndex;
 
+    console.log(`getVerticalShift for ${taskId}: active=${activeGlobalIndex}, hovered=${hoveredGlobalIndex}, current=${currentGlobalIndex}, action=${hoveredAction}`);
+
     // Dragging Down
     if (activeGlobalIndex < hoveredGlobalIndex) {
         // Items between active and hovered should shift UP
@@ -360,6 +370,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
         const limitIndex = hoveredAction === 'reorder-below' ? hoveredGlobalIndex : hoveredGlobalIndex - 1;
 
         if (currentGlobalIndex > activeGlobalIndex && currentGlobalIndex <= limitIndex) {
+            console.log(`  → Shifting ${taskId} UP by ${-shiftAmount}px`);
             return -shiftAmount;
         }
     }
@@ -372,10 +383,12 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
         const startIndex = hoveredAction === 'reorder-above' ? hoveredGlobalIndex : hoveredGlobalIndex + 1;
 
         if (currentGlobalIndex >= startIndex && currentGlobalIndex < activeGlobalIndex) {
+            console.log(`  → Shifting ${taskId} DOWN by ${shiftAmount}px`);
             return shiftAmount;
         }
     }
 
+    console.log(`  → No shift for ${taskId}`);
     return 0;
   }, [tasks]);
 
