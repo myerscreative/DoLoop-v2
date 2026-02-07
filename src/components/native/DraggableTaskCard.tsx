@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { LayoutChangeEvent } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { LayoutChangeEvent, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -21,7 +21,7 @@ interface DraggableTaskCardProps {
   isPracticeLoop: boolean;
   verticalShift?: number;
   onDragStart: (id: string, index: number) => void;
-  onDragMove: (translationY: number) => void;
+  onDragMove: (absoluteY: number) => void;
   onDragEnd: () => void;
   onPress: () => void;
   onToggle: () => void;
@@ -52,22 +52,28 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   const scale = useSharedValue(1);
   const zIndex = useSharedValue(0);
   const isDragActive = useSharedValue(false);
+  const viewRef = useRef<View>(null);
 
   // Sync shiftY with prop
   // We use a useEffect or useAnimatedReaction equivalent logic
-  // But since proper react-native-reanimated usage inside FC usually relies on dependency array for shared values updates 
+  // But since proper react-native-reanimated usage inside FC usually relies on dependency array for shared values updates
   // if they come from props, we can set it here.
   React.useEffect(() => {
     shiftY.value = withSpring(verticalShift, { damping: 20, stiffness: 150 });
   }, [verticalShift]);
 
   const triggerDragStart = useCallback(() => {
-    // Determine vibration based on platform
+    // Refresh absolute position before drag starts
+    if (viewRef.current) {
+      viewRef.current.measureInWindow((x, y, width, height) => {
+        onLayout(task.id, { y, height });
+      });
+    }
     onDragStart(task.id, index);
-  }, [onDragStart, task.id, index]);
+  }, [onDragStart, onLayout, task.id, index]);
 
-  const triggerDragMove = useCallback((ty: number) => {
-    onDragMove(ty);
+  const triggerDragMove = useCallback((absoluteY: number) => {
+    onDragMove(absoluteY);
   }, [onDragMove]);
 
   const triggerDragEnd = useCallback(() => {
@@ -88,7 +94,7 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       'worklet';
       if (!isDragActive.value) return;
       translateY.value = event.translationY;
-      runOnJS(triggerDragMove)(event.translationY);
+      runOnJS(triggerDragMove)(event.absoluteY);
     })
     .onEnd(() => {
       'worklet';
@@ -120,13 +126,19 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   }));
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
-    const { y, height } = event.nativeEvent.layout;
-    onLayout(task.id, { y, height });
+    const { height } = event.nativeEvent.layout;
+    // Measure absolute position on screen instead of relative position
+    if (viewRef.current) {
+      viewRef.current.measureInWindow((x, y, width, measuredHeight) => {
+        onLayout(task.id, { y, height: measuredHeight || height });
+      });
+    }
   }, [onLayout, task.id]);
 
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View
+        ref={viewRef}
         style={animatedDragStyle}
         onLayout={handleLayout}
       >

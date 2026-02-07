@@ -63,7 +63,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     safeHaptic(Haptics.ImpactFeedbackStyle.Medium);
   }, [safeHaptic]);
 
-  const handleDragMove = useCallback((translationY: number) => {
+  const handleDragMove = useCallback((absoluteY: number) => {
     const { activeId } = dragStateRef.current;
     if (!activeId) return;
 
@@ -75,7 +75,8 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
 
     if (!activeTask) return;
 
-    const activeCenterY = activeLayout.y + activeLayout.height / 2 + translationY;
+    // Use absolute Y position from gesture directly
+    const activeCenterY = absoluteY;
 
     let closestId: string | null = null;
     let closestAction: HoverAction = null;
