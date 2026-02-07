@@ -21,7 +21,7 @@ interface DraggableTaskCardProps {
   isPracticeLoop: boolean;
   verticalShift?: number;
   onDragStart: (id: string, index: number) => void;
-  onDragMove: (absoluteY: number) => void;
+  onDragMove: (translationY: number) => void;
   onDragEnd: () => void;
   onPress: () => void;
   onToggle: () => void;
@@ -72,8 +72,8 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
     onDragStart(task.id, index);
   }, [onDragStart, onLayout, task.id, index]);
 
-  const triggerDragMove = useCallback((absoluteY: number) => {
-    onDragMove(absoluteY);
+  const triggerDragMove = useCallback((translationY: number) => {
+    onDragMove(translationY);
   }, [onDragMove]);
 
   const triggerDragEnd = useCallback(() => {
@@ -94,7 +94,7 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       'worklet';
       if (!isDragActive.value) return;
       translateY.value = event.translationY;
-      runOnJS(triggerDragMove)(event.absoluteY);
+      runOnJS(triggerDragMove)(event.translationY);
     })
     .onEnd(() => {
       'worklet';
