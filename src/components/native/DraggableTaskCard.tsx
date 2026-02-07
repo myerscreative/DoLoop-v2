@@ -1,11 +1,10 @@
 import React, { useCallback } from 'react';
-import { Platform, LayoutChangeEvent } from 'react-native';
+import { LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
   runOnJS,
 } from 'react-native-reanimated';
 import { TaskWithDetails } from '../../types/loop';
@@ -96,8 +95,8 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
       isDragActive.value = false;
     });
 
-  // On web, disable drag gesture
-  const gesture = Platform.OS === 'web' ? Gesture.Pan().enabled(false) : panGesture;
+  // Use the same gesture for all platforms
+  const gesture = panGesture;
 
   const animatedDragStyle = useAnimatedStyle(() => ({
     transform: [

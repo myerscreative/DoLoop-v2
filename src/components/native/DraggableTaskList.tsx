@@ -1,10 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { View, StyleSheet } from 'react-native';
 import { TaskWithDetails, Task } from '../../types/loop';
 import { DraggableTaskCard } from './DraggableTaskCard';
 import { useDragReorder } from '../../hooks/useDragReorder';
-import { reorderTasks } from '../../lib/taskHelpers';
+
 
 interface DraggableTaskListProps {
   tasks: TaskWithDetails[];
@@ -51,24 +50,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
     [tasks, registerLayout]
   );
 
-  const isWeb = Platform.OS === 'web';
 
-  const handleWebReorder = useCallback(async (taskIndex: number, direction: 'up' | 'down') => {
-    const swapIndex = direction === 'up' ? taskIndex - 1 : taskIndex + 1;
-    if (swapIndex < 0 || swapIndex >= tasks.length) return;
-
-    const reordered = [...tasks];
-    [reordered[taskIndex], reordered[swapIndex]] = [reordered[swapIndex], reordered[taskIndex]];
-
-    const orderedIds = reordered.map((t, i) => ({
-      id: t.id,
-      order_index: i,
-      parent_task_id: t.parent_task_id || null,
-    }));
-
-    await reorderTasks(loopId, orderedIds);
-    await loadLoopData();
-  }, [tasks, loopId, loadLoopData]);
 
   const firstIncompleteIndex = tasks.findIndex(t => !t.completed);
 
@@ -99,45 +81,25 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
               </View>
             )}
 
-            {/* Top-level task with optional web reorder buttons */}
-            <View style={isWeb ? styles.webTaskRow : undefined}>
-              {isWeb && (
-                <View style={styles.webReorderButtons}>
-                  <TouchableOpacity
-                    onPress={() => handleWebReorder(index, 'up')}
-                    disabled={index === 0}
-                    style={[styles.webReorderBtn, index === 0 && styles.webReorderBtnDisabled]}
-                  >
-                    <Ionicons name="chevron-up" size={18} color={index === 0 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleWebReorder(index, 'down')}
-                    disabled={index === tasks.length - 1}
-                    style={[styles.webReorderBtn, index === tasks.length - 1 && styles.webReorderBtnDisabled]}
-                  >
-                    <Ionicons name="chevron-down" size={18} color={index === tasks.length - 1 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
-                  </TouchableOpacity>
-                </View>
-              )}
-              <View style={isWeb ? styles.webTaskCardFlex : undefined}>
-                <DraggableTaskCard
-                  task={task}
-                  index={index}
-                  isActive={isActive}
-                  isShelved={isShelved}
-                  isDragging={isDragging}
-                  isDropTarget={isDropTarget}
-                  isNested={false}
-                  isPracticeLoop={isPracticeLoop}
-                  onDragStart={handleDragStart}
-                  onDragMove={handleDragMove}
-                  onDragEnd={handleDragEnd}
-                  onPress={() => onEditTask(task)}
-                  onToggle={() => onToggleTask(task)}
-                  onSubtaskChange={onSubtaskChange}
-                  onLayout={handleRegisterLayout}
-                />
-              </View>
+            {/* Top-level task */}
+            <View>
+              <DraggableTaskCard
+                task={task}
+                index={index}
+                isActive={isActive}
+                isShelved={isShelved}
+                isDragging={isDragging}
+                isDropTarget={isDropTarget}
+                isNested={false}
+                isPracticeLoop={isPracticeLoop}
+                onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
+                onDragEnd={handleDragEnd}
+                onPress={() => onEditTask(task)}
+                onToggle={() => onToggleTask(task)}
+                onSubtaskChange={onSubtaskChange}
+                onLayout={handleRegisterLayout}
+              />
             </View>
 
             {/* Child tasks (nested under parent) */}
@@ -209,25 +171,5 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingLeft: 8,
   },
-  webTaskRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-  },
-  webTaskCardFlex: {
-    flex: 1,
-  },
-  webReorderButtons: {
-    marginRight: 4,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 2,
-  },
-  webReorderBtn: {
-    padding: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  webReorderBtnDisabled: {
-    opacity: 0.3,
-  },
+
 });
