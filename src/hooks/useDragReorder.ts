@@ -290,55 +290,75 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
   // Helper to calculate visual shift for a task
   const getVerticalShift = useCallback((taskId: string, index: number): number => {
     const { activeId, activeIndex, hoveredId, hoveredAction } = dragStateRef.current;
-    
-    if (!activeId || !hoveredId || !activeId) return 0;
-    
+
+    if (!activeId || !hoveredId) return 0;
+
     // If this is the active card, it doesn't shift (it drags)
     if (taskId === activeId) return 0;
-    
+
     // If nesting, no shift
     if (hoveredAction === 'nest') return 0;
 
     // We need the height of the active card to know how much to shift
     const activeLayout = cardLayoutsRef.current.get(activeId);
     if (!activeLayout) return 0;
-    
+
     const shiftAmount = activeLayout.height;
 
-    // Find the index of the hovered item
-    // Note: We need to know if we are looking at top-level or subtasks
-    // For now, we assume we are reordering the list that 'tasks' represents.
-    // If we are mixing top-level and subtasks in the same visual list, this needs to be smarter.
-    // Assuming 'tasks' passed to this hook is the linear list of items being rendered.
-    
-    const hoveredIndex = tasks.findIndex(t => t.id === hoveredId);
-    if (hoveredIndex === -1) return 0;
+    // Create a flattened list of all tasks with their global indices
+    // This handles both top-level and nested tasks
+    const flattenedTasks: Array<{ id: string; globalIndex: number; parentId: string | null }> = [];
+    let globalIdx = 0;
+
+    tasks.forEach(task => {
+      flattenedTasks.push({ id: task.id, globalIndex: globalIdx++, parentId: null });
+      if (task.children && task.children.length > 0) {
+        task.children.forEach(child => {
+          flattenedTasks.push({ id: child.id, globalIndex: globalIdx++, parentId: task.id });
+        });
+      }
+    });
+
+    // Find the active and hovered items in the flattened list
+    const activeItem = flattenedTasks.find(t => t.id === activeId);
+    const hoveredItem = flattenedTasks.find(t => t.id === hoveredId);
+    const currentItem = flattenedTasks.find(t => t.id === taskId);
+
+    if (!activeItem || !hoveredItem || !currentItem) return 0;
+
+    // Only shift items that are in the same parent context as the active item
+    // (This prevents shifts in different nesting levels)
+    if (currentItem.parentId !== activeItem.parentId) return 0;
+
+    const activeGlobalIndex = activeItem.globalIndex;
+    const hoveredGlobalIndex = hoveredItem.globalIndex;
+    const currentGlobalIndex = currentItem.globalIndex;
 
     // Dragging Down
-    if (activeIndex < hoveredIndex) {
+    if (activeGlobalIndex < hoveredGlobalIndex) {
         // Items between active and hovered should shift UP
         // If reorder-below: shift items up to and including hoveredIndex
         // If reorder-above: shift items up to hoveredIndex - 1
-        
-        const limitIndex = hoveredAction === 'reorder-below' ? hoveredIndex : hoveredIndex - 1;
-        
-        if (index > activeIndex && index <= limitIndex) {
+
+        const limitIndex = hoveredAction === 'reorder-below' ? hoveredGlobalIndex : hoveredGlobalIndex - 1;
+
+        if (currentGlobalIndex > activeGlobalIndex && currentGlobalIndex <= limitIndex) {
             return -shiftAmount;
         }
-    } 
+    }
     // Dragging Up
-    else if (activeIndex > hoveredIndex) {
+    else if (activeGlobalIndex > hoveredGlobalIndex) {
         // Items between hovered and active should shift DOWN
         // If reorder-above: shift items from hoveredIndex
         // If reorder-below: shift items from hoveredIndex + 1
-        
-        const startIndex = hoveredAction === 'reorder-above' ? hoveredIndex : hoveredIndex + 1;
-        
-        if (index >= startIndex && index < activeIndex) {
+
+        const startIndex = hoveredAction === 'reorder-above' ? hoveredGlobalIndex : hoveredGlobalIndex + 1;
+
+        if (currentGlobalIndex >= startIndex && currentGlobalIndex < activeGlobalIndex) {
             return shiftAmount;
         }
     }
-    
+
     return 0;
   }, [tasks]);
 
