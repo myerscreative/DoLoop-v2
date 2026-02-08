@@ -30,14 +30,23 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
   colors,
   onOptimisticUpdate,
 }) => {
+  const containerRef = React.useRef<View>(null);
+
   const {
     dragState,
     handleDragStart,
     handleDragMove,
     handleDragEnd,
     registerLayout,
-    getVerticalShift
+    getVerticalShift,
+    setContainerRef
   } = useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate });
+
+  React.useEffect(() => {
+    if (containerRef.current) {
+      setContainerRef(containerRef.current);
+    }
+  }, [setContainerRef]);
 
   const handleRegisterLayout = useCallback(
     (id: string, layout: { y: number; height: number }) => {
@@ -58,7 +67,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
   const firstIncompleteIndex = tasks.findIndex(t => !t.completed);
 
   return (
-    <View style={styles.container}>
+    <View ref={containerRef} style={styles.container}>
       {tasks.map((task, index) => {
         const isActive = index === firstIncompleteIndex;
         const isShelved = task.completed;
@@ -104,6 +113,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                 onToggle={() => onToggleTask(task)}
                 onSubtaskChange={onSubtaskChange}
                 onLayout={handleRegisterLayout}
+                containerRef={containerRef}
               />
             </View>
 
@@ -136,6 +146,7 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                         onToggle={() => onToggleTask(child)}
                         onSubtaskChange={onSubtaskChange}
                         onLayout={handleRegisterLayout}
+                        containerRef={containerRef}
                       />
                     );
                   })}

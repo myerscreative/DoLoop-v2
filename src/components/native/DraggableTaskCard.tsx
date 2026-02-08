@@ -27,6 +27,7 @@ interface DraggableTaskCardProps {
   onToggle: () => void;
   onSubtaskChange: () => void;
   onLayout: (id: string, layout: { y: number; height: number }) => void;
+  containerRef?: React.RefObject<View>;
 }
 
 export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
@@ -46,6 +47,7 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   onToggle,
   onSubtaskChange,
   onLayout,
+  containerRef,
 }) => {
   const translateY = useSharedValue(0);
   const shiftY = useSharedValue(0);
@@ -63,14 +65,19 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
   }, [verticalShift]);
 
   const triggerDragStart = useCallback(() => {
-    // Refresh absolute position before drag starts
-    if (viewRef.current) {
-      viewRef.current.measureInWindow((x, y, width, height) => {
-        onLayout(task.id, { y, height });
-      });
+    // Refresh position before drag starts - measure relative to container
+    if (viewRef.current && containerRef?.current) {
+      viewRef.current.measureLayout(
+        containerRef.current,
+        (x, y, width, height) => {
+          console.log(`Drag start - measuring ${task.id}: y=${y}, height=${height}`);
+          onLayout(task.id, { y, height });
+        },
+        () => console.error(`Failed to measure ${task.id}`)
+      );
     }
     onDragStart(task.id, index);
-  }, [onDragStart, onLayout, task.id, index]);
+  }, [onDragStart, onLayout, task.id, index, containerRef]);
 
   const triggerDragMove = useCallback((translationY: number) => {
     onDragMove(translationY);
@@ -127,13 +134,21 @@ export const DraggableTaskCard: React.FC<DraggableTaskCardProps> = ({
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { height } = event.nativeEvent.layout;
-    // Measure absolute position on screen instead of relative position
-    if (viewRef.current) {
-      viewRef.current.measureInWindow((x, y, width, measuredHeight) => {
-        onLayout(task.id, { y, height: measuredHeight || height });
-      });
+    // Measure position relative to container for consistent coordinate space
+    if (viewRef.current && containerRef?.current) {
+      viewRef.current.measureLayout(
+        containerRef.current,
+        (x, y, width, measuredHeight) => {
+          console.log(`Layout - measuring ${task.id}: y=${y}, height=${measuredHeight || height}`);
+          onLayout(task.id, { y, height: measuredHeight || height });
+        },
+        () => {
+          // Fallback if measureLayout fails - this shouldn't happen but just in case
+          console.warn(`measureLayout failed for ${task.id}, using fallback`);
+        }
+      );
     }
-  }, [onLayout, task.id]);
+  }, [onLayout, task.id, containerRef]);
 
   return (
     <GestureDetector gesture={gesture}>

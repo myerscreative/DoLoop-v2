@@ -40,6 +40,7 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
   const dragStateRef = useRef<DragState>(initialDragState);
   const cardLayoutsRef = useRef<Map<string, CardLayout>>(new Map());
   const lastHoveredIdRef = useRef<string | null>(null);
+  const containerRef = useRef<any>(null);
 
   const registerLayout = useCallback((id: string, layout: { y: number; height: number }, parentTaskId: string | null, hasChildren: boolean) => {
     console.log(`Registering layout for ${id}:`, { y: layout.y, height: layout.height, parentTaskId, hasChildren });
@@ -307,6 +308,10 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     lastHoveredIdRef.current = null;
   }, []);
 
+  const setContainerRef = useCallback((ref: any) => {
+    containerRef.current = ref;
+  }, []);
+
   // Helper to calculate visual shift for a task
   const getVerticalShift = useCallback((taskId: string, index: number): number => {
     const { activeId, activeIndex, hoveredId, hoveredAction } = dragStateRef.current;
@@ -400,5 +405,6 @@ export function useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate
     cancelDrag,
     registerLayout,
     getVerticalShift,
+    setContainerRef,
   };
 }
