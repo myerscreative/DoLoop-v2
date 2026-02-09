@@ -1,9 +1,15 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
+import { SortableItem, listToObject, ScrollDirection } from 'react-native-reanimated-dnd';
+import * as Haptics from 'expo-haptics';
 import { TaskWithDetails, Task } from '../../types/loop';
-import { DraggableTaskCard } from './DraggableTaskCard';
-import { useDragReorder } from '../../hooks/useDragReorder';
+import { ExpandableTaskCard } from './ExpandableTaskCard';
+import { reorderTasks } from '../../lib/taskHelpers';
+
+// Fixed height per sortable item — matches collapsed ExpandableTaskCard
+// (paddingVertical:10*2 + checkbox:24 + border:2 + gap:4 ≈ 50px, plus breathing room)
+const ITEM_HEIGHT = 56;
 
 interface DraggableTaskListProps {
   tasks: TaskWithDetails[];
@@ -18,7 +24,12 @@ interface DraggableTaskListProps {
   onOptimisticUpdate?: (tasks: TaskWithDetails[]) => void;
 }
 
-export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
+/**
+ * Inner component that owns shared values for the sortable list.
+ * Remounted via key when the task list identity changes, which resets
+ * the positions shared value cleanly.
+ */
+const SortableTaskListInner: React.FC<DraggableTaskListProps> = ({
   tasks,
   loopId,
   isPracticeLoop,
@@ -30,47 +41,80 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
   colors,
   onOptimisticUpdate,
 }) => {
-  const {
-    dragState,
-    handleDragStart,
-    handleDragMove,
-    handleDragEnd,
-    registerLayout,
-    getVerticalShift
-  } = useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate });
-
-  const handleRegisterLayout = useCallback(
-    (id: string, layout: { y: number; height: number }) => {
-      const task = tasks.find(t => t.id === id) ||
-        tasks.flatMap(t => t.children || []).find(c => c.id === id);
-      registerLayout(
-        id,
-        layout,
-        task?.parent_task_id || null,
-        (task?.children?.length || 0) > 0
-      );
-    },
-    [tasks, registerLayout]
-  );
-
-
+  // Shared values for react-native-reanimated-dnd SortableItem
+  const positions = useSharedValue(listToObject(tasks));
+  const lowerBound = useSharedValue(0);
+  const autoScrollDirection = useSharedValue<ScrollDirection>(ScrollDirection.None);
 
   const firstIncompleteIndex = tasks.findIndex(t => !t.completed);
 
+  const handleDragStart = useCallback((_id: string, _position: number) => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    async (id: string, newPosition: number) => {
+      if (Platform.OS !== 'web') {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+
+      const oldIndex = tasks.findIndex(t => t.id === id);
+      if (oldIndex === -1 || oldIndex === newPosition) return;
+
+      // Reconstruct the ordered list after the move
+      const reordered = [...tasks];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newPosition, 0, moved);
+
+      // Optimistic UI update
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate(reordered);
+      }
+
+      // Persist new order to server
+      const orderedIds = reordered.map((task, idx) => ({
+        id: task.id,
+        order_index: idx,
+        parent_task_id: task.parent_task_id || null,
+      }));
+
+      try {
+        await reorderTasks(loopId, orderedIds);
+      } catch {
+        // Revert on error by reloading
+        await loadLoopData();
+      }
+    },
+    [tasks, loopId, onOptimisticUpdate, loadLoopData],
+  );
+
+  const containerHeight = tasks.length * ITEM_HEIGHT;
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { height: containerHeight }]}>
       {tasks.map((task, index) => {
         const isActive = index === firstIncompleteIndex;
         const isShelved = task.completed;
-        const isDragging = dragState.activeId === task.id;
-        const isDropTarget = dragState.hoveredId === task.id;
-        const verticalShift = getVerticalShift(task.id, index);
+        const childCount = task.children?.length || 0;
 
         return (
-          <View key={task.id} style={{ zIndex: isDragging ? 100 : 1 }}>
-            {/* Trail connector */}
+          <SortableItem
+            key={task.id}
+            id={task.id}
+            data={task}
+            positions={positions}
+            lowerBound={lowerBound}
+            autoScrollDirection={autoScrollDirection}
+            itemsCount={tasks.length}
+            itemHeight={ITEM_HEIGHT}
+            onDragStart={handleDragStart}
+            onDrop={handleDrop}
+            animatedStyle={styles.sortableItemOverride}
+          >
             {showTrail && (
-              <View style={styles.taskCardWrapper}>
+              <View style={styles.trailConnectorWrapper}>
                 <View
                   style={[
                     styles.trailConnector,
@@ -84,76 +128,52 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                 />
               </View>
             )}
-
-            {/* Top-level task */}
-            <View>
-              <DraggableTaskCard
-                task={task}
-                index={index}
-                isActive={isActive}
-                isShelved={isShelved}
-                isDragging={isDragging}
-                isDropTarget={isDropTarget}
-                isNested={false}
-                isPracticeLoop={isPracticeLoop}
-                verticalShift={verticalShift}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                onPress={() => onEditTask(task)}
-                onToggle={() => onToggleTask(task)}
-                onSubtaskChange={onSubtaskChange}
-                onLayout={handleRegisterLayout}
-              />
-            </View>
-
-            {/* Child tasks (nested under parent) */}
-            {task.children && task.children.length > 0 && (
-              <View style={styles.childrenContainer}>
-                <View style={[styles.nestingLine, { backgroundColor: colors.primary + '40' }]} />
-                <View style={styles.childrenList}>
-                  {task.children.map((child, childIndex) => {
-                    const childIsDragging = dragState.activeId === child.id;
-                    const childIsDropTarget = dragState.hoveredId === child.id;
-                    const childVerticalShift = getVerticalShift(child.id, childIndex); // Note: Indexing for children needs care if list is flattened in getVerticalShift logic
-
-                    return (
-                      <DraggableTaskCard
-                        key={child.id}
-                        task={child}
-                        index={childIndex}
-                        isActive={false}
-                        isShelved={child.completed}
-                        isDragging={childIsDragging}
-                        isDropTarget={childIsDropTarget}
-                        isNested={true}
-                        isPracticeLoop={isPracticeLoop}
-                        verticalShift={childVerticalShift} // Currently logic might calculate 0 if it assumes flattened list.
-                        onDragStart={handleDragStart}
-                        onDragMove={handleDragMove}
-                        onDragEnd={handleDragEnd}
-                        onPress={() => onEditTask(child)}
-                        onToggle={() => onToggleTask(child)}
-                        onSubtaskChange={onSubtaskChange}
-                        onLayout={handleRegisterLayout}
-                      />
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-          </View>
+            <ExpandableTaskCard
+              task={task}
+              onPress={() => onEditTask(task)}
+              onToggle={() => onToggleTask(task)}
+              onSubtaskChange={onSubtaskChange}
+              isPracticeLoop={isPracticeLoop}
+              isActive={isActive}
+              isShelved={isShelved}
+              isNested={false}
+              childCount={childCount}
+            />
+          </SortableItem>
         );
       })}
     </View>
   );
 };
 
+/**
+ * DraggableTaskList — sortable task list powered by react-native-reanimated-dnd.
+ *
+ * Uses the library's SortableItem for long-press-to-drag reordering with
+ * smooth Reanimated animations. The inner component remounts (via key)
+ * whenever the task list identity changes, resetting shared values cleanly.
+ *
+ * Limitations of the current integration:
+ * - Fixed ITEM_HEIGHT means child/nested tasks are shown as a count badge
+ *   rather than inline (the library requires uniform item heights).
+ * - Auto-scroll during drag is not connected to the parent ScrollView.
+ * - Nesting (drag-to-nest) is handled separately via the task edit modal.
+ */
+export const DraggableTaskList: React.FC<DraggableTaskListProps> = (props) => {
+  // Remount the inner component when the set of task IDs changes.
+  // This ensures shared values (positions) are recreated for the new list.
+  const key = props.tasks.map(t => t.id).join(',');
+  return <SortableTaskListInner key={key} {...props} />;
+};
+
 const styles = StyleSheet.create({
   container: {
-    gap: 0,
+    position: 'relative',
   },
-  taskCardWrapper: {
+  sortableItemOverride: {
+    backgroundColor: 'transparent',
+  },
+  trailConnectorWrapper: {
     position: 'relative',
   },
   trailConnector: {
@@ -164,19 +184,4 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 1,
   },
-  childrenContainer: {
-    flexDirection: 'row',
-    marginLeft: 14,
-    paddingLeft: 10,
-  },
-  nestingLine: {
-    width: 2,
-    borderRadius: 1,
-    marginRight: 0,
-  },
-  childrenList: {
-    flex: 1,
-    paddingLeft: 8,
-  },
-
 });

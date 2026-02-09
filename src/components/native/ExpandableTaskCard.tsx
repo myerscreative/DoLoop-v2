@@ -39,6 +39,7 @@ interface ExpandableTaskCardProps {
   isBeingDragged?: boolean;
   isDropTarget?: boolean;
   isNested?: boolean;
+  childCount?: number;
 }
 
 const BRAND_GOLD = '#FEC00F';
@@ -55,6 +56,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   isBeingDragged = false,
   isDropTarget = false,
   isNested = false,
+  childCount = 0,
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -217,6 +219,12 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
                 <PriorityBadge priority={task.priority} size="small" />
               )}
             </View>
+            {childCount > 0 && (
+              <View style={styles.childBadge}>
+                <Ionicons name="git-branch-outline" size={12} color={COOL_GREY} />
+                <Text style={styles.childBadgeText}>{childCount}</Text>
+              </View>
+            )}
           </View>
         </TouchableOpacity>
 
@@ -516,5 +524,17 @@ const styles = StyleSheet.create({
   nestedCard: {
     marginBottom: 8,
     borderRadius: 16,
+  },
+  childBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+    paddingLeft: 34,
+  },
+  childBadgeText: {
+    fontSize: 11,
+    color: COOL_GREY,
+    fontWeight: '500',
   },
 });
