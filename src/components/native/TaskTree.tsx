@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { StyleSheet, View, Text } from 'react-native';
+import { Swipeable, RectButton } from 'react-native-gesture-handler';
 import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
 import { Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
@@ -15,7 +15,7 @@ interface TaskTreeProps {
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
   /** Promote a subtask to top-level (move back to main list). */
   onPromoteTask?: (taskId: string) => void;
-  /** Delete a task (swipe left to reveal delete button). */
+  /** Delete a task (swipe right to reveal delete button). */
   onDeleteTask?: (task: Task) => void;
   /** Nesting level: 0 = top-level steps, 1+ = subtasks */
   depth?: number;
@@ -39,17 +39,19 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   }, []);
 
   const renderRightActions = (task: Task) => (
-    <TouchableOpacity
+    <RectButton
       style={styles.deleteAction}
       onPress={() => {
         onDeleteTask?.(task);
       }}
-      activeOpacity={0.8}
     >
       <Ionicons name="trash-outline" size={22} color="white" />
       <Text style={styles.deleteActionText}>Delete</Text>
-    </TouchableOpacity>
+    </RectButton>
   );
+
+  // Swipe RIGHT to reveal delete on the left - avoids touch bug with renderRightActions
+  const renderLeftActions = (task: Task) => renderRightActions(task);
 
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
@@ -102,8 +104,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     if (onDeleteTask) {
       return (
         <Swipeable
-          renderRightActions={() => renderRightActions(item)}
-          overshootRight={false}
+          renderLeftActions={() => renderLeftActions(item)}
+          overshootLeft={false}
           friction={2}
         >
           {rowContent}

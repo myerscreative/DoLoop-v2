@@ -74,6 +74,7 @@ export const LoopDetailScreen: React.FC = () => {
 
   // NEW: Loop Info Modal state
   const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
+  const [showSynopsisInfoModal, setShowSynopsisInfoModal] = useState(false);
 
 
   const loadLoopData = async () => {
@@ -805,8 +806,7 @@ export const LoopDetailScreen: React.FC = () => {
   
   return (
     <View style={styles.container}>
-      <MomentumOrb />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, flexBasis: 0, userSelect: 'none', touchAction: 'auto' }} edges={['top']}>
         <NestableScrollContainer
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 120 }}
@@ -1008,28 +1008,59 @@ export const LoopDetailScreen: React.FC = () => {
 
         {/* AI Synopsis Button */}
         {recurringTasks.length > 0 && !loopData.description && (
-          <TouchableOpacity
-            style={styles.synopsisFab}
-            onPress={handleGenerateSynopsis}
-            disabled={generatingSynopsis}
-          >
-            <View style={styles.synopsisFabInner}>
+          <View style={styles.synopsisFab}>
+            <TouchableOpacity
+              style={styles.synopsisFabMain}
+              onPress={handleGenerateSynopsis}
+              disabled={generatingSynopsis}
+            >
               <Text style={styles.synopsisFabText}>
                 {generatingSynopsis ? '...' : '✨ Create AI Synopsis'}
               </Text>
-            </View>
-          </TouchableOpacity>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.synopsisFabInfo}
+              onPress={() => setShowSynopsisInfoModal(true)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessible
+              accessibilityLabel="What does Create AI Synopsis do?"
+              accessibilityRole="button"
+            >
+              <Ionicons name="information-circle-outline" size={24} color="#1a1a1a" />
+            </TouchableOpacity>
+          </View>
         )}
 
-        {/* Add Task FAB */}
-        {recurringTasks.length > 0 && (
+        {/* Synopsis info popover */}
+        <Modal
+          visible={showSynopsisInfoModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowSynopsisInfoModal(false)}
+        >
           <TouchableOpacity
-            style={styles.fab}
-            onPress={handleAddTask}
+            style={styles.synopsisInfoOverlay}
+            activeOpacity={1}
+            onPress={() => setShowSynopsisInfoModal(false)}
           >
-            <Text style={styles.fabText}>+</Text>
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              style={styles.synopsisInfoCard}
+            >
+              <Text style={styles.synopsisInfoTitle}>What's the AI Synopsis?</Text>
+              <Text style={styles.synopsisInfoBody}>
+                Creates a short summary of this loop based on your recurring tasks. The synopsis is saved as the loop description and can be shown when sharing or viewing loop details.
+              </Text>
+              <TouchableOpacity
+                style={styles.synopsisInfoDismiss}
+                onPress={() => setShowSynopsisInfoModal(false)}
+              >
+                <Text style={styles.synopsisInfoDismissText}>Got it</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
           </TouchableOpacity>
-        )}
+        </Modal>
 
         {/* =====================================================
             LOOP INFO MODAL (Glassmorphic Bottom Sheet)
@@ -1305,6 +1336,7 @@ export const LoopDetailScreen: React.FC = () => {
           isEditing={true}
         />
       </SafeAreaView>
+      <MomentumOrb />
     </View>
   );
 };
@@ -1505,25 +1537,6 @@ const styles = StyleSheet.create({
   },
 
   // FABs
-  fab: {
-    position: 'absolute',
-    bottom: 30,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: BRAND_GOLD,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    zIndex: 10,
-  },
-  fabText: {
-    fontSize: 28,
-    color: '#1a1a1a',
-    fontWeight: '600',
-  },
   taskCardWrapper: {
     position: 'relative',
   },
@@ -1540,22 +1553,73 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: BRAND_GOLD + '60',
     backgroundColor: BRAND_GOLD,
     zIndex: 10,
+    overflow: 'hidden',
   },
-  synopsisFabInner: {
+  synopsisFabMain: {
+    flex: 1,
     paddingVertical: 14,
     paddingHorizontal: 20,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  synopsisFabInfo: {
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     justifyContent: 'center',
   },
   synopsisFabText: {
     fontSize: 15,
     color: '#1a1a1a',
     fontWeight: '700',
+  },
+  synopsisInfoOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  synopsisInfoCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    padding: 20,
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  synopsisInfoTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginBottom: 10,
+  },
+  synopsisInfoBody: {
+    fontSize: 15,
+    color: '#374151',
+    lineHeight: 22,
+    marginBottom: 18,
+  },
+  synopsisInfoDismiss: {
+    alignSelf: 'flex-end',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: BRAND_GOLD,
+    borderRadius: 10,
+  },
+  synopsisInfoDismissText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
   },
   bottomReadabilityAnchor: {
     position: 'absolute',

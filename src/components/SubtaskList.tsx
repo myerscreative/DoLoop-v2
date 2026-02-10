@@ -7,7 +7,7 @@ import {
   StyleSheet,
   FlatList,
 } from 'react-native';
-import Swipeable from 'react-native-gesture-handler/Swipeable';
+import { Swipeable, RectButton } from 'react-native-gesture-handler';
 import { Subtask } from '../types/loop'; // Fixed path
 
 interface SubtaskListProps {
@@ -32,13 +32,12 @@ const SubtaskItem = ({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const renderRightActions = () => (
-    <TouchableOpacity
+    <RectButton
       style={styles.swipeDeleteAction}
       onPress={() => onDelete(item.id)}
-      activeOpacity={0.8}
     >
       <Text style={styles.swipeDeleteText}>Delete</Text>
-    </TouchableOpacity>
+    </RectButton>
   );
 
   const content = (
@@ -89,8 +88,8 @@ const SubtaskItem = ({
   if (editable) {
     return (
       <Swipeable
-        renderRightActions={renderRightActions}
-        overshootRight={false}
+        renderLeftActions={renderRightActions}
+        overshootLeft={false}
         friction={2}
       >
         {content}
