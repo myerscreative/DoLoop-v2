@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { StyleSheet, View, Text } from 'react-native';
-import { Swipeable, RectButton } from 'react-native-gesture-handler';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
 import { Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
@@ -25,6 +25,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const rowLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
+  const swipeableRefs = useRef<Record<string, Swipeable | null>>({});
 
   const toggleExpanded = useCallback((taskId: string) => {
     setExpandedIds(prev => {
@@ -38,17 +39,19 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     });
   }, []);
 
-  // renderRightActions works; renderLeftActions has a known bug where onPress doesn't fire (RNGH #3223)
-  const renderRightActions = (task: Task) => (
-    <RectButton
+  // Use TouchableOpacity so onPress fires reliably (RectButton can fail in nested gesture contexts)
+  const renderRightActions = (taskId: string, task: Task) => (
+    <TouchableOpacity
       style={styles.deleteAction}
       onPress={() => {
+        swipeableRefs.current[taskId]?.close();
         onDeleteTask?.(task);
       }}
+      activeOpacity={0.8}
     >
       <Ionicons name="trash-outline" size={22} color="white" />
       <Text style={styles.deleteActionText}>Delete</Text>
-    </RectButton>
+    </TouchableOpacity>
   );
 
   const renderItem = (params: RenderItemParams<Task>) => {
@@ -103,7 +106,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     if (onDeleteTask) {
       return (
         <Swipeable
-          renderRightActions={() => renderRightActions(item)}
+          ref={(r) => { swipeableRefs.current[item.id] = r; }}
+          renderRightActions={() => renderRightActions(item.id, item)}
           overshootRight={false}
           friction={2}
         >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
@@ -48,6 +48,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     <ScaleDecorator activeScale={1.04}>
       <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
         {isSubtask && <View style={styles.subtaskConnector} />}
+        <View style={styles.rowOuter}>
         <Pressable
           onLongPress={drag}
           delayLongPress={200}
@@ -67,6 +68,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               opacity: isDragging ? 0.4 : 1,
             },
             isSubtask && styles.subtaskRow,
+            onDelete && styles.containerFlex,
           ]}
         >
           {/* Drag Handle */}
@@ -132,18 +134,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </Pressable>
           ) : isSubtask ? (
             <View style={styles.subtaskRight}>
-              {onDelete ? (
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                    onDelete();
-                  }}
-                  style={styles.deleteIconButton}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
-                </Pressable>
-              ) : null}
               {onPromote ? (
                 <Pressable
                   onPress={(e) => {
@@ -161,27 +151,32 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 <Text style={styles.subtaskBadgeText}>Substep</Text>
               </View>
             </View>
-          ) : onDelete ? (
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onDelete();
-              }}
-              style={styles.deleteIconButton}
+          ) : !onDelete ? (
+            <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
+          ) : null}
+        </Pressable>
+          {onDelete ? (
+            <TouchableOpacity
+              onPress={onDelete}
+              style={styles.deleteIconButtonOuter}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.7}
             >
               <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
-            </Pressable>
-          ) : (
-            <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
-          )}
-        </Pressable>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
     </ScaleDecorator>
   );
 };
 
 const styles = StyleSheet.create({
+  rowOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -190,7 +185,15 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 4,
+  },
+  containerFlex: {
+    flex: 1,
+    marginRight: 4,
+  },
+  deleteIconButtonOuter: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
   },
   subtaskRow: {
     borderTopLeftRadius: 0,
