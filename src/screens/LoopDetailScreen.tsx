@@ -1550,7 +1550,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     left: 20,
-    right: 100,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 14,

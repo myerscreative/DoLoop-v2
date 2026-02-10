@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { 
   TaskWithDetails, 
   TaskPriority, 
@@ -54,6 +55,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onNestUnder,
 }) => {
   const { user } = useAuth();
+  const { colors, isDark } = useTheme();
 
   // Ref for input to re-focus after saving
   const descriptionInputRef = useRef<any>(null);
@@ -361,19 +363,19 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         onPress={onPress}
       >
         <View style={styles.optionIconContainer}>
-            <Ionicons name={icon} size={22} color={value ? (isBlue ? '#0EA5E9' : '#0f172a') : '#0f172a'} />
+            <Ionicons name={icon} size={22} color={value ? (isBlue ? '#0EA5E9' : colors.text) : colors.text} />
         </View>
         
         {value ? (
-            <Text style={[styles.optionValue, isBlue && { color: '#0EA5E9' }]}>{value}</Text>
+            <Text style={[styles.optionValue, { color: colors.text }, isBlue && { color: '#0EA5E9' }]}>{value}</Text>
         ) : (
-            <Text style={styles.optionLabel}>{label}</Text>
+            <Text style={[styles.optionLabel, { color: colors.text }]}>{label}</Text>
         )}
       </TouchableOpacity>
 
       {value && onClear && (
         <TouchableOpacity onPress={onClear} style={styles.optionClear}>
-             <Ionicons name="close" size={18} color="#94a3b8" />
+             <Ionicons name="close" size={18} color={colors.textSecondary} />
         </TouchableOpacity>
       )}
     </View>
@@ -381,10 +383,10 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
   const SubtaskRow = ({ item }: { item: Subtask }) => (
       <View style={styles.subtaskRow}>
-          <View style={styles.subtaskDot} />
-          <Text style={styles.subtaskText}>{item.description}</Text>
+          <View style={[styles.subtaskDot, { backgroundColor: colors.textSecondary }]} />
+          <Text style={[styles.subtaskText, { color: colors.text }]}>{item.description}</Text>
           <TouchableOpacity onPress={() => handleDeleteSubtask(item.id)} style={{ padding: 4 }}>
-              <Ionicons name="close" size={16} color="#94a3b8" />
+              <Ionicons name="close" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
       </View>
   );
@@ -395,16 +397,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       animationType="slide"
       onRequestClose={handleSaveAndClose}
     >
-      <View style={styles.container}>
-        <View style={styles.modalContentWrapper}>
+      <View style={[styles.container, { backgroundColor: isDark ? (Platform.OS === 'web' ? 'rgba(0,0,0,0.7)' : colors.background) : (Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white') }]}>
+        <View style={[styles.modalContentWrapper, { backgroundColor: isDark ? colors.structure : 'white' }]}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.primary }]}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={28} color="#0f172a" />
+                <Ionicons name="close" size={28} color={colors.textOnPrimary} />
             </TouchableOpacity>
             
             <View style={styles.headerTitleContainer}>
-                <Text style={styles.headerTitle}>{task ? 'Item Details' : 'Add Item'}</Text>
+                <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>{task ? 'Item Details' : 'Add Item'}</Text>
             </View>
 
             <TouchableOpacity 
@@ -413,37 +415,37 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 disabled={saving}
             >
                 {saving ? (
-                    <ActivityIndicator size="small" color="#0f172a" />
+                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
                 ) : (
-                    <Text style={styles.saveHeaderText}>Save</Text>
+                    <Text style={[styles.saveHeaderText, { color: colors.textOnPrimary }]}>Save</Text>
                 )}
             </TouchableOpacity>
         </View>
 
         {/* Promote to top-level (only for nested/child tasks) */}
         {task?.parent_task_id && onPromote && (
-          <TouchableOpacity style={styles.promoteButton} onPress={onPromote}>
-            <Ionicons name="arrow-up-circle-outline" size={20} color="#FEC00F" />
+          <TouchableOpacity style={[styles.promoteButton, { backgroundColor: isDark ? colors.primary + '20' : 'rgba(254, 192, 15, 0.08)', borderBottomColor: colors.border }]} onPress={onPromote}>
+            <Ionicons name="arrow-up-circle-outline" size={20} color={colors.primary} />
             <View>
-              <Text style={styles.promoteButtonText}>Promote to top-level step</Text>
-              <Text style={styles.promoteButtonSubtext}>Move this back to the main list</Text>
+              <Text style={[styles.promoteButtonText, { color: colors.primary }]}>Promote to top-level step</Text>
+              <Text style={[styles.promoteButtonSubtext, { color: colors.textSecondary }]}>Move this back to the main list</Text>
             </View>
           </TouchableOpacity>
         )}
 
         {/* Nest under parent (only for existing top-level tasks with available parents) */}
         {task && !task.parent_task_id && onNestUnder && availableParentTasks && availableParentTasks.length > 0 && (
-          <View style={styles.nestUnderSection}>
-            <Text style={styles.nestUnderLabel}>Nest under:</Text>
+          <View style={[styles.nestUnderSection, { backgroundColor: isDark ? colors.primary + '15' : 'rgba(254, 192, 15, 0.05)', borderBottomColor: colors.border }]}>
+            <Text style={[styles.nestUnderLabel, { color: colors.textSecondary }]}>Nest under:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.nestUnderScroll}>
               {availableParentTasks.map(parent => (
                 <TouchableOpacity
                   key={parent.id}
-                  style={styles.nestUnderChip}
+                  style={[styles.nestUnderChip, { backgroundColor: isDark ? colors.primary + '25' : 'rgba(254, 192, 15, 0.12)' }]}
                   onPress={() => onNestUnder(parent.id)}
                 >
-                  <Ionicons name="return-down-forward-outline" size={14} color="#FEC00F" />
-                  <Text style={styles.nestUnderChipText} numberOfLines={1}>{parent.description}</Text>
+                  <Ionicons name="return-down-forward-outline" size={14} color={colors.primary} />
+                  <Text style={[styles.nestUnderChipText, { color: colors.text }]} numberOfLines={1}>{parent.description}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -455,15 +457,15 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             <View style={styles.nameInputContainer}>
                 <View style={styles.nameSection}>
                     <TouchableOpacity style={styles.radioPlaceholder}>
-                        <View style={styles.radioCircle} />
+                        <View style={[styles.radioCircle, { borderColor: colors.text }]} />
                     </TouchableOpacity>
                     <TextInput
                         ref={descriptionInputRef}
-                        style={styles.nameInput}
+                        style={[styles.nameInput, { color: colors.text, backgroundColor: isDark ? colors.surface : '#f8fafc', borderColor: colors.border }]}
                         placeholder="Enter Item Name..."
                         value={description}
                         onChangeText={setDescription}
-                        placeholderTextColor="#94a3b8"
+                        placeholderTextColor={colors.textSecondary}
                         multiline={Platform.OS !== 'web'} 
                         blurOnSubmit={true}
                         returnKeyType="done"
@@ -484,7 +486,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
             <View style={styles.subtasksContainer}>
                 {subtasks.length > 0 && (
-                  <Text style={styles.substepsLabel}>Steps inside this item</Text>
+                  <Text style={[styles.substepsLabel, { color: colors.textSecondary }]}>Steps inside this item</Text>
                 )}
                 {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
                 
@@ -494,21 +496,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                             style={styles.addSubtaskLink} 
                             onPress={() => setShowSubtaskInput(true)}
                         >
-                            <Ionicons name="add" size={18} color="#64748b" />
-                            <Text style={styles.addSubtaskLinkText}>Add Sub-Item</Text>
+                            <Ionicons name="add" size={18} color={colors.textSecondary} />
+                            <Text style={[styles.addSubtaskLinkText, { color: colors.textSecondary }]}>Add Sub-Item</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.addSubtaskRow}>
-                            <View style={styles.addSubtaskInputContainer}>
+                            <View style={[styles.addSubtaskInputContainer, { backgroundColor: isDark ? colors.surface : '#f8fafc' }]}>
                                 <TextInput
-                                    style={styles.addSubtaskInput}
+                                    style={[styles.addSubtaskInput, { color: colors.text }]}
                                     placeholder="Sub-Step description..."
                                     value={newSubtaskText}
                                     onChangeText={setNewSubtaskText}
                                     onSubmitEditing={handleAddSubtask}
                                     blurOnSubmit={false} 
                                     autoFocus
-                                    placeholderTextColor="#94a3b8"
+                                    placeholderTextColor={colors.textSecondary}
                                     onKeyPress={({ nativeEvent }) => {
                                         if (nativeEvent.key === 'Enter') {
                                             handleAddSubtask();
@@ -517,11 +519,11 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                 />
                             </View>
                             <TouchableOpacity onPress={() => setShowSubtaskInput(false)} style={styles.cancelSubtask}>
-                                <Ionicons name="close-circle" size={24} color="#94a3b8" />
+                                <Ionicons name="close-circle" size={24} color={colors.textSecondary} />
                             </TouchableOpacity>
                             {newSubtaskText.length > 0 && (
                                     <TouchableOpacity onPress={handleAddSubtask} style={styles.addSubtaskConfirm}>
-                                        <Ionicons name="checkmark-circle" size={24} color="#FEC00F" />
+                                        <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
                                     </TouchableOpacity>
                             )}
                         </View>
@@ -531,7 +533,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
             {showDetails ? (
                 <View>
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
                     {/* Options List */}
                     
@@ -543,7 +545,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         onPress={() => setIsOneTime(!isOneTime)}
                         // No clear for this, it's a toggle
                     />
-                    <View style={styles.separator} />
+                    <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
                     {/* Due Date */}
                     <OptionRow
@@ -558,7 +560,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                         <View style={styles.datePickerContainer}>
                             {Platform.OS === 'web' ? (
                                 <View style={styles.webInputContainer}>
-                                   <Text style={styles.webLabel}>Select Date:</Text>
+                                   <Text style={[styles.webLabel, { color: colors.textSecondary }]}>Select Date:</Text>
                                    <input 
                                        type="date" 
                                        value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
@@ -570,7 +572,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                            }
                                            setShowDatePicker(false);
                                        }}
-                                       style={{ padding: 10, borderRadius: 8, border: '1px solid #e2e8f0', fontSize: 16, width: '100%', fontFamily: 'inherit' }}
+                                       style={{ padding: 10, borderRadius: 8, border: `1px solid ${colors.border}`, fontSize: 16, width: '100%', fontFamily: 'inherit', backgroundColor: isDark ? colors.surface : undefined, color: colors.text }}
                                    />
                                 </View>
                             ) : (
@@ -589,7 +591,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                             )}
                         </View>
                     )}
-                    <View style={styles.separator} />
+                    <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
                     {/* Assign To */}
                     <View>
@@ -610,19 +612,19 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                         setShowAssignInput(false);
                                     }}
                                 >
-                                    <View style={[styles.avatarPlaceholder, { backgroundColor: '#FEC00F' }]}>
-                                        <Text style={{ color: 'white', fontWeight: 'bold' }}>M</Text>
+                                    <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+                                        <Text style={{ color: colors.textOnPrimary, fontWeight: 'bold' }}>M</Text>
                                     </View>
-                                    <Text style={styles.assignOptionText}>Assign to Me</Text>
+                                    <Text style={[styles.assignOptionText, { color: colors.text }]}>Assign to Me</Text>
                                 </TouchableOpacity>
                                 
                                 <View style={styles.emailInputRow}>
                                      <TextInput
-                                        style={styles.emailInput}
+                                        style={[styles.emailInput, { borderColor: colors.border, color: colors.text, backgroundColor: isDark ? colors.surface : undefined }]}
                                         placeholder="Enter email address"
                                         value={assignInput}
                                         onChangeText={setAssignInput}
-                                        placeholderTextColor="#94a3b8"
+                                        placeholderTextColor={colors.textSecondary}
                                      />
                                      <TouchableOpacity 
                                         onPress={() => {
@@ -635,9 +637,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                                 setAssignInput('');
                                             }
                                         }}
-                                        style={styles.assignConfirmButton}
+                                        style={[styles.assignConfirmButton, { backgroundColor: isDark ? colors.surface : '#f1f5f9' }]}
                                      >
-                                         <Text style={styles.assignConfirmText}>Assign</Text>
+                                         <Text style={[styles.assignConfirmText, { color: colors.text }]}>Assign</Text>
                                      </TouchableOpacity>
                                 </View>
                             </View>
@@ -666,19 +668,19 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                              {/* Create New Tag UI */}
                              <View style={styles.createTagRow}>
                                  <TextInput
-                                     style={styles.createTagInput}
+                                     style={[styles.createTagInput, { backgroundColor: isDark ? colors.surface : '#f1f5f9', color: colors.text }]}
                                      placeholder="New Tag Name"
                                      value={newTagName}
                                      onChangeText={setNewTagName}
-                                     placeholderTextColor="#94a3b8"
+                                     placeholderTextColor={colors.textSecondary}
                                      onSubmitEditing={handleCreateTag}
                                  />
                                  <TouchableOpacity 
                                      onPress={handleCreateTag} 
-                                     style={[styles.createTagButton, !newTagName.trim() && { opacity: 0.5 }]}
+                                     style={[styles.createTagButton, { backgroundColor: colors.primary }, !newTagName.trim() && { opacity: 0.5 }]}
                                      disabled={!newTagName.trim()}
                                  >
-                                     <Ionicons name="add" size={20} color="white" />
+                                     <Ionicons name="add" size={20} color={colors.textOnPrimary} />
                                  </TouchableOpacity>
                              </View>
                          </View>
@@ -698,20 +700,20 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     {/* Existing Files List */}
                     {existingAttachments.filter(a => !a.file_type?.startsWith('image/')).map(att => (
                        <View key={att.id} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
-                          <Ionicons name="document-outline" size={16} color="#64748b" />
-                          <Text style={{ flex: 1, fontSize: 13, color: '#64748b' }} numberOfLines={1}>{att.file_name}</Text>
+                          <Ionicons name="document-outline" size={16} color={colors.textSecondary} />
+                          <Text style={{ flex: 1, fontSize: 13, color: colors.textSecondary }} numberOfLines={1}>{att.file_name}</Text>
                           <TouchableOpacity onPress={() => handleDeleteExistingAttachment(att.id)}>
-                            <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                           </TouchableOpacity>
                        </View>
                     ))}
                     {/* Pending Files List */}
                     {pendingAttachments.filter(a => a.type === 'file').map((att, i) => (
                        <View key={`pending-file-${i}`} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 4, gap: 8 }}>
-                          <Ionicons name="document-outline" size={16} color="#94a3b8" />
-                          <Text style={{ flex: 1, fontSize: 13, color: '#94a3b8' }} numberOfLines={1}>{att.name}</Text>
+                          <Ionicons name="document-outline" size={16} color={colors.textSecondary} />
+                          <Text style={{ flex: 1, fontSize: 13, color: colors.textSecondary }} numberOfLines={1}>{att.name}</Text>
                           <TouchableOpacity onPress={() => removeAttachment(i)}>
-                            <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                           </TouchableOpacity>
                        </View>
                     ))}
@@ -734,7 +736,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                     <Image source={{ uri: att.file_url }} style={{ width: 45, height: 45, borderRadius: 6 }} />
                                     <TouchableOpacity 
                                       onPress={() => handleDeleteExistingAttachment(att.id)}
-                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10 }}
                                     >
                                         <Ionicons name="close-circle" size={18} color="#ef4444" />
                                     </TouchableOpacity>
@@ -745,9 +747,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                     <Image source={{ uri: att.uri }} style={{ width: 45, height: 45, borderRadius: 6, opacity: 0.7 }} />
                                     <TouchableOpacity 
                                       onPress={() => removeAttachment(i)}
-                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: 'white', borderRadius: 10 }}
+                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10 }}
                                     >
-                                        <Ionicons name="close-circle" size={18} color="#94a3b8" />
+                                        <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
                                     </TouchableOpacity>
                                 </View>
                             ))}
@@ -761,12 +763,12 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     <View style={styles.noteSection}>
                         <View style={[styles.optionRow, { borderBottomWidth: 0, alignItems: 'flex-start' }]}>
                              <View style={[styles.optionIconContainer, { marginTop: 12 }]}>
-                                  <Ionicons name="chatbox-outline" size={22} color="#0f172a" />
+                                  <Ionicons name="chatbox-outline" size={22} color={colors.text} />
                              </View>
                              <TextInput 
-                                 style={[styles.noteInput, !!notes && { color: '#0EA5E9' }]}
+                                 style={[styles.noteInput, { color: colors.text }, !!notes && { color: '#0EA5E9' }]}
                                  placeholder="Add Note" 
-                                 placeholderTextColor="#94a3b8"
+                                 placeholderTextColor={colors.textSecondary}
                                  value={notes}
                                  onChangeText={setNotes}
                                  multiline
@@ -782,9 +784,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         </ScrollView>
 
         {/* Bottom Save Button - for better visibility */}
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: isDark ? colors.structure : 'white', borderTopColor: colors.border }]}>
             <TouchableOpacity 
-                style={[styles.bottomSaveButton, saving && styles.bottomSaveButtonDisabled]}
+                style={[styles.bottomSaveButton, { backgroundColor: saving ? (isDark ? colors.primary + '80' : '#FDE68A') : colors.primary }, saving && { shadowOpacity: 0, elevation: 0 }]}
                 onPress={() => {
                     if (description.trim()) {
                         handleSave(true);
@@ -796,9 +798,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 disabled={saving}
             >
                 {saving ? (
-                    <ActivityIndicator size="small" color="#000" />
+                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
                 ) : (
-                    <Text style={styles.bottomSaveButtonText}>Save Changes</Text>
+                    <Text style={[styles.bottomSaveButtonText, { color: colors.textOnPrimary }]}>Save Changes</Text>
                 )}
             </TouchableOpacity>
         </View>
