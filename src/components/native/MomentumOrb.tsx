@@ -18,7 +18,7 @@ export const MomentumOrb = () => {
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.15); // Reduced default opacity
+  const opacity = useSharedValue(0.06); // Very subtle ambient glow
 
   useEffect(() => {
     translateX.value = withRepeat(
@@ -52,8 +52,8 @@ export const MomentumOrb = () => {
 
     opacity.value = withRepeat(
       withSequence(
-        withTiming(0.1, { duration: 5000 }),
-        withTiming(0.2, { duration: 5000 })
+        withTiming(0.04, { duration: 5000 }),
+        withTiming(0.08, { duration: 5000 })
       ),
       -1,
       true
@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
     borderRadius: width * 0.4,
     backgroundColor: PURPLE_ORB,
     shadowColor: ACCENT_ORB,
-    shadowRadius: 150,
-    shadowOpacity: 0.5,
-    elevation: 20,
+    shadowRadius: 120,
+    shadowOpacity: 0.15,
+    elevation: 8,
   },
 });
