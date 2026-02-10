@@ -675,8 +675,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             style={styles.addTaskButton} 
             onPress={openAddTaskModal}
           >
-            <Ionicons name="add" size={20} color="#666" />
-            <Text style={styles.addTaskText}>Add Step</Text>
+            <Ionicons name="add" size={18} color="#FEC00F" />
+            <Text style={styles.addTaskText}>Add new step</Text>
           </TouchableOpacity>
         </View>
 
@@ -969,18 +969,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#E5E7EB',
+    borderWidth: 1.5,
+    borderStyle: 'solid',
+    borderColor: '#FEC00F60',
+    backgroundColor: '#FEC00F12',
     marginTop: 12,
-    gap: 8,
+    gap: 10,
   },
   addTaskText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
-    color: '#666',
+    color: '#FEC00F',
   },
   ratingSection: {
     marginTop: 32,

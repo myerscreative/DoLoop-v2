@@ -910,21 +910,16 @@ export const LoopDetailScreen: React.FC = () => {
                 onToggleTask={toggleTask}
               />
 
-              {/* Add Step Button - More Vibrant */}
+              {/* Add Step Button */}
               <TouchableOpacity
                 style={styles.floatingAddStepButton}
                 onPress={openAddTaskModal}
                 activeOpacity={0.7}
               >
-                <LinearGradient
-                  colors={[colors.primary + '26', colors.primary + '0D']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.addStepGradient}
-                >
-                  <Ionicons name="add-circle" size={24} color={colors.primary} />
-                  <Text style={styles.addStepText}>Add Step</Text>
-                </LinearGradient>
+                <View style={styles.addStepInner}>
+                  <Ionicons name="add" size={20} color={colors.primary} />
+                  <Text style={styles.addStepText}>Add new step</Text>
+                </View>
               </TouchableOpacity>
             </View>
           )}
@@ -970,21 +965,18 @@ export const LoopDetailScreen: React.FC = () => {
           pointerEvents="none"
         />
 
-        {/* AI Synopsis FAB - Sparkle Button */}
+        {/* AI Synopsis Button */}
         {recurringTasks.length > 0 && !loopData.description && (
           <TouchableOpacity
             style={styles.synopsisFab}
             onPress={handleGenerateSynopsis}
             disabled={generatingSynopsis}
           >
-            <LinearGradient
-              colors={[colors.primary + '60', colors.primary + '90']}
-              style={styles.synopsisFabGradient}
-            >
-              <Text style={[styles.synopsisFabText, { color: '#000', fontWeight: '900' }]}>
+            <View style={styles.synopsisFabInner}>
+              <Text style={styles.synopsisFabText}>
                 {generatingSynopsis ? '...' : '✨ Create AI Synopsis'}
               </Text>
-            </LinearGradient>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -1392,33 +1384,24 @@ const styles = StyleSheet.create({
     gap: 0, // Cards have their own marginBottom
   },
   floatingAddStepButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     alignSelf: 'flex-start',
-    borderRadius: 20,
     marginTop: 8,
-    borderWidth: 1,
-    borderColor: BRAND_GOLD + '30',
-    shadowColor: BRAND_GOLD,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-    overflow: 'hidden',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: BRAND_GOLD + '50',
+    backgroundColor: BRAND_GOLD + '12',
   },
-  addStepGradient: {
+  addStepInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    gap: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   addStepText: {
     fontSize: 15,
     color: BRAND_GOLD,
-    fontWeight: '700',
-    marginLeft: 10,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    fontWeight: '600',
   },
 
   // Empty State
@@ -1485,25 +1468,20 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 30,
     right: 24,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(254, 192, 15, 0.9)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: BRAND_GOLD,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: BRAND_GOLD,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
     zIndex: 10,
   },
   fabText: {
-    fontSize: 32,
-    color: 'white',
-    fontWeight: '300',
+    fontSize: 28,
+    color: '#1a1a1a',
+    fontWeight: '600',
   },
   taskCardWrapper: {
     position: 'relative',
@@ -1521,27 +1499,22 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 100,
-    borderRadius: 24,
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Much more opaque for readability
-    overflow: 'hidden',
+    borderColor: BRAND_GOLD + '60',
+    backgroundColor: BRAND_GOLD,
     zIndex: 10,
-    shadowColor: BRAND_GOLD,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
   },
-  synopsisFabGradient: {
+  synopsisFabInner: {
     paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    justifyContent: 'center',
   },
   synopsisFabText: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: '800',
+    fontSize: 15,
+    color: '#1a1a1a',
+    fontWeight: '700',
   },
   bottomReadabilityAnchor: {
     position: 'absolute',
