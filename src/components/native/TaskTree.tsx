@@ -10,12 +10,14 @@ interface TaskTreeProps {
   onToggleTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
+  /** Nesting level: 0 = top-level steps, 1+ = subtasks (controls indentation and styling) */
+  depth?: number;
 }
 
 // How long (ms) the user must hover over an item before it activates as a nest target
 const NEST_HOVER_DELAY = 800;
 
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask }) => {
+export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, depth = 0 }) => {
   // hoveredTaskId tracks the item the placeholder is currently over (before timer fires)
   const [, setHoveredTaskId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
       <View>
         <TaskRow
           {...params}
+          depth={depth}
           onToggle={onToggleTask}
           onPress={onEditTask}
           isActive={params.isActive}
@@ -51,6 +54,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           <View style={styles.childContainer}>
             <TaskTree
               tasks={item.children!}
+              depth={depth + 1}
               onUpdateTree={(newChildren) => {
                 const newTree = tasks.map(t =>
                   t.id === item.id ? { ...t, children: newChildren } : t

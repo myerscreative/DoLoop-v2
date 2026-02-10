@@ -13,6 +13,8 @@ interface EnhancedTaskCardProps {
   onToggle: () => void;
   isActive?: boolean;
   isShelved?: boolean;
+  /** When true, renders indented with left bar and "Substep" badge */
+  isSubtask?: boolean;
 }
 
 export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
@@ -21,6 +23,7 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
   onToggle,
   isActive = false,
   isShelved = false,
+  isSubtask = false,
 }) => {
   const { colors } = useTheme();
   const { user } = useAuth();
@@ -62,14 +65,15 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
   return (
     <TouchableOpacity
       style={[
-        styles.container, 
-        { 
-          backgroundColor: isShelved ? 'rgba(255, 255, 255, 0.02)' : 
+        styles.container,
+        {
+          backgroundColor: isShelved ? 'rgba(255, 255, 255, 0.02)' :
                           isActive ? 'rgba(254, 192, 15, 0.12)' : 'rgba(255, 255, 255, 0.05)',
           borderColor: isActive ? '#FEC00F' : 'rgba(255, 255, 255, 0.1)',
           opacity: isShelved ? 0.4 : (isActive ? 1 : 0.6),
           borderWidth: 1,
-        }
+        },
+        isSubtask && styles.subtaskCard,
       ]}
       onPress={onPress}
       activeOpacity={0.7}
@@ -109,6 +113,11 @@ export const EnhancedTaskCard: React.FC<EnhancedTaskCardProps> = ({
             >
               {task.description}
             </Text>
+            {isSubtask && (
+              <View style={styles.substepBadge}>
+                <Text style={styles.substepBadgeText}>Substep</Text>
+              </View>
+            )}
             <View style={styles.actionIcons}>
               {task.notes && (
                 <TouchableOpacity
@@ -265,6 +274,26 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+  },
+  subtaskCard: {
+    marginLeft: 32,
+    borderLeftWidth: 4,
+    borderLeftColor: 'rgba(254, 192, 15, 0.6)',
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  substepBadge: {
+    backgroundColor: 'rgba(254, 192, 15, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  substepBadgeText: {
+    color: '#FEC00F',
+    fontSize: 10,
+    fontWeight: '700',
   },
   headerRow: {
     flexDirection: 'row',

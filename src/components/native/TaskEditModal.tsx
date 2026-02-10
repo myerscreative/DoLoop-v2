@@ -108,8 +108,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         setReminderDate(task.reminder_at ? new Date(task.reminder_at) : undefined);
         setTimeEstimate(task.time_estimate_minutes?.toString() || '');
         setSelectedTags(task.tag_details || []);
-        // Ensure subtasks is an array
-        setSubtasks(Array.isArray(task.subtasks) ? task.subtasks : []);
+        // Show nested steps: prefer task.children (from drag-to-nest) so substeps always appear in detail view
+        const rawSubitems = (task.children ?? task.subtasks ?? []) as Array<{ id: string; description?: string; completed?: boolean; status?: string; task_id?: string; order_index?: number }>;
+        const normalized: Subtask[] = rawSubitems.map((s, i) => ({
+          id: s.id,
+          task_id: s.task_id ?? task.id,
+          description: s.description ?? '',
+          completed: s.completed ?? (s.status === 'done'),
+          order_index: s.order_index ?? i,
+        }));
+        setSubtasks(normalized);
         setExistingAttachments(task.attachments || []);
       } else {
         resetForm();
@@ -472,6 +480,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             </View>
 
             <View style={styles.subtasksContainer}>
+                {subtasks.length > 0 && (
+                  <Text style={styles.substepsLabel}>Steps inside this item</Text>
+                )}
                 {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
                 
                 <View style={styles.addSubtaskContainer}>
@@ -880,6 +891,12 @@ const styles = StyleSheet.create({
       paddingHorizontal: 20,
       paddingLeft: 60, // Indent to match text
       marginBottom: 20,
+  },
+  substepsLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: '#94a3b8',
+      marginBottom: 8,
   },
   subtaskRow: {
       flexDirection: 'row',

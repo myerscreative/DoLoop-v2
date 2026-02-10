@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
-import { RenderItemParams } from 'react-native-draggable-flatlist';
+import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 
 interface TaskRowProps extends RenderItemParams<Task> {
   onToggle: (task: Task) => void;
@@ -11,108 +11,121 @@ interface TaskRowProps extends RenderItemParams<Task> {
   isActive: boolean;
   isHovered?: boolean;
   isDragging?: boolean;
+  /** Nesting level from TaskTree: 0 = main step, 1+ = subtask */
+  depth?: number;
 }
 
-export const TaskRow: React.FC<TaskRowProps> = ({ item: task, drag, isActive, onToggle, onPress, isHovered = false, isDragging = false }) => {
-  const depth = task.depth || 0;
-  const BRAND_GOLD = '#FEC00F';
+const SUBTASK_INDENT = 32;
+const BRAND_GOLD = '#FEC00F';
+
+export const TaskRow: React.FC<TaskRowProps> = ({
+  item: task,
+  drag,
+  isActive: isDragActive,
+  onToggle,
+  onPress,
+  isHovered = false,
+  isDragging = false,
+  depth: depthProp,
+}) => {
+  const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
+  const isSubtask = depth > 0 || !!task.parent_task_id;
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          paddingLeft: depth * 24 + 12,
-          backgroundColor: isHovered
-            ? 'rgba(254, 192, 15, 0.30)'
-            : isActive
-              ? 'rgba(254, 192, 15, 0.15)'
-              : 'rgba(255, 255, 255, 0.05)',
-          borderColor: isHovered
-            ? BRAND_GOLD
-            : isActive
-              ? BRAND_GOLD
-              : 'rgba(255, 255, 255, 0.08)',
-          borderWidth: isHovered ? 2 : 1,
-          transform: [{ scale: isHovered ? 1.03 : 1 }],
-          opacity: isDragging ? 0.5 : 1,
-        },
-        isHovered && styles.hoveredShadow,
-      ]}
-    >
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onPress(task)}
-        onLongPress={drag}
-        delayLongPress={300}
-        style={styles.touchable}
-      >
-        {/* Drag Handle */}
-        <TouchableOpacity
+    <ScaleDecorator activeScale={1.04}>
+      <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
+        {isSubtask && <View style={styles.subtaskConnector} />}
+        <Pressable
           onLongPress={drag}
-          delayLongPress={150}
-          style={styles.dragHandle}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <MaterialCommunityIcons name="drag-vertical" size={24} color={BRAND_GOLD} />
-        </TouchableOpacity>
-
-        {/* Checkbox */}
-        <TouchableOpacity
-          onPress={() => onToggle(task)}
+          delayLongPress={200}
+          onPress={() => onPress(task)}
+          disabled={isDragActive}
           style={[
-            styles.checkbox,
+            styles.container,
             {
-              borderColor: task.completed ? BRAND_GOLD : 'rgba(255, 255, 255, 0.2)',
-              backgroundColor: task.completed ? BRAND_GOLD : 'transparent',
+              backgroundColor: isHovered
+                ? 'rgba(254, 192, 15, 0.30)'
+                : isSubtask
+                  ? 'rgba(255, 255, 255, 0.04)'
+                  : 'rgba(255, 255, 255, 0.06)',
+              borderColor: isHovered
+                ? BRAND_GOLD
+                : isSubtask
+                  ? 'rgba(255, 255, 255, 0.06)'
+                  : 'rgba(255, 255, 255, 0.08)',
+              borderLeftWidth: isSubtask ? 4 : 1,
+              borderLeftColor: isSubtask ? BRAND_GOLD : undefined,
+              opacity: isDragging ? 0.4 : 1,
             },
+            isHovered && styles.hoveredShadow,
+            isSubtask && styles.subtaskRow,
           ]}
         >
-          {task.completed && <Ionicons name="checkmark" size={14} color="white" />}
-        </TouchableOpacity>
+          {/* Drag Handle */}
+          <View style={styles.dragHandle}>
+            <MaterialCommunityIcons name="drag-vertical" size={22} color="rgba(255,255,255,0.35)" />
+          </View>
 
-        {/* Content */}
-        <View style={styles.content}>
-          <Text
+          {/* Checkbox */}
+          <Pressable
+            onPress={() => onToggle(task)}
             style={[
-              styles.description,
+              styles.checkbox,
               {
-                color: 'white',
-                textDecorationLine: task.completed ? 'line-through' : 'none',
-                opacity: task.completed ? 0.6 : 1,
+                borderColor: task.completed ? BRAND_GOLD : 'rgba(255, 255, 255, 0.2)',
+                backgroundColor: task.completed ? BRAND_GOLD : 'transparent',
               },
             ]}
-            numberOfLines={1}
           >
-            {task.description}
-          </Text>
+            {task.completed && <Ionicons name="checkmark" size={14} color="white" />}
+          </Pressable>
 
-          <View style={styles.metadata}>
-            {task.priority !== 'none' && (
-              <PriorityBadge priority={task.priority} size="small" />
-            )}
-            {task.children && task.children.length > 0 && (
-              <View style={styles.counts}>
-                <Text style={styles.countText}>
-                  {task.children.filter((c: Task) => c.completed).length}/{task.children.length}
-                </Text>
-              </View>
-            )}
+          {/* Content */}
+          <View style={styles.content}>
+            <Text
+              style={[
+                styles.description,
+                {
+                  textDecorationLine: task.completed ? 'line-through' : 'none',
+                  opacity: task.completed ? 0.5 : 1,
+                  fontSize: isSubtask ? 14 : 16,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {task.description}
+            </Text>
+
+            <View style={styles.metadata}>
+              {task.priority !== 'none' && (
+                <PriorityBadge priority={task.priority} size="small" />
+              )}
+              {task.children && task.children.length > 0 && (
+                <View style={styles.counts}>
+                  <Text style={styles.countText}>
+                    {task.children.filter((c: Task) => c.completed).length}/{task.children.length}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
 
-        {isHovered && (
-          <View style={styles.nestHint}>
-            <Ionicons name="enter-outline" size={16} color={BRAND_GOLD} />
-            <Text style={styles.nestHintText}>Nest</Text>
-          </View>
-        )}
-
-        {!isHovered && (
-          <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
-        )}
-      </TouchableOpacity>
-    </View>
+          {/* Right side indicator */}
+          {isHovered ? (
+            <View style={styles.nestHint}>
+              <Ionicons name="enter-outline" size={16} color={BRAND_GOLD} />
+              <Text style={styles.nestHintText}>Nest</Text>
+            </View>
+          ) : isSubtask ? (
+            <View style={styles.subtaskBadge}>
+              <Text style={styles.subtaskBadgeText}>Substep</Text>
+            </View>
+          ) : (
+            <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
+          )}
+        </Pressable>
+      </View>
+    </ScaleDecorator>
   );
 };
 
@@ -120,16 +133,12 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingRight: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 0,
-  },
-  touchable: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingVertical: 12,
+    paddingRight: 14,
+    paddingLeft: 4,
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 4,
   },
   hoveredShadow: {
     shadowColor: '#FEC00F',
@@ -137,10 +146,28 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 10,
     elevation: 8,
-    borderRadius: 8,
+  },
+  subtaskRow: {
+    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
+  },
+  subtaskWrapper: {
+    marginTop: 2,
+    marginBottom: 2,
+    position: 'relative',
+  },
+  subtaskConnector: {
+    position: 'absolute',
+    left: -1,
+    top: -4,
+    bottom: -4,
+    width: 3,
+    backgroundColor: 'rgba(254, 192, 15, 0.3)',
+    borderRadius: 2,
   },
   dragHandle: {
-    paddingRight: 12,
+    paddingHorizontal: 6,
+    justifyContent: 'center',
   },
   checkbox: {
     width: 24,
@@ -159,7 +186,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   description: {
-    fontSize: 16,
+    color: 'white',
     fontWeight: '500',
     flex: 1,
   },
@@ -191,6 +218,17 @@ const styles = StyleSheet.create({
   nestHintText: {
     color: '#FEC00F',
     fontSize: 11,
+    fontWeight: '700',
+  },
+  subtaskBadge: {
+    backgroundColor: 'rgba(254, 192, 15, 0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  subtaskBadgeText: {
+    color: '#FEC00F',
+    fontSize: 10,
     fontWeight: '700',
   },
 });

@@ -489,7 +489,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   }
 
   const currentProgress = loopData.totalCount > 0 ? Math.round((loopData.completedCount / loopData.totalCount) * 100) : 0;
-  const recurringTasks = loopData.tasks.filter(task => !task.is_one_time);
+  const allRecurring = loopData.tasks.filter(task => !task.is_one_time);
+  const recurringTasksTopLevel = allRecurring.filter(task => !task.parent_task_id);
+  const getChildTasks = (parentId: string) => allRecurring.filter(t => t.parent_task_id === parentId);
   const oneTimeTasks = loopData.tasks.filter(task => task.is_one_time);
 
   return (
@@ -575,10 +577,11 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
              )}
           </View>
           
-          {recurringTasks.map((task, index) => {
-            const isActive = index === recurringTasks.findIndex(t => !t.completed);
+          {recurringTasksTopLevel.map((task, index) => {
+            const isActive = index === recurringTasksTopLevel.findIndex(t => !t.completed);
             const isShelved = task.completed;
-            
+            const childTasks = getChildTasks(task.id);
+
             return (
               <React.Fragment key={task.id}>
                 <EnhancedTaskCard
@@ -588,8 +591,22 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                   isActive={isActive}
                   isShelved={isShelved}
                 />
-                
-                {index < recurringTasks.length - 1 && (
+                {childTasks.length > 0 && (
+                  <View style={styles.subtasksBlock}>
+                    {childTasks.map((child) => (
+                      <EnhancedTaskCard
+                        key={child.id}
+                        task={child as TaskWithDetails}
+                        onToggle={() => toggleTask(child)}
+                        onPress={() => handleEditTask(child as TaskWithDetails)}
+                        isActive={false}
+                        isShelved={child.completed}
+                        isSubtask
+                      />
+                    ))}
+                  </View>
+                )}
+                {index < recurringTasksTopLevel.length - 1 && (
                   <TouchableOpacity 
                     style={styles.ketchupSlot} 
                     onPress={() => openAddTaskModal()}
@@ -803,6 +820,14 @@ const styles = StyleSheet.create({
   },
   tasksSection: {
     flex: 1,
+  },
+  subtasksBlock: {
+    marginLeft: 16,
+    marginBottom: 8,
+    paddingLeft: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: 'rgba(254, 192, 15, 0.35)',
+    borderRadius: 0,
   },
   sectionTitle: {
     fontSize: 22,
