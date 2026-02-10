@@ -8,7 +8,6 @@ import Animated, {
   withSequence,
   Easing,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
 
 const { width, height } = Dimensions.get('window');
 
@@ -73,7 +72,6 @@ export const MomentumOrb = () => {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Animated.View style={[styles.orb, animatedStyle]} />
-      <BlurView intensity={90} tint="dark" style={StyleSheet.absoluteFill} />
     </View>
   );
 };
