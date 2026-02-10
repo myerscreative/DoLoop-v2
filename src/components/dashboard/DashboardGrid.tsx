@@ -167,6 +167,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     marginBottom: 8,
+    minWidth: 300,
   },
   greeting: {
     fontSize: 24,

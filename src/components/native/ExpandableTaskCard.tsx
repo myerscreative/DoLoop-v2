@@ -180,6 +180,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   const cardContent = (
     <>
       <View style={styles.mainRow}>
+        {/* Checkbox - isolated touch area */}
         <TouchableOpacity 
           onPress={(e) => {
             // Stop event propagation to prevent parent card's onPress from firing
@@ -188,8 +189,9 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
             }
             onToggle();
           }}
-          style={styles.toggleArea}
+          style={styles.checkboxTouchArea}
           activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <View
             style={[
@@ -204,31 +206,43 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
               <Ionicons name="checkmark" size={14} color="white" />
             )}
           </View>
-
-          <View style={styles.content}>
-            <View style={styles.titleRow}>
-              <Text
-                style={[
-                  styles.description,
-                  {
-                    color: 'white',
-                    fontFamily: isActive ? 'Outfit_700Bold' : 'Inter_500Medium',
-                    textDecorationLine: isShelved ? 'line-through' : 'none',
-                    opacity: taskStatus === 'done' ? 0.6 : 1,
-                  },
-                ]}
-                numberOfLines={1}
-              >
-                {task.description}
-              </Text>
-              {task.priority !== 'none' && (
-                <PriorityBadge priority={task.priority} size="small" />
-              )}
-            </View>
-          </View>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={handleToggleExpand} style={styles.expandButton}>
+        {/* Task description - triggers detail view via parent onPress */}
+        <View style={styles.content}>
+          <View style={styles.titleRow}>
+            <Text
+              style={[
+                styles.description,
+                {
+                  color: 'white',
+                  fontFamily: isActive ? 'Outfit_700Bold' : 'Inter_500Medium',
+                  textDecorationLine: isShelved ? 'line-through' : 'none',
+                  opacity: taskStatus === 'done' ? 0.6 : 1,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {task.description}
+            </Text>
+            {task.priority !== 'none' && (
+              <PriorityBadge priority={task.priority} size="small" />
+            )}
+          </View>
+        </View>
+
+        {/* Expand button - separated from checkbox */}
+        <TouchableOpacity 
+          onPress={(e) => {
+            // Stop propagation to prevent parent's onPress
+            if (e && typeof e.stopPropagation === 'function') {
+              e.stopPropagation();
+            }
+            handleToggleExpand();
+          }}
+          style={styles.expandButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons
             name={expanded ? 'chevron-up' : 'chevron-down'}
             size={20}
@@ -409,10 +423,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  toggleArea: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+  checkboxTouchArea: {
+    // Fixed width for checkbox area to prevent overlap
+    paddingRight: 10,
   },
   checkbox: {
     width: 24,
@@ -421,10 +434,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
   },
   content: {
     flex: 1,
+    paddingRight: 8,
   },
   titleRow: {
     flexDirection: 'row',
