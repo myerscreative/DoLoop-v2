@@ -9,7 +9,6 @@ interface TaskRowProps extends RenderItemParams<Task> {
   onToggle: (task: Task) => void;
   onPress: (task: Task) => void;
   isActive: boolean;
-  isHovered?: boolean;
   isDragging?: boolean;
   /** Nesting level from TaskTree: 0 = main step, 1+ = subtask */
   depth?: number;
@@ -30,7 +29,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   isActive: isDragActive,
   onToggle,
   onPress,
-  isHovered = false,
   isDragging = false,
   depth: depthProp,
   hasChildren = false,
@@ -52,21 +50,16 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           style={[
             styles.container,
             {
-              backgroundColor: isHovered
-                ? 'rgba(254, 192, 15, 0.30)'
-                : isSubtask
-                  ? 'rgba(255, 255, 255, 0.04)'
-                  : 'rgba(255, 255, 255, 0.06)',
-              borderColor: isHovered
-                ? BRAND_GOLD
-                : isSubtask
-                  ? 'rgba(255, 255, 255, 0.06)'
-                  : 'rgba(255, 255, 255, 0.08)',
+              backgroundColor: isSubtask
+                ? 'rgba(255, 255, 255, 0.04)'
+                : 'rgba(255, 255, 255, 0.06)',
+              borderColor: isSubtask
+                ? 'rgba(255, 255, 255, 0.06)'
+                : 'rgba(255, 255, 255, 0.08)',
               borderLeftWidth: isSubtask ? 4 : 1,
               borderLeftColor: isSubtask ? BRAND_GOLD : undefined,
               opacity: isDragging ? 0.4 : 1,
             },
-            isHovered && styles.hoveredShadow,
             isSubtask && styles.subtaskRow,
           ]}
         >
@@ -113,12 +106,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           </View>
 
           {/* Right side indicator */}
-          {isHovered ? (
-            <View style={styles.nestHint}>
-              <Ionicons name="enter-outline" size={16} color={BRAND_GOLD} />
-              <Text style={styles.nestHintText}>Nest</Text>
-            </View>
-          ) : hasChildren ? (
+          {hasChildren ? (
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
@@ -159,13 +147,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     marginBottom: 4,
-  },
-  hoveredShadow: {
-    shadowColor: '#FEC00F',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 10,
-    elevation: 8,
   },
   subtaskRow: {
     borderTopLeftRadius: 0,
@@ -214,31 +195,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  counts: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  countText: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  nestHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(254, 192, 15, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    gap: 4,
-  },
-  nestHintText: {
-    color: '#FEC00F',
-    fontSize: 11,
-    fontWeight: '700',
   },
   expandButton: {
     flexDirection: 'row',

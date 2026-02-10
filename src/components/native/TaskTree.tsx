@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
 import { Task } from '../../types/loop';
@@ -10,21 +10,12 @@ interface TaskTreeProps {
   onToggleTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
-  /** Nesting level: 0 = top-level steps, 1+ = subtasks (controls indentation and styling) */
+  /** Nesting level: 0 = top-level steps, 1+ = subtasks */
   depth?: number;
 }
 
-// How long (ms) the user must hold still over an item before the "Nest" glow appears
-const NEST_HOVER_DELAY = 2000;
-// After the glow appears, user must hold for this long before drop will actually nest
-// This prevents accidental nesting when the glow just barely appeared
-const NEST_CONFIRM_DELAY = 500;
-
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, depth = 0 }) => {
-  // hoveredTaskId tracks the item the placeholder is currently over (before timer fires)
-  const [, setHoveredTaskId] = useState<string | null>(null);
+export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, depth = 0 }) => {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
-  const [nestTargetId, setNestTargetId] = useState<string | null>(null);
   // Track which parent tasks have their children expanded
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -40,22 +31,9 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     });
   }, []);
 
-  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastPlaceholderIndex = useRef<number | null>(null);
-  // Timestamp when nestTargetId was set — used to enforce NEST_CONFIRM_DELAY
-  const nestTargetSetAt = useRef<number | null>(null);
-
-  const clearHoverTimer = useCallback(() => {
-    if (hoverTimerRef.current) {
-      clearTimeout(hoverTimerRef.current);
-      hoverTimerRef.current = null;
-    }
-  }, []);
-
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
     const hasChildren = item.children && item.children.length > 0;
-    const isNestTarget = nestTargetId === item.id;
     const isDragging = draggedTaskId === item.id;
     const isExpanded = expandedIds.has(item.id);
 
@@ -67,7 +45,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           onToggle={onToggleTask}
           onPress={onEditTask}
           isActive={params.isActive}
-          isHovered={isNestTarget && !isDragging}
           isDragging={isDragging}
           hasChildren={hasChildren}
           isExpanded={isExpanded}
@@ -86,7 +63,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
               }}
               onToggleTask={onToggleTask}
               onEditTask={onEditTask}
-              onNestTask={onNestTask}
             />
           </View>
         )}
@@ -98,72 +74,14 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     <NestableDraggableFlatList
       data={tasks}
       onDragBegin={(index: number) => {
-        // onDragBegin receives just the index
         if (index >= 0 && index < tasks.length) {
           setDraggedTaskId(tasks[index].id);
         }
       }}
-      onPlaceholderIndexChange={(placeholderIndex: number) => {
-        // Called as the dragged item moves over other items
-        // If we hover over the same item for NEST_HOVER_DELAY ms, mark it as a nest target
-        if (placeholderIndex === lastPlaceholderIndex.current) return;
-        lastPlaceholderIndex.current = placeholderIndex;
-
-        // Clear any pending hover timer and nest target when moving to a new position
-        clearHoverTimer();
-        setNestTargetId(null);
-        setHoveredTaskId(null);
-        nestTargetSetAt.current = null;
-
-        if (placeholderIndex >= 0 && placeholderIndex < tasks.length) {
-          const targetTask = tasks[placeholderIndex];
-
-          // Don't target self
-          if (targetTask.id === draggedTaskId) return;
-
-          setHoveredTaskId(targetTask.id);
-
-          // Start a timer — if user holds here long enough, activate nest target glow
-          hoverTimerRef.current = setTimeout(() => {
-            setNestTargetId(targetTask.id);
-            nestTargetSetAt.current = Date.now();
-          }, NEST_HOVER_DELAY);
-        }
-      }}
       onDragEnd={async ({ data }) => {
-        const currentDraggedId = draggedTaskId;
-        const currentNestTargetId = nestTargetId;
-        const nestGlowedAt = nestTargetSetAt.current;
-
-        // Reset all state
         setDraggedTaskId(null);
-        setHoveredTaskId(null);
-        setNestTargetId(null);
-        clearHoverTimer();
-        lastPlaceholderIndex.current = null;
-        nestTargetSetAt.current = null;
 
-        // Only nest if:
-        // 1. There's an active nest target (the glow was showing)
-        // 2. The glow was visible for at least NEST_CONFIRM_DELAY ms (user saw it and chose to drop)
-        const glowWasConfirmed = nestGlowedAt && (Date.now() - nestGlowedAt) >= NEST_CONFIRM_DELAY;
-
-        if (currentNestTargetId && currentDraggedId && currentNestTargetId !== currentDraggedId && onNestTask && glowWasConfirmed) {
-          const draggedTask = tasks.find(t => t.id === currentDraggedId);
-          const targetTask = tasks.find(t => t.id === currentNestTargetId);
-
-          if (draggedTask && targetTask) {
-            const isAlreadyChild = draggedTask.parent_task_id === targetTask.id;
-            const wouldCreateCycle = isTaskDescendant(targetTask, currentDraggedId, tasks);
-
-            if (!isAlreadyChild && !wouldCreateCycle) {
-              await onNestTask(currentDraggedId, currentNestTargetId);
-              return; // Don't reorder — nesting handles the update
-            }
-          }
-        }
-
-        // Normal reordering
+        // Pure reordering — no nesting logic during drag
         const reordered = data.map((task, index) => ({
           ...task,
           order_index: index,
@@ -179,13 +97,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     />
   );
 };
-
-// Helper: check if a task is a descendant of another (prevents cycles)
-function isTaskDescendant(task: Task, ancestorId: string, _allTasks: Task[]): boolean {
-  if (task.id === ancestorId) return true;
-  if (!task.children || task.children.length === 0) return false;
-  return task.children.some(child => isTaskDescendant(child, ancestorId, _allTasks));
-}
 
 const styles = StyleSheet.create({
   childContainer: {

@@ -904,20 +904,6 @@ export const LoopDetailScreen: React.FC = () => {
                 }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
-                onNestTask={async (taskId, parentTaskId) => {
-                  try {
-                    const parentTask = loopData?.tasks.find(t => t.id === parentTaskId) as TaskWithDetails | undefined;
-                    const childCount = parentTask?.children?.length || 0;
-                    const success = await nestTask(taskId, parentTaskId, childCount);
-                    if (success) {
-                      await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-                      await loadLoopData();
-                    }
-                  } catch (error) {
-                    console.error('Error nesting task:', error);
-                    Alert.alert('Error', 'Failed to nest task');
-                  }
-                }}
               />
 
               {/* Add Step Button - More Vibrant */}
@@ -963,20 +949,6 @@ export const LoopDetailScreen: React.FC = () => {
                 }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
-                onNestTask={async (taskId, parentTaskId) => {
-                  try {
-                    const parentTask = loopData?.tasks.find(t => t.id === parentTaskId) as TaskWithDetails | undefined;
-                    const childCount = parentTask?.children?.length || 0;
-                    const success = await nestTask(taskId, parentTaskId, childCount);
-                    if (success) {
-                      await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-                      await loadLoopData();
-                    }
-                  } catch (error) {
-                    console.error('Error nesting task:', error);
-                    Alert.alert('Error', 'Failed to nest task');
-                  }
-                }}
               />
             </View>
           )}
