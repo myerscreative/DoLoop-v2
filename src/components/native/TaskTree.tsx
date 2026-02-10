@@ -40,20 +40,26 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   }, []);
 
   // Use TouchableOpacity so onPress fires reliably (RectButton can fail in nested gesture contexts)
-  const renderRightActions = (taskId: string, task: Task) => (
-    <TouchableOpacity
-      style={styles.deleteAction}
-      onPress={() => {
-        console.log('[TaskTree] Swipe delete button pressed for task:', task.id);
-        swipeableRefs.current[taskId]?.close();
-        onDeleteTask?.(task);
-      }}
-      activeOpacity={0.8}
-    >
-      <Ionicons name="trash-outline" size={22} color="white" />
-      <Text style={styles.deleteActionText}>Delete</Text>
-    </TouchableOpacity>
-  );
+  const renderRightActions = (taskId: string, task: Task) => {
+    const handleDelete = () => {
+      console.log('[TaskTree] Swipe delete button pressed for task:', task.id);
+      // Close the swipeable first to prevent UI glitches
+      swipeableRefs.current[taskId]?.close();
+      // Call delete handler - it will show confirmation dialog
+      onDeleteTask?.(task);
+    };
+
+    return (
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={handleDelete}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="trash-outline" size={22} color="white" />
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </TouchableOpacity>
+    );
+  };
 
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
@@ -80,10 +86,9 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           isExpanded={isExpanded}
           onToggleExpand={() => toggleExpanded(item.id)}
           onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
-          onDelete={onDeleteTask ? () => {
-            console.log('[TaskTree] Row delete called for task:', item.id);
-            onDeleteTask(item);
-          } : undefined}
+          // Don't show delete button in TaskRow when swipe-to-delete is available
+          // This prevents duplicate delete UI and gesture conflicts
+          onDelete={undefined}
         />
         {hasChildren && isExpanded && (
           <View style={styles.childContainer}>
@@ -114,6 +119,16 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           renderRightActions={() => renderRightActions(item.id, item)}
           overshootRight={false}
           friction={2}
+          rightThreshold={40}
+          enabled={!isDragging}
+          // Close other swipeables when this one opens
+          onSwipeableWillOpen={() => {
+            Object.keys(swipeableRefs.current).forEach((id) => {
+              if (id !== item.id && swipeableRefs.current[id]) {
+                swipeableRefs.current[id]?.close();
+              }
+            });
+          }}
         >
           {rowContent}
         </Swipeable>
@@ -129,6 +144,10 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
       onDragBegin={(index: number) => {
         if (index >= 0 && index < tasks.length) {
           setDraggedTaskId(tasks[index].id);
+          // Close all open swipeables when dragging starts
+          Object.values(swipeableRefs.current).forEach((swipeable) => {
+            swipeable?.close();
+          });
         }
       }}
       onDragEnd={async ({ data, from, releaseY }) => {
