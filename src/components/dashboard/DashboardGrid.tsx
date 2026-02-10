@@ -42,10 +42,8 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   // Calculate number of columns for Bento Grid
   const getColumns = (): number => {
     if (forcedColumns) return forcedColumns;
-    if (layout === 'list') return 1;
-    if (width >= 1200) return 3; // 27"+ desktop
-    if (width >= 768) return 2; // 13-15" laptop
-    return 1; // Fallback
+    // Always use 1 column for vertical stacking
+    return 1;
   };
 
   const columns = getColumns();
