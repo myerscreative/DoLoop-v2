@@ -336,17 +336,36 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
 
-  const toggleTask = async (task: Task) => {
-    try {
-      const newCompleted = !task.completed;
+  /** Apply optimistic toggle to local state so the UI updates immediately. */
+  const applyOptimisticTaskToggle = (prev: LoopWithTasks | null, taskId: string, newCompleted: boolean): LoopWithTasks | null => {
+    if (!prev) return null;
+    const setCompletedRecursive = (t: TaskWithDetails, completed: boolean): TaskWithDetails => ({
+      ...t,
+      completed,
+      completed_at: completed ? new Date().toISOString() : null,
+      children: (t.children || []).map((c) => setCompletedRecursive(c as TaskWithDetails, completed)),
+    });
+    const mapTask = (t: TaskWithDetails): TaskWithDetails =>
+      t.id === taskId ? setCompletedRecursive(t, newCompleted) : { ...t, children: (t.children || []).map((c) => mapTask(c as TaskWithDetails)) };
+    const newTasks = prev.tasks.map((t) => mapTask(t as TaskWithDetails));
+    const completedCount = newTasks.filter((t) => t.completed && !t.is_one_time).length;
+    const totalCount = newTasks.filter((t) => !t.is_one_time).length;
+    return { ...prev, tasks: newTasks, completedCount, totalCount };
+  };
 
-      // Use cascading toggle that also updates children
+  const toggleTask = async (task: Task) => {
+    const newCompleted = !task.completed;
+    if (!loopData) return;
+
+    // Optimistic update: show checked state immediately
+    setLoopData((prev) => applyOptimisticTaskToggle(prev, task.id, newCompleted));
+    if (newCompleted) {
+      safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    try {
       const success = await toggleTaskWithChildren(task.id, newCompleted);
       if (!success) throw new Error('Toggle failed');
-
-      if (newCompleted) {
-        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-      }
 
       if (task.is_one_time && newCompleted) {
         await supabase.from('archived_tasks').insert({
@@ -361,12 +380,12 @@ export const LoopDetailScreen: React.FC = () => {
       }
 
       const updatedLoopData = await loadLoopData();
-
       if (updatedLoopData) {
         await checkAndShowThemePrompt();
       }
     } catch (error) {
       console.error('Error toggling task:', error);
+      setLoopData((prev) => (prev ? applyOptimisticTaskToggle(prev, task.id, !newCompleted) : prev));
       Alert.alert('Error', 'Failed to update task');
     }
   };

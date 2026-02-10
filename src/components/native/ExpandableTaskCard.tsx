@@ -136,15 +136,23 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   };
 
   const handleToggleSubtask = async (subtask: Subtask) => {
+    const newCompleted = !subtask.completed;
+    setLocalSubtasks(localSubtasks.map(st =>
+      st.id === subtask.id ? { ...st, completed: newCompleted } : st
+    ));
     try {
       const success = await toggleSubtask(subtask.id, subtask.completed);
       if (success) {
-        setLocalSubtasks(localSubtasks.map(st =>
-          st.id === subtask.id ? { ...st, completed: !st.completed } : st
-        ));
         onSubtaskChange?.();
+      } else {
+        setLocalSubtasks(localSubtasks.map(st =>
+          st.id === subtask.id ? { ...st, completed: subtask.completed } : st
+        ));
       }
     } catch {
+      setLocalSubtasks(localSubtasks.map(st =>
+        st.id === subtask.id ? { ...st, completed: subtask.completed } : st
+      ));
     }
   };
 
