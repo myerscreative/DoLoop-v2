@@ -20,6 +20,8 @@ interface TaskRowProps extends RenderItemParams<Task> {
   onToggleExpand?: () => void;
   /** Promote subtask to top-level (move back to main list). Only shown for subtasks. */
   onPromote?: () => void;
+  /** When set, show a delete icon that calls this (e.g. swipe alternative on web). */
+  onDelete?: () => void;
 }
 
 const SUBTASK_INDENT = 32;
@@ -37,6 +39,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   isExpanded = false,
   onToggleExpand,
   onPromote,
+  onDelete,
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
@@ -129,6 +132,18 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </Pressable>
           ) : isSubtask ? (
             <View style={styles.subtaskRight}>
+              {onDelete ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    onDelete();
+                  }}
+                  style={styles.deleteIconButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
+                </Pressable>
+              ) : null}
               {onPromote ? (
                 <Pressable
                   onPress={(e) => {
@@ -146,6 +161,17 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                 <Text style={styles.subtaskBadgeText}>Substep</Text>
               </View>
             </View>
+          ) : onDelete ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onDelete();
+              }}
+              style={styles.deleteIconButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
+            </Pressable>
           ) : (
             <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
           )}
@@ -230,6 +256,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  deleteIconButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
   },
   promoteOutButton: {
     flexDirection: 'row',

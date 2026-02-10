@@ -40,6 +40,8 @@ interface TaskEditModalProps {
   onPromote?: () => void;
   availableParentTasks?: TaskWithDetails[];
   onNestUnder?: (parentTaskId: string) => void;
+  /** When set, show a "Delete item" button when editing an existing task. */
+  onDeleteTask?: (task: TaskWithDetails) => void;
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -53,6 +55,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onPromote,
   availableParentTasks,
   onNestUnder,
+  onDeleteTask,
 }) => {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
@@ -785,6 +788,18 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
         {/* Bottom Save Button - for better visibility */}
         <View style={[styles.footer, { backgroundColor: isDark ? colors.structure : 'white', borderTopColor: colors.border }]}>
+            {task && onDeleteTask ? (
+              <TouchableOpacity
+                style={[styles.deleteItemButton, { borderColor: colors.border }]}
+                onPress={() => {
+                  onClose();
+                  onDeleteTask(task);
+                }}
+              >
+                <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                <Text style={styles.deleteItemButtonText}>Delete item</Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity 
                 style={[styles.bottomSaveButton, { backgroundColor: saving ? (isDark ? colors.primary + '80' : '#FDE68A') : colors.primary }, saving && { shadowOpacity: 0, elevation: 0 }]}
                 onPress={() => {
@@ -926,6 +941,21 @@ const styles = StyleSheet.create({
       borderTopWidth: 1,
       borderTopColor: '#f1f5f9',
       backgroundColor: 'white',
+  },
+  deleteItemButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 12,
+      marginBottom: 12,
+      borderRadius: 12,
+      borderWidth: 1,
+  },
+  deleteItemButtonText: {
+      color: '#DC2626',
+      fontSize: 16,
+      fontWeight: '600',
   },
   bottomSaveButton: {
       backgroundColor: '#FEC00F',

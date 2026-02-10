@@ -4,7 +4,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CompactLoopItem } from '../CompactLoopItem';
 import { LoopWithTasks, FilterType, LoopType, FOLDER_ICONS } from '../../types/loop';
-import { Colors } from '../../constants/Colors';
 
 interface DashboardGridProps {
   loops: LoopWithTasks[];
@@ -38,7 +37,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   });
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.surface, borderRightColor: colors.border }]}>
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollView} 
@@ -46,23 +45,23 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
-        <View style={styles.header}>
-           <Text style={styles.greeting}>
+        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+           <Text style={[styles.greeting, { color: colors.text }]}>
             Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {user?.user_metadata?.first_name || 'Friend'} 👋
           </Text>
-          <Text style={styles.dateText}>{currentDate}</Text>
+          <Text style={[styles.dateText, { color: colors.textSecondary }]}>{currentDate}</Text>
         </View>
 
         {/* Section Label */}
         <View style={styles.sectionHeader}>
-           <Text style={styles.sectionTitle}>{title || "TODAY'S LOOPS"}</Text>
+           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{title || "TODAY'S LOOPS"}</Text>
         </View>
 
         {/* Loops List */}
         <View style={styles.gridContainer}>
           {loops.length === 0 ? (
              <View style={styles.emptyState}>
-                 <Text style={styles.emptyText}>No loops yet. Create a new one to get started!</Text>
+                 <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No loops yet. Create a new one to get started!</Text>
              </View>
           ) : (
              loops.map((loop) => (
@@ -73,6 +72,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                   description={loop.description || ''}
                   isSelected={selectedLoopId === loop.id}
                   onPress={() => onLoopPress(loop)}
+                  colors={colors}
                 />
              ))
           )}
@@ -85,9 +85,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB', // gray-50
     borderRightWidth: 1,
-    borderRightColor: '#E5E7EB', // gray-200
   },
   scrollView: {
     flex: 1,
@@ -97,20 +95,16 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
     marginBottom: 16,
   },
   greeting: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
     marginBottom: 4,
   },
   dateText: {
     fontSize: 14,
-    color: '#6B7280',
     fontWeight: '600',
   },
   sectionHeader: {
@@ -121,7 +115,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -135,7 +128,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: '#6B7280',
     textAlign: 'center',
   }
 });

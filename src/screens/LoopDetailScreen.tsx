@@ -1296,6 +1296,7 @@ export const LoopDetailScreen: React.FC = () => {
               : undefined
           }
           onNestUnder={editingTask && !editingTask.parent_task_id ? handleNestTask : undefined}
+          onDeleteTask={handleDeleteTask}
         />
 
         {/* Invite Modal */}

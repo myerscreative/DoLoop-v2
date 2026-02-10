@@ -1,12 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 
+type ThemeColors = {
+  background: string;
+  text: string;
+  textSecondary: string;
+  primary: string;
+  border: string;
+};
+
 interface CompactLoopItemProps {
   emoji: string;
   name: string;
   description: string;
   isSelected?: boolean;
   onPress: () => void;
+  colors?: ThemeColors;
 }
 
 export const CompactLoopItem: React.FC<CompactLoopItemProps> = ({
@@ -15,15 +24,35 @@ export const CompactLoopItem: React.FC<CompactLoopItemProps> = ({
   description,
   isSelected,
   onPress,
+  colors: themeColors,
 }) => {
   const [isHovered, setIsHovered] = React.useState(false);
+  const colors = themeColors ?? {
+    background: '#FFFFFF',
+    text: '#111827',
+    textSecondary: '#4B5563',
+    primary: '#FEC00F',
+    border: '#E5E7EB',
+  };
 
   return (
     <TouchableOpacity
       style={[
         styles.container,
-        isSelected && styles.selectedContainer,
-        !isSelected && isHovered && styles.hoverContainer,
+        { backgroundColor: colors.background },
+        isSelected && {
+          borderColor: colors.primary,
+          backgroundColor: `${colors.primary}12`,
+        },
+        !isSelected && isHovered && {
+          borderColor: `${colors.primary}60`,
+          transform: [{ translateY: -2 }],
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.05,
+          shadowRadius: 4,
+          elevation: 2,
+        },
       ]}
       onPress={onPress}
       onMouseEnter={() => setIsHovered(true)}
@@ -33,10 +62,10 @@ export const CompactLoopItem: React.FC<CompactLoopItemProps> = ({
       <View style={styles.content}>
         <Text style={styles.emoji}>{emoji}</Text>
         <View style={styles.textContainer}>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
             {name}
           </Text>
-          <Text style={styles.description} numberOfLines={2}>
+          <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
             {description}
           </Text>
         </View>
@@ -47,13 +76,11 @@ export const CompactLoopItem: React.FC<CompactLoopItemProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 2,
     borderColor: 'transparent',
-    // Strict height around 80-90px
     minHeight: 80,
     justifyContent: 'center',
     ...Platform.select({
@@ -63,19 +90,6 @@ const styles = StyleSheet.create({
       },
     }),
   } as any,
-  hoverContainer: {
-    borderColor: '#FFE4A3',
-    transform: [{ translateY: -2 }],
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  selectedContainer: {
-    borderColor: '#FFD700',
-    backgroundColor: '#FFFBF5',
-  },
   content: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -92,12 +106,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827', // text-gray-900
     marginBottom: 2,
   },
   description: {
     fontSize: 13,
-    color: '#4B5563', // text-gray-600
     lineHeight: 18,
   },
 });

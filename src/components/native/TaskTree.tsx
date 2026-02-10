@@ -15,7 +15,7 @@ interface TaskTreeProps {
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
   /** Promote a subtask to top-level (move back to main list). */
   onPromoteTask?: (taskId: string) => void;
-  /** Delete a task (swipe right to reveal delete button). */
+  /** Delete a task (swipe left to reveal delete button). */
   onDeleteTask?: (task: Task) => void;
   /** Nesting level: 0 = top-level steps, 1+ = subtasks */
   depth?: number;
@@ -38,6 +38,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     });
   }, []);
 
+  // renderRightActions works; renderLeftActions has a known bug where onPress doesn't fire (RNGH #3223)
   const renderRightActions = (task: Task) => (
     <RectButton
       style={styles.deleteAction}
@@ -49,9 +50,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
       <Text style={styles.deleteActionText}>Delete</Text>
     </RectButton>
   );
-
-  // Swipe RIGHT to reveal delete on the left - avoids touch bug with renderRightActions
-  const renderLeftActions = (task: Task) => renderRightActions(task);
 
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
@@ -78,6 +76,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           isExpanded={isExpanded}
           onToggleExpand={() => toggleExpanded(item.id)}
           onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
+          onDelete={onDeleteTask ? () => onDeleteTask(item) : undefined}
         />
         {hasChildren && isExpanded && (
           <View style={styles.childContainer}>
@@ -104,8 +103,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     if (onDeleteTask) {
       return (
         <Swipeable
-          renderLeftActions={() => renderLeftActions(item)}
-          overshootLeft={false}
+          renderRightActions={() => renderRightActions(item)}
+          overshootRight={false}
           friction={2}
         >
           {rowContent}
