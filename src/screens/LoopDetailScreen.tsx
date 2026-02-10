@@ -905,6 +905,7 @@ export const LoopDetailScreen: React.FC = () => {
                 onNestTask={async () => {
                   await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
                 }}
+                onPromoteTask={handlePromoteTask}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
               />
@@ -953,6 +954,7 @@ export const LoopDetailScreen: React.FC = () => {
                 onNestTask={async () => {
                   await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
                 }}
+                onPromoteTask={handlePromoteTask}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
               />

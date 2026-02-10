@@ -420,11 +420,14 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             </TouchableOpacity>
         </View>
 
-        {/* Promote to top-level button (only for nested/child tasks) */}
+        {/* Promote to top-level (only for nested/child tasks) */}
         {task?.parent_task_id && onPromote && (
           <TouchableOpacity style={styles.promoteButton} onPress={onPromote}>
             <Ionicons name="arrow-up-circle-outline" size={20} color="#FEC00F" />
-            <Text style={styles.promoteButtonText}>Promote to Top-Level Step</Text>
+            <View>
+              <Text style={styles.promoteButtonText}>Promote to top-level step</Text>
+              <Text style={styles.promoteButtonSubtext}>Move this back to the main list</Text>
+            </View>
           </TouchableOpacity>
         )}
 
@@ -810,6 +813,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingHorizontal: 16, // Inset modal content from screen edges
     backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white',
     alignItems: Platform.OS === 'web' ? 'center' : undefined,
     justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end', // On mobile, slide from bottom
@@ -1277,6 +1281,11 @@ const styles = StyleSheet.create({
       fontSize: 14,
       fontWeight: '600',
       color: '#FEC00F',
+  },
+  promoteButtonSubtext: {
+      fontSize: 12,
+      color: 'rgba(255, 255, 255, 0.6)',
+      marginTop: 2,
   },
   nestUnderSection: {
       flexDirection: 'row',

@@ -11,11 +11,13 @@ interface TaskTreeProps {
   onToggleTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
+  /** Promote a subtask to top-level (move back to main list). */
+  onPromoteTask?: (taskId: string) => void;
   /** Nesting level: 0 = top-level steps, 1+ = subtasks */
   depth?: number;
 }
 
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, depth = 0 }) => {
+export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, onPromoteTask, depth = 0 }) => {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const rowLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
@@ -37,6 +39,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     const hasChildren = item.children && item.children.length > 0;
     const isDragging = draggedTaskId === item.id;
     const isExpanded = expandedIds.has(item.id);
+    const isSubtask = depth > 0 || !!item.parent_task_id;
 
     return (
       <View
@@ -55,6 +58,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           hasChildren={hasChildren}
           isExpanded={isExpanded}
           onToggleExpand={() => toggleExpanded(item.id)}
+          onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
         />
         {hasChildren && isExpanded && (
           <View style={styles.childContainer}>
@@ -70,6 +74,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
               onToggleTask={onToggleTask}
               onEditTask={onEditTask}
               onNestTask={onNestTask}
+              onPromoteTask={onPromoteTask}
             />
           </View>
         )}

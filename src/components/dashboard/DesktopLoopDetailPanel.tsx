@@ -22,7 +22,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, FOLDER_ICONS, LoopType, Subtask } from '../../types/loop';
 import { AnimatedCircularProgress } from '../native/AnimatedCircularProgress';
-import { EnhancedTaskCard } from '../native/EnhancedTaskCard';
 import { TaskEditModal } from '../native/TaskEditModal';
 import { InviteModal } from '../native/InviteModal';
 import { MemberAvatars } from '../native/MemberAvatars';
@@ -30,13 +29,18 @@ import { BeeIcon } from '../native/BeeIcon';
 import { 
   getUserTags, 
   getTaskTags, 
-  getTaskSubtasks, 
   getTaskAttachments, 
   updateTaskExtended, 
   ensureLoopMember, 
   uploadAttachment, 
-  createSubtask 
+  createSubtask,
+  promoteTask,
+  nestTask,
+  toggleTaskWithChildren,
 } from '../../lib/taskHelpers';
+import { flattenTreeForSync } from '../../lib/treeHelpers';
+import { TaskTree } from '../native/TaskTree';
+import { NestableScrollContainer } from 'react-native-draggable-flatlist';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../../lib/profileHelpers';
 import { useSharedMomentum } from '../../hooks/useSharedMomentum';
 import { LoopProvenance } from '../loops/LoopProvenance';
@@ -164,31 +168,63 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select(`*, assigned_member:assigned_to (user_id)`)
+        .select(`
+          *,
+          assigned_member:assigned_to (
+            user_id
+          ),
+          task_tags (
+            tags (*)
+          ),
+          attachments (*)
+        `)
         .eq('loop_id', loopId)
+        .order('order_index', { ascending: true })
         .order('created_at', { ascending: true });
 
       if (tasksError) throw tasksError;
 
-      const tasksWithDetails = await Promise.all(
-        (tasks || []).map(async (task: any) => {
-          const [tags, subtasks, attachments] = await Promise.all([
-            getTaskTags(task.id),
-            getTaskSubtasks(task.id),
-            getTaskAttachments(task.id),
-          ]);
-          return {
-            ...task,
-            tag_details: tags,
-            subtasks,
-            attachments,
-            assigned_user_id: task.assigned_member?.user_id
-          };
-        })
-      );
+      // Build tree: top-level tasks with children (same shape as mobile)
+      const allTasks = tasks || [];
+      const topLevelTasks = allTasks.filter((t: any) => !t.parent_task_id);
+      const childTaskMap = new Map<string, any[]>();
+      for (const task of allTasks) {
+        if (task.parent_task_id) {
+          const siblings = childTaskMap.get(task.parent_task_id) || [];
+          siblings.push(task);
+          childTaskMap.set(task.parent_task_id, siblings);
+        }
+      }
 
-      const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
-      const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
+      const tasksWithDetails = topLevelTasks.map((task: any) => {
+        const tags = task.task_tags?.map((tt: any) => tt.tags).filter(Boolean) || [];
+        const attachments = task.attachments || [];
+        const childTasks = childTaskMap.get(task.id) || [];
+        const hydratedChildren = childTasks.map((child: any) => {
+          const childTags = child.task_tags?.map((tt: any) => tt.tags).filter(Boolean) || [];
+          const childAttachments = child.attachments || [];
+          return {
+            ...child,
+            tag_details: childTags,
+            subtasks: [],
+            children: undefined,
+            attachments: childAttachments,
+            assigned_user_id: child.assigned_member?.user_id,
+          };
+        });
+        return {
+          ...task,
+          tag_details: tags,
+          subtasks: hydratedChildren,
+          children: hydratedChildren,
+          attachments,
+          assigned_user_id: task.assigned_member?.user_id,
+        };
+      });
+
+      // Count only top-level tasks for progress
+      const completedCount = tasksWithDetails?.filter((t: any) => t.completed && !t.is_one_time).length || 0;
+      const totalCount = tasksWithDetails?.filter((t: any) => !t.is_one_time).length || 0;
 
       const { data: streaks } = await supabase
         .from('loop_streaks')
@@ -229,12 +265,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const toggleTask = async (task: Task) => {
     try {
       const newCompleted = !task.completed;
-      const { error } = await supabase
-        .from('tasks')
-        .update({ completed: newCompleted })
-        .eq('id', task.id);
-
-      if (error) throw error;
+      const success = await toggleTaskWithChildren(task.id, newCompleted);
+      if (!success) throw new Error('Toggle failed');
       if (newCompleted) await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
 
       if (task.is_one_time && newCompleted) {
@@ -251,6 +283,40 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     } catch (error) {
       console.error('Error toggling task:', error);
       Alert.alert('Error', 'Failed to update task');
+    }
+  };
+
+  const handlePromoteTask = async (taskId: string) => {
+    try {
+      const topLevelCount = loopData?.tasks.filter((t: Task) => !t.parent_task_id).length || 0;
+      const success = await promoteTask(taskId, topLevelCount);
+      if (success) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+        setModalVisible(false);
+        setEditingTask(null);
+        await loadLoopData();
+      }
+    } catch (error) {
+      console.error('Error promoting task:', error);
+      Alert.alert('Error', 'Failed to promote task');
+    }
+  };
+
+  const handleNestTask = async (parentTaskId: string) => {
+    if (!editingTask) return;
+    try {
+      const parentTask = loopData?.tasks.find((t: Task) => t.id === parentTaskId) as TaskWithDetails | undefined;
+      const childCount = parentTask?.children?.length ?? 0;
+      const success = await nestTask(editingTask.id, parentTaskId, childCount);
+      if (success) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+        setModalVisible(false);
+        setEditingTask(null);
+        await loadLoopData();
+      }
+    } catch (error) {
+      console.error('Error nesting task:', error);
+      Alert.alert('Error', 'Failed to nest task');
     }
   };
 
@@ -489,10 +555,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   }
 
   const currentProgress = loopData.totalCount > 0 ? Math.round((loopData.completedCount / loopData.totalCount) * 100) : 0;
-  const allRecurring = loopData.tasks.filter(task => !task.is_one_time);
-  const recurringTasksTopLevel = allRecurring.filter(task => !task.parent_task_id);
-  const getChildTasks = (parentId: string) => allRecurring.filter(t => t.parent_task_id === parentId);
-  const oneTimeTasks = loopData.tasks.filter(task => task.is_one_time);
+  /** Recurring tasks as tree (top-level with .children) for TaskTree */
+  const recurringTasks = loopData.tasks.filter((task: Task) => !task.is_one_time) as Task[];
+  const oneTimeTasks = loopData.tasks.filter((task: Task) => task.is_one_time) as Task[];
 
   return (
     <View style={styles.container}>
@@ -522,7 +587,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         </View>
       </View>
 
-      <ScrollView 
+      <NestableScrollContainer
         style={styles.content}
         contentContainerStyle={styles.contentPadding}
         showsVerticalScrollIndicator={false}
@@ -565,7 +630,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           </View>
         </View>
 
-        {/* TASKS SECTION */}
+        {/* TASKS SECTION - Drag-and-drop reorder and nest; promote subtasks from edit modal */}
         <View style={styles.tasksSection}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
              <Text style={styles.sectionTitle}>Tasks</Text>
@@ -576,52 +641,36 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                </View>
              )}
           </View>
-          
-          {recurringTasksTopLevel.map((task, index) => {
-            const isActive = index === recurringTasksTopLevel.findIndex(t => !t.completed);
-            const isShelved = task.completed;
-            const childTasks = getChildTasks(task.id);
 
-            return (
-              <React.Fragment key={task.id}>
-                <EnhancedTaskCard
-                  task={task}
-                  onToggle={() => toggleTask(task)}
-                  onPress={() => handleEditTask(task)}
-                  isActive={isActive}
-                  isShelved={isShelved}
-                />
-                {childTasks.length > 0 && (
-                  <View style={styles.subtasksBlock}>
-                    {childTasks.map((child) => (
-                      <EnhancedTaskCard
-                        key={child.id}
-                        task={child as TaskWithDetails}
-                        onToggle={() => toggleTask(child)}
-                        onPress={() => handleEditTask(child as TaskWithDetails)}
-                        isActive={false}
-                        isShelved={child.completed}
-                        isSubtask
-                      />
-                    ))}
-                  </View>
-                )}
-                {index < recurringTasksTopLevel.length - 1 && (
-                  <TouchableOpacity 
-                    style={styles.ketchupSlot} 
-                    onPress={() => openAddTaskModal()}
-                  >
-                    <View style={styles.ketchupSlotLine} />
-                    <View style={styles.ketchupSlotCircle}>
-                      <Ionicons name="add" size={14} color="rgba(255, 255, 255, 0.2)" />
-                    </View>
-                    <View style={styles.ketchupSlotLine} />
-                  </TouchableOpacity>
-                )}
-              </React.Fragment>
-            );
-          })}
-          
+          {recurringTasks.length > 0 && (
+            <TaskTree
+              tasks={recurringTasks}
+              onUpdateTree={async (newTree) => {
+                setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
+                try {
+                  const flatUpdates = flattenTreeForSync(newTree);
+                  await Promise.all(
+                    flatUpdates.map(u =>
+                      supabase.from('tasks').update({
+                        order_index: u.order_index,
+                        parent_task_id: u.parent_task_id,
+                        updated_at: new Date().toISOString(),
+                      }).eq('id', u.id)
+                    )
+                  );
+                } catch (err) {
+                  console.error('Failed to sync tree reorder:', err);
+                }
+              }}
+              onNestTask={async () => {
+                await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              onPromoteTask={handlePromoteTask}
+              onEditTask={handleEditTask}
+              onToggleTask={toggleTask}
+            />
+          )}
+
           <TouchableOpacity 
             style={styles.addTaskButton} 
             onPress={openAddTaskModal}
@@ -635,14 +684,32 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         {oneTimeTasks.length > 0 && (
           <View style={[styles.tasksSection, { marginTop: 24 }]}>
             <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>One-time Tasks</Text>
-            {oneTimeTasks.map((task) => (
-              <EnhancedTaskCard
-                key={task.id}
-                task={task}
-                onToggle={() => toggleTask(task)}
-                onPress={() => handleEditTask(task)}
-              />
-            ))}
+            <TaskTree
+              tasks={oneTimeTasks}
+              onUpdateTree={async (newTree) => {
+                setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
+                try {
+                  const flatUpdates = flattenTreeForSync(newTree);
+                  await Promise.all(
+                    flatUpdates.map(u =>
+                      supabase.from('tasks').update({
+                        order_index: u.order_index,
+                        parent_task_id: u.parent_task_id,
+                        updated_at: new Date().toISOString(),
+                      }).eq('id', u.id)
+                    )
+                  );
+                } catch (err) {
+                  console.error('Failed to sync one-time tree:', err);
+                }
+              }}
+              onNestTask={async () => {
+                await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              onPromoteTask={handlePromoteTask}
+              onEditTask={handleEditTask}
+              onToggleTask={toggleTask}
+            />
           </View>
         )}
 
@@ -671,7 +738,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             </Text>
           )}
         </View>
-      </ScrollView>
+      </NestableScrollContainer>
 
       <TaskEditModal
         visible={modalVisible}
@@ -684,6 +751,13 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         user={user}
         availableTags={availableTags}
         onCreateTag={handleCreateTag}
+        onPromote={editingTask?.parent_task_id ? () => handlePromoteTask(editingTask.id) : undefined}
+        availableParentTasks={
+          editingTask && !editingTask.parent_task_id
+            ? (loopData?.tasks.filter((t: Task) => t.id !== editingTask.id && !t.parent_task_id) as TaskWithDetails[])
+            : undefined
+        }
+        onNestUnder={editingTask && !editingTask.parent_task_id ? handleNestTask : undefined}
       />
 
       <InviteModal

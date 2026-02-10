@@ -18,6 +18,8 @@ interface TaskRowProps extends RenderItemParams<Task> {
   isExpanded?: boolean;
   /** Toggle children visibility */
   onToggleExpand?: () => void;
+  /** Promote subtask to top-level (move back to main list). Only shown for subtasks. */
+  onPromote?: () => void;
 }
 
 const SUBTASK_INDENT = 32;
@@ -34,6 +36,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   hasChildren = false,
   isExpanded = false,
   onToggleExpand,
+  onPromote,
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
@@ -125,8 +128,23 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               </Text>
             </Pressable>
           ) : isSubtask ? (
-            <View style={styles.subtaskBadge}>
-              <Text style={styles.subtaskBadgeText}>Substep</Text>
+            <View style={styles.subtaskRight}>
+              {onPromote ? (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation?.();
+                    onPromote();
+                  }}
+                  style={styles.promoteOutButton}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Ionicons name="arrow-up-circle-outline" size={20} color={BRAND_GOLD} />
+                  <Text style={styles.promoteOutText}>Move out</Text>
+                </Pressable>
+              ) : null}
+              <View style={styles.subtaskBadge}>
+                <Text style={styles.subtaskBadgeText}>Substep</Text>
+              </View>
             </View>
           ) : (
             <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
@@ -207,6 +225,23 @@ const styles = StyleSheet.create({
     color: BRAND_GOLD,
     fontSize: 12,
     fontWeight: '700',
+  },
+  subtaskRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  promoteOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  promoteOutText: {
+    color: BRAND_GOLD,
+    fontSize: 12,
+    fontWeight: '600',
   },
   subtaskBadge: {
     backgroundColor: 'rgba(254, 192, 15, 0.15)',
