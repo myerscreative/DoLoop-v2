@@ -41,15 +41,13 @@ export const ResponsiveContainer: React.FC<Props> = ({
         </View>
 
         {/* Right Column (Panel) */}
-        {rightPanel ? (
+        {rightPanel && (
           <View style={[
             styles.rightPanelContainer,
             isProductivity ? [styles.rightPanelFlex, { backgroundColor: colors.background }] : [styles.rightPanelFixed, { backgroundColor: colors.background }]
           ]}>
             {rightPanel}
           </View>
-        ) : (
-             isProductivity && <View style={{ flex: 1, backgroundColor: colors.background }} />
         )}
       </View>
     );
@@ -68,7 +66,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   sidebarContainer: {
-    width: 260,
+    width: 80, // Match NavigationBlade width
     height: '100%',
     overflow: 'hidden',
     zIndex: 10,
@@ -84,7 +82,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   mainContentFixed: {
-    width: 340, // Fixed width for "List" view
+    flex: 1, // Allow main content to flex and fill available space
     flexShrink: 0,
   },
 
