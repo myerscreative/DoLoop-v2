@@ -35,7 +35,6 @@ import { BeeIcon } from '../components/native/BeeIcon';
 import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
 import { flattenTreeForSync } from '../lib/treeHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
-import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType } from '../types/loop';
 import { StarRatingInput } from '../components/native/StarRatingInput';
@@ -1336,7 +1335,6 @@ export const LoopDetailScreen: React.FC = () => {
           isEditing={true}
         />
       </SafeAreaView>
-      <MomentumOrb />
     </View>
   );
 };
