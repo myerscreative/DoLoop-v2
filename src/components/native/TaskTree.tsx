@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
+import { Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
 import { TaskRow } from './TaskRow';
 import { nestTaskInTree } from '../../lib/treeHelpers';
@@ -13,11 +15,13 @@ interface TaskTreeProps {
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
   /** Promote a subtask to top-level (move back to main list). */
   onPromoteTask?: (taskId: string) => void;
+  /** Delete a task (swipe left to reveal delete button). */
+  onDeleteTask?: (task: Task) => void;
   /** Nesting level: 0 = top-level steps, 1+ = subtasks */
   depth?: number;
 }
 
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, onPromoteTask, depth = 0 }) => {
+export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, onPromoteTask, onDeleteTask, depth = 0 }) => {
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const rowLayoutsRef = useRef<Record<string, { y: number; height: number }>>({});
@@ -34,6 +38,19 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     });
   }, []);
 
+  const renderRightActions = (task: Task) => (
+    <TouchableOpacity
+      style={styles.deleteAction}
+      onPress={() => {
+        onDeleteTask?.(task);
+      }}
+      activeOpacity={0.8}
+    >
+      <Ionicons name="trash-outline" size={22} color="white" />
+      <Text style={styles.deleteActionText}>Delete</Text>
+    </TouchableOpacity>
+  );
+
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
     const hasChildren = item.children && item.children.length > 0;
@@ -41,7 +58,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     const isExpanded = expandedIds.has(item.id);
     const isSubtask = depth > 0 || !!item.parent_task_id;
 
-    return (
+    const rowContent = (
       <View
         onLayout={(e) => {
           const { y, height } = e.nativeEvent.layout;
@@ -75,11 +92,26 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
               onEditTask={onEditTask}
               onNestTask={onNestTask}
               onPromoteTask={onPromoteTask}
+              onDeleteTask={onDeleteTask}
             />
           </View>
         )}
       </View>
     );
+
+    if (onDeleteTask) {
+      return (
+        <Swipeable
+          renderRightActions={() => renderRightActions(item)}
+          overshootRight={false}
+          friction={2}
+        >
+          {rowContent}
+        </Swipeable>
+      );
+    }
+
+    return rowContent;
   };
 
   return (
@@ -149,5 +181,17 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
 const styles = StyleSheet.create({
   childContainer: {
     // Indentation is handled inside TaskRow via depth
+  },
+  deleteAction: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+  },
+  deleteActionText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

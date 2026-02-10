@@ -645,6 +645,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           {recurringTasks.length > 0 && (
             <TaskTree
               tasks={recurringTasks}
+              onDeleteTask={handleDeleteTask}
               onUpdateTree={async (newTree) => {
                 setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
                 try {
@@ -686,6 +687,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>One-time Tasks</Text>
             <TaskTree
               tasks={oneTimeTasks}
+              onDeleteTask={handleDeleteTask}
               onUpdateTree={async (newTree) => {
                 setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
                 try {

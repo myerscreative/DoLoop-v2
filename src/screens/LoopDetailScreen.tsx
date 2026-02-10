@@ -407,6 +407,26 @@ export const LoopDetailScreen: React.FC = () => {
     setModalVisible(true);
   };
 
+  const handleDeleteTask = async (task: Task) => {
+    Alert.alert('Delete Task', `Delete "${task.description}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await supabase.from('tasks').delete().eq('id', task.id);
+            if (error) throw error;
+            await loadLoopData();
+          } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Failed to delete task');
+          }
+        },
+      },
+    ]);
+  };
+
   const handleSaveTask = async (
     taskData: Partial<TaskWithDetails>,
     pendingSubtasks?: Subtask[],
@@ -885,6 +905,7 @@ export const LoopDetailScreen: React.FC = () => {
               {/* Draggable Task Cards with reorder and nesting */}
               <TaskTree
                 tasks={recurringTasks as Task[]}
+                onDeleteTask={handleDeleteTask}
                 onUpdateTree={async (newTree) => {
                   setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
                   // Sync to DB
@@ -930,6 +951,7 @@ export const LoopDetailScreen: React.FC = () => {
               <Text style={styles.sectionHeader}>One-time Tasks</Text>
               <TaskTree
                 tasks={oneTimeTasks as Task[]}
+                onDeleteTask={handleDeleteTask}
                 onUpdateTree={async (newTree) => {
                   setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
                   try {

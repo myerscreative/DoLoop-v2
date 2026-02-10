@@ -7,6 +7,7 @@ import {
   StyleSheet,
   FlatList,
 } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 import { Subtask } from '../types/loop'; // Fixed path
 
 interface SubtaskListProps {
@@ -30,7 +31,17 @@ const SubtaskItem = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  return (
+  const renderRightActions = () => (
+    <TouchableOpacity
+      style={styles.swipeDeleteAction}
+      onPress={() => onDelete(item.id)}
+      activeOpacity={0.8}
+    >
+      <Text style={styles.swipeDeleteText}>Delete</Text>
+    </TouchableOpacity>
+  );
+
+  const content = (
     <View style={styles.subtaskItemContainer}>
       <View style={styles.subtaskRow}>
         <TouchableOpacity
@@ -65,15 +76,6 @@ const SubtaskItem = ({
             </Text>
           </TouchableOpacity>
         )}
-
-        {editable && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => onDelete(item.id)}
-          >
-            <Text style={styles.deleteButtonText}>×</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {(item as any).notes && isExpanded && (
@@ -83,6 +85,20 @@ const SubtaskItem = ({
       )}
     </View>
   );
+
+  if (editable) {
+    return (
+      <Swipeable
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+        friction={2}
+      >
+        {content}
+      </Swipeable>
+    );
+  }
+
+  return content;
 };
 
 export default function SubtaskList({
@@ -229,14 +245,16 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
     color: '#9CA3AF',
   },
-  deleteButton: {
-    padding: 4,
-    marginLeft: 4,
+  swipeDeleteAction: {
+    backgroundColor: '#DC2626',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
   },
-  deleteButtonText: {
-    fontSize: 18,
-    color: '#9CA3AF',
-    fontWeight: 'bold',
+  swipeDeleteText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   addRow: {
     flexDirection: 'row',
