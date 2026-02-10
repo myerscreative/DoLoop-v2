@@ -14,8 +14,11 @@ interface TaskTreeProps {
   depth?: number;
 }
 
-// How long (ms) the user must hover over an item before it activates as a nest target
-const NEST_HOVER_DELAY = 800;
+// How long (ms) the user must hold still over an item before the "Nest" glow appears
+const NEST_HOVER_DELAY = 2000;
+// After the glow appears, user must hold for this long before drop will actually nest
+// This prevents accidental nesting when the glow just barely appeared
+const NEST_CONFIRM_DELAY = 500;
 
 export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask, depth = 0 }) => {
   // hoveredTaskId tracks the item the placeholder is currently over (before timer fires)
@@ -39,6 +42,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
 
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPlaceholderIndex = useRef<number | null>(null);
+  // Timestamp when nestTargetId was set — used to enforce NEST_CONFIRM_DELAY
+  const nestTargetSetAt = useRef<number | null>(null);
 
   const clearHoverTimer = useCallback(() => {
     if (hoverTimerRef.current) {
@@ -104,11 +109,11 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
         if (placeholderIndex === lastPlaceholderIndex.current) return;
         lastPlaceholderIndex.current = placeholderIndex;
 
-        // Clear any pending hover timer
+        // Clear any pending hover timer and nest target when moving to a new position
         clearHoverTimer();
-        // Clear the nest target when moving to a new position
         setNestTargetId(null);
         setHoveredTaskId(null);
+        nestTargetSetAt.current = null;
 
         if (placeholderIndex >= 0 && placeholderIndex < tasks.length) {
           const targetTask = tasks[placeholderIndex];
@@ -118,15 +123,17 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
 
           setHoveredTaskId(targetTask.id);
 
-          // Start a timer — if user holds here, activate nest target
+          // Start a timer — if user holds here long enough, activate nest target glow
           hoverTimerRef.current = setTimeout(() => {
             setNestTargetId(targetTask.id);
+            nestTargetSetAt.current = Date.now();
           }, NEST_HOVER_DELAY);
         }
       }}
       onDragEnd={async ({ data }) => {
         const currentDraggedId = draggedTaskId;
         const currentNestTargetId = nestTargetId;
+        const nestGlowedAt = nestTargetSetAt.current;
 
         // Reset all state
         setDraggedTaskId(null);
@@ -134,9 +141,14 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
         setNestTargetId(null);
         clearHoverTimer();
         lastPlaceholderIndex.current = null;
+        nestTargetSetAt.current = null;
 
-        // If we have a nest target, nest instead of reorder
-        if (currentNestTargetId && currentDraggedId && currentNestTargetId !== currentDraggedId && onNestTask) {
+        // Only nest if:
+        // 1. There's an active nest target (the glow was showing)
+        // 2. The glow was visible for at least NEST_CONFIRM_DELAY ms (user saw it and chose to drop)
+        const glowWasConfirmed = nestGlowedAt && (Date.now() - nestGlowedAt) >= NEST_CONFIRM_DELAY;
+
+        if (currentNestTargetId && currentDraggedId && currentNestTargetId !== currentDraggedId && onNestTask && glowWasConfirmed) {
           const draggedTask = tasks.find(t => t.id === currentDraggedId);
           const targetTask = tasks.find(t => t.id === currentNestTargetId);
 
