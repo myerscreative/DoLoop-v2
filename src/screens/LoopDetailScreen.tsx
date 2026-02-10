@@ -427,6 +427,7 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleDeleteTask = async (task: Task) => {
+    console.log('[LoopDetailScreen] handleDeleteTask called for task:', task.id, task.description);
     Alert.alert('Delete Task', `Delete "${task.description}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -437,9 +438,10 @@ export const LoopDetailScreen: React.FC = () => {
             const { error } = await supabase.from('tasks').delete().eq('id', task.id);
             if (error) throw error;
             await loadLoopData();
-          } catch (e) {
-            console.error(e);
-            Alert.alert('Error', 'Failed to delete task');
+          } catch (e: any) {
+            console.error('Delete task error:', e);
+            const errorMessage = e?.message || e?.error?.message || String(e) || 'Failed to delete task';
+            Alert.alert('Error', errorMessage);
           }
         },
       },
@@ -1198,21 +1200,6 @@ export const LoopDetailScreen: React.FC = () => {
                     </TouchableOpacity>
                   )}
                 </View>
-
-                {/* Rating Section */}
-                {showRatingPrompt && (
-                  <View style={styles.infoSection}>
-                    <Text style={styles.infoSectionTitle}>Rate this Loop</Text>
-                    <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-                      <StarRatingInput
-                        value={userRating}
-                        onChange={handleSubmitRating}
-                        disabled={isSubmittingRating}
-                        size={32}
-                      />
-                    </View>
-                  </View>
-                )}
 
                 {/* Edit Loop Button */}
                 <TouchableOpacity

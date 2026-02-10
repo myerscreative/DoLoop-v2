@@ -445,6 +445,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   };
 
   const handleDeleteTask = async (task: Task) => {
+    console.log('[DesktopPanel] handleDeleteTask called for task:', task.id, task.description);
     // For desktop web, use window.confirm
     if (Platform.OS === 'web') {
         const confirmed = window.confirm(`Delete "${task.description}"?`);
@@ -453,8 +454,10 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             const { error } = await supabase.from('tasks').delete().eq('id', task.id);
             if (error) throw error;
             await loadLoopData();
-        } catch(e) {
-            console.error(e);
+        } catch(e: any) {
+            console.error('Delete task error:', e);
+            const errorMessage = e?.message || e?.error?.message || String(e) || 'Failed to delete task';
+            Alert.alert('Error', errorMessage);
         }
         return;
     }
@@ -462,9 +465,15 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     Alert.alert('Delete Task', `Delete "${task.description}"?`, [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Delete', style: 'destructive', onPress: async () => {
-             const { error } = await supabase.from('tasks').delete().eq('id', task.id);
-             if (error) throw error;
-             await loadLoopData();
+             try {
+                 const { error } = await supabase.from('tasks').delete().eq('id', task.id);
+                 if (error) throw error;
+                 await loadLoopData();
+             } catch(e: any) {
+                 console.error('Delete task error:', e);
+                 const errorMessage = e?.message || e?.error?.message || String(e) || 'Failed to delete task';
+                 Alert.alert('Error', errorMessage);
+             }
         }}
     ]);
   };
@@ -595,7 +604,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity 
-              style={[styles.editButton, { backgroundColor: colors.surface, borderColor: colors.border }]} 
+              style={[styles.editButton, { backgroundColor: colors.surface }]} 
               onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}
             >
               <Text style={[styles.editButtonText, { color: colors.text }]}>Edit</Text>
@@ -646,7 +655,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                     : `${loopData.completedCount} of ${loopData.totalCount} tasks`}
               </Text>
               
-              <View style={[styles.streakBadge, { backgroundColor: colors.surface, borderColor: `${colors.primary}40` }]}>
+              <View style={[styles.streakBadge, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.streakText, { color: colors.primary }]}>
                     {loopData.function_type === 'practice' ? '🧘 PRACTICE MODE' : `🔥 ${streak} day streak`}
                 </Text>
@@ -657,7 +666,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
         {/* TASKS SECTION - Drag-and-drop reorder and nest; promote subtasks from edit modal */}
         <View style={styles.tasksSection}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tasks</Text>
              {saving && (
                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -698,7 +707,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           )}
 
           <TouchableOpacity 
-            style={[styles.addTaskButton, { borderColor: `${colors.primary}60`, backgroundColor: `${colors.primary}12` }]} 
+            style={[styles.addTaskButton, { backgroundColor: `${colors.primary}12` }]} 
             onPress={openAddTaskModal}
           >
             <Ionicons name="add" size={18} color={colors.primary} />
@@ -789,7 +798,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 40,
+    padding: 32,
   },
   headerTop: {
     flexDirection: 'row',
@@ -819,7 +828,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    borderWidth: 1,
   },
   editButtonText: {
     fontWeight: '600',
@@ -842,12 +850,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentPadding: {
-    padding: 40,
+    padding: 32,
   },
   progressCard: {
     borderRadius: 20,
-    padding: 32,
-    marginBottom: 40,
+    padding: 24,
+    marginBottom: 24,
   },
   progressInfo: {
     flexDirection: 'row',
@@ -882,7 +890,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
   },
   streakText: {
     fontSize: 14,
@@ -902,7 +909,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontFamily: 'Outfit_700Bold',
-    marginBottom: 24,
+    marginBottom: 16,
   },
   taskContainer: {
     marginBottom: 12,
@@ -967,8 +974,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 12,
-    borderWidth: 1.5,
-    borderStyle: 'solid',
     marginTop: 12,
     gap: 10,
   },

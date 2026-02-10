@@ -119,7 +119,6 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
         <TextInput 
             style={[styles.searchInput, { 
                 backgroundColor: colors.surface, 
-                borderColor: colors.border,
                 color: colors.text 
             }]}
             placeholder="Search recipes..."
@@ -180,7 +179,8 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
   },
   branding: {
     flexDirection: 'row',
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     width: '100%',
-    borderWidth: 1,
+    borderWidth: 0,
     borderRadius: 12,
     paddingVertical: 10,
     paddingLeft: 40,

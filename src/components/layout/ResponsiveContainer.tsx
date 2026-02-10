@@ -64,7 +64,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     height: '100%',
-    overflow: 'hidden', 
+    overflow: 'hidden',
+    gap: 0,
   },
   sidebarContainer: {
     width: 260,

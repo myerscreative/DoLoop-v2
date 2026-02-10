@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   greeting: {
     fontSize: 24,
@@ -107,8 +107,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   sectionTitle: {
     fontSize: 12,

@@ -60,11 +60,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               backgroundColor: isSubtask
                 ? 'rgba(255, 255, 255, 0.04)'
                 : 'rgba(255, 255, 255, 0.06)',
-              borderColor: isSubtask
-                ? 'rgba(255, 255, 255, 0.06)'
-                : 'rgba(255, 255, 255, 0.08)',
-              borderLeftWidth: isSubtask ? 4 : 1,
-              borderLeftColor: isSubtask ? BRAND_GOLD : undefined,
               opacity: isDragging ? 0.4 : 1,
             },
             isSubtask && styles.subtaskRow,
@@ -156,14 +151,20 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           ) : null}
         </Pressable>
           {onDelete ? (
-            <TouchableOpacity
-              onPress={onDelete}
-              style={styles.deleteIconButtonOuter}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              activeOpacity={0.7}
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                console.log('[TaskRow] Delete button pressed');
+                onDelete();
+              }}
+              style={({ pressed }) => [
+                styles.deleteIconButtonOuter,
+                pressed && { opacity: 0.5 }
+              ]}
+              hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
               <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
-            </TouchableOpacity>
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -183,7 +184,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingRight: 14,
     paddingLeft: 4,
-    borderWidth: 1,
     borderRadius: 8,
   },
   containerFlex: {

@@ -44,6 +44,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     <TouchableOpacity
       style={styles.deleteAction}
       onPress={() => {
+        console.log('[TaskTree] Swipe delete button pressed for task:', task.id);
         swipeableRefs.current[taskId]?.close();
         onDeleteTask?.(task);
       }}
@@ -79,7 +80,10 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           isExpanded={isExpanded}
           onToggleExpand={() => toggleExpanded(item.id)}
           onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
-          onDelete={onDeleteTask ? () => onDeleteTask(item) : undefined}
+          onDelete={onDeleteTask ? () => {
+            console.log('[TaskTree] Row delete called for task:', item.id);
+            onDeleteTask(item);
+          } : undefined}
         />
         {hasChildren && isExpanded && (
           <View style={styles.childContainer}>
