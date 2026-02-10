@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
-import { View, StyleSheet } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { TaskWithDetails, Task } from '../../types/loop';
 import { DraggableTaskCard } from './DraggableTaskCard';
-import { useDragReorder } from '../../hooks/useDragReorder';
+import { reorderTasks } from '../../lib/taskHelpers';
 
 interface DraggableTaskListProps {
   tasks: TaskWithDetails[];
@@ -30,30 +30,22 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
   colors,
   onOptimisticUpdate,
 }) => {
-  const {
-    dragState,
-    handleDragStart,
-    handleDragMove,
-    handleDragEnd,
-    registerLayout,
-    getVerticalShift
-  } = useDragReorder({ tasks, loopId, loadLoopData, onOptimisticUpdate });
+  const handleReorder = useCallback(async (taskIndex: number, direction: 'up' | 'down') => {
+    const swapIndex = direction === 'up' ? taskIndex - 1 : taskIndex + 1;
+    if (swapIndex < 0 || swapIndex >= tasks.length) return;
 
-  const handleRegisterLayout = useCallback(
-    (id: string, layout: { y: number; height: number }) => {
-      const task = tasks.find(t => t.id === id) ||
-        tasks.flatMap(t => t.children || []).find(c => c.id === id);
-      registerLayout(
-        id,
-        layout,
-        task?.parent_task_id || null,
-        (task?.children?.length || 0) > 0
-      );
-    },
-    [tasks, registerLayout]
-  );
+    const reordered = [...tasks];
+    [reordered[taskIndex], reordered[swapIndex]] = [reordered[swapIndex], reordered[taskIndex]];
 
+    const orderedIds = reordered.map((t, i) => ({
+      id: t.id,
+      order_index: i,
+      parent_task_id: t.parent_task_id || null,
+    }));
 
+    await reorderTasks(loopId, orderedIds);
+    await loadLoopData();
+  }, [tasks, loopId, loadLoopData]);
 
   const firstIncompleteIndex = tasks.findIndex(t => !t.completed);
 
@@ -62,12 +54,9 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
       {tasks.map((task, index) => {
         const isActive = index === firstIncompleteIndex;
         const isShelved = task.completed;
-        const isDragging = dragState.activeId === task.id;
-        const isDropTarget = dragState.hoveredId === task.id;
-        const verticalShift = getVerticalShift(task.id, index);
 
         return (
-          <View key={task.id} style={{ zIndex: isDragging ? 100 : 1 }}>
+          <View key={task.id}>
             {/* Trail connector */}
             {showTrail && (
               <View style={styles.taskCardWrapper}>
@@ -85,26 +74,38 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
               </View>
             )}
 
-            {/* Top-level task */}
-            <View>
-              <DraggableTaskCard
-                task={task}
-                index={index}
-                isActive={isActive}
-                isShelved={isShelved}
-                isDragging={isDragging}
-                isDropTarget={isDropTarget}
-                isNested={false}
-                isPracticeLoop={isPracticeLoop}
-                verticalShift={verticalShift}
-                onDragStart={handleDragStart}
-                onDragMove={handleDragMove}
-                onDragEnd={handleDragEnd}
-                onPress={() => onEditTask(task)}
-                onToggle={() => onToggleTask(task)}
-                onSubtaskChange={onSubtaskChange}
-                onLayout={handleRegisterLayout}
-              />
+            {/* Task Row with Reorder Buttons */}
+            <View style={styles.taskRow}>
+              <View style={styles.reorderButtons}>
+                <TouchableOpacity
+                  onPress={() => handleReorder(index, 'up')}
+                  disabled={index === 0}
+                  style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
+                >
+                  <Ionicons name="chevron-up" size={18} color={index === 0 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleReorder(index, 'down')}
+                  disabled={index === tasks.length - 1}
+                  style={[styles.reorderBtn, index === tasks.length - 1 && styles.reorderBtnDisabled]}
+                >
+                  <Ionicons name="chevron-down" size={18} color={index === tasks.length - 1 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.taskCardFlex}>
+                <DraggableTaskCard
+                  task={task}
+                  index={index}
+                  isActive={isActive}
+                  isShelved={isShelved}
+                  isNested={false}
+                  isPracticeLoop={isPracticeLoop}
+                  onPress={() => onEditTask(task)}
+                  onToggle={() => onToggleTask(task)}
+                  onSubtaskChange={onSubtaskChange}
+                />
+              </View>
             </View>
 
             {/* Child tasks (nested under parent) */}
@@ -113,10 +114,6 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                 <View style={[styles.nestingLine, { backgroundColor: colors.primary + '40' }]} />
                 <View style={styles.childrenList}>
                   {task.children.map((child, childIndex) => {
-                    const childIsDragging = dragState.activeId === child.id;
-                    const childIsDropTarget = dragState.hoveredId === child.id;
-                    const childVerticalShift = getVerticalShift(child.id, childIndex); // Note: Indexing for children needs care if list is flattened in getVerticalShift logic
-
                     return (
                       <DraggableTaskCard
                         key={child.id}
@@ -124,18 +121,11 @@ export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
                         index={childIndex}
                         isActive={false}
                         isShelved={child.completed}
-                        isDragging={childIsDragging}
-                        isDropTarget={childIsDropTarget}
                         isNested={true}
                         isPracticeLoop={isPracticeLoop}
-                        verticalShift={childVerticalShift} // Currently logic might calculate 0 if it assumes flattened list.
-                        onDragStart={handleDragStart}
-                        onDragMove={handleDragMove}
-                        onDragEnd={handleDragEnd}
                         onPress={() => onEditTask(child)}
                         onToggle={() => onToggleTask(child)}
                         onSubtaskChange={onSubtaskChange}
-                        onLayout={handleRegisterLayout}
                       />
                     );
                   })}
@@ -158,7 +148,7 @@ const styles = StyleSheet.create({
   },
   trailConnector: {
     position: 'absolute',
-    left: 30,
+    left: 44, // Adjusted for reorder buttons
     top: -8,
     width: 2,
     height: 8,
@@ -166,7 +156,7 @@ const styles = StyleSheet.create({
   },
   childrenContainer: {
     flexDirection: 'row',
-    marginLeft: 14,
+    marginLeft: 38, // Adjusted for reorder buttons
     paddingLeft: 10,
   },
   nestingLine: {
@@ -178,5 +168,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingLeft: 8,
   },
-
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskCardFlex: {
+    flex: 1,
+  },
+  reorderButtons: {
+    marginRight: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    width: 32,
+  },
+  reorderBtn: {
+    padding: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  reorderBtnDisabled: {
+    opacity: 0.3,
+  },
 });

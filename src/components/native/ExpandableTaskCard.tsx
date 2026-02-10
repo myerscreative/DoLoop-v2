@@ -20,7 +20,6 @@ import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TaskWithDetails, Subtask } from '../../types/loop';
-import { useTheme } from '../../contexts/ThemeContext';
 import { PriorityBadge } from './PriorityBadge';
 import { createSubtask, toggleSubtask, deleteSubtask } from '../../lib/taskHelpers';
 import { ReflectionInput } from './ReflectionInput';
@@ -36,8 +35,6 @@ interface ExpandableTaskCardProps {
   isPracticeLoop?: boolean;
   isActive?: boolean;
   isShelved?: boolean;
-  isBeingDragged?: boolean;
-  isDropTarget?: boolean;
   isNested?: boolean;
 }
 
@@ -52,11 +49,8 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
   isPracticeLoop = false,
   isActive = false,
   isShelved = false,
-  isBeingDragged = false,
-  isDropTarget = false,
   isNested = false,
 }) => {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const [expanded, setExpanded] = useState(false);
   const [showAddSubtask, setShowAddSubtask] = useState(false);
@@ -347,8 +341,6 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
         animatedStyle,
         isActive && styles.activeCard,
         isShelved && { opacity: 0.4 },
-        isBeingDragged && { opacity: 0.4 },
-        isDropTarget && styles.dropTargetCard,
         isNested && styles.nestedCard,
       ]}
     >
@@ -360,9 +352,7 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
       >
         <BlurView intensity={24} tint="dark" style={styles.glassContainer}>
           <LinearGradient
-            colors={isDropTarget
-              ? ['rgba(254, 192, 15, 0.25)', 'rgba(28, 31, 38, 0.8)']
-              : isActive
+            colors={isActive
               ? ['rgba(254, 192, 15, 0.15)', 'rgba(28, 31, 38, 0.8)']
               : ['rgba(255, 255, 255, 0.05)', 'rgba(28, 31, 38, 0.8)']}
             start={{ x: 0, y: 0 }}
@@ -502,16 +492,6 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  dropTargetCard: {
-    borderColor: '#FEC00F',
-    borderWidth: 2,
-    shadowColor: '#FEC00F',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-    transform: [{ scale: 1.02 }],
   },
   nestedCard: {
     marginBottom: 8,

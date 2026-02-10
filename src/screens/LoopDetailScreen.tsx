@@ -11,6 +11,7 @@ import {
   Platform,
   Linking,
 } from 'react-native';
+import { NestableScrollContainer } from 'react-native-draggable-flatlist';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,14 +25,15 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
-import { DraggableTaskList } from '../components/native/DraggableTaskList';
+import { TaskTree } from '../components/native/TaskTree';
 import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+import { flattenTreeForSync } from '../lib/treeHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { MomentumOrb } from '../components/native/MomentumOrb';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
@@ -766,7 +768,7 @@ export const LoopDetailScreen: React.FC = () => {
     <View style={styles.container}>
       <MomentumOrb />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView
+        <NestableScrollContainer
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
@@ -881,13 +883,28 @@ export const LoopDetailScreen: React.FC = () => {
               </View>
 
               {/* Draggable Task Cards with reorder and nesting */}
-              <DraggableTaskList
-                tasks={recurringTasks as TaskWithDetails[]}
-                loopId={loopId}
-                isPracticeLoop={loopData.function_type === 'practice'}
-                showTrail={true}
+              <TaskTree
+                tasks={recurringTasks as Task[]}
+                onUpdateTree={async (newTree) => {
+                  setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
+                  // Sync to DB
+                  try {
+                    const flatUpdates = flattenTreeForSync(newTree);
+                    const updates = flatUpdates.map(u => 
+                      supabase.from('tasks').update({ 
+                        order_index: u.order_index, 
+                        parent_task_id: u.parent_task_id,
+                        updated_at: new Date().toISOString()
+                      }).eq('id', u.id)
+                    );
+                    await Promise.all(updates);
+                  } catch (err) {
+                    console.error('Failed to sync tree reorder:', err);
+                  }
+                }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
+<<<<<<< Updated upstream
                 onSubtaskChange={loadLoopData}
                 loadLoopData={loadLoopData}
                 colors={colors}
@@ -905,6 +922,8 @@ export const LoopDetailScreen: React.FC = () => {
                         });
                     }
                 }}
+=======
+>>>>>>> Stashed changes
               />
 
               {/* Add Step Button - More Vibrant */}
@@ -930,22 +949,31 @@ export const LoopDetailScreen: React.FC = () => {
           {oneTimeTasks.length > 0 && (
             <View style={styles.stepsSection}>
               <Text style={styles.sectionHeader}>One-time Tasks</Text>
-              <DraggableTaskList
-                tasks={oneTimeTasks as TaskWithDetails[]}
-                loopId={loopId}
-                isPracticeLoop={false}
-                showTrail={false}
+              <TaskTree
+                tasks={oneTimeTasks as Task[]}
+                onUpdateTree={async (newTree) => {
+                  setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
+                  try {
+                    const flatUpdates = flattenTreeForSync(newTree);
+                    const updates = flatUpdates.map(u => 
+                      supabase.from('tasks').update({ 
+                        order_index: u.order_index, 
+                        parent_task_id: u.parent_task_id,
+                        updated_at: new Date().toISOString()
+                      }).eq('id', u.id)
+                    );
+                    await Promise.all(updates);
+                  } catch (err) {
+                    console.error('Failed to sync one-time tree:', err);
+                  }
+                }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
-                onSubtaskChange={loadLoopData}
-                loadLoopData={loadLoopData}
-                colors={colors}
               />
             </View>
           )}
 
-
-        </ScrollView>
+        </NestableScrollContainer>
 
         {/* Readability Anchor: Dark gradient at bottom to isolate floating buttons */}
         <LinearGradient

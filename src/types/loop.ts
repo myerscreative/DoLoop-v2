@@ -113,6 +113,10 @@ export interface Task {
   tag_details?: Tag[];
   attachments?: Attachment[];
   reminder?: TaskReminder;
+
+  // Tree properties (transient)
+  children?: Task[];
+  depth?: number;
 }
 
 export interface Subtask {
@@ -434,4 +438,3 @@ export interface RecommendationSession {
   recommendations: LoopRecommendation[];
   created_at: string;
 }
-
