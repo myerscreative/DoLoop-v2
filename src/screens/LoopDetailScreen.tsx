@@ -427,7 +427,6 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleDeleteTask = async (task: Task) => {
-    console.log('[LoopDetailScreen] handleDeleteTask called for task:', task.id, task.description);
     Alert.alert('Delete Task', `Delete "${task.description}"?`, [
       { text: 'Cancel', style: 'cancel' },
       {

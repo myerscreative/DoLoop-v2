@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
@@ -154,7 +154,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
-                console.log('[TaskRow] Delete button pressed');
                 onDelete();
               }}
               style={({ pressed }) => [
@@ -176,23 +175,25 @@ const styles = StyleSheet.create({
   rowOuter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   container: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingRight: 14,
     paddingLeft: 4,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   containerFlex: {
-    flex: 1,
     marginRight: 4,
   },
   deleteIconButtonOuter: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     justifyContent: 'center',
   },
   subtaskRow: {
