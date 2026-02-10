@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
 import { Task } from '../../types/loop';
@@ -9,21 +9,33 @@ interface TaskTreeProps {
   onUpdateTree: (newTree: Task[]) => void;
   onToggleTask: (task: Task) => void;
   onEditTask: (task: Task) => void;
+  onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
 }
 
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask }) => {
-  
+export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggleTask, onEditTask, onNestTask }) => {
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+
   const renderItem = (params: RenderItemParams<Task>) => {
     const { item } = params;
     const hasChildren = item.children && item.children.length > 0;
+    const isHovered = hoveredTaskId === item.id;
+    const isDragging = draggedTaskId === item.id;
 
     return (
-      <View>
+      <View
+        onLayout={(event) => {
+          // This will be used for hover detection
+          // We'll track which item we're over based on position
+        }}
+      >
         <TaskRow 
           {...params} 
           onToggle={onToggleTask} 
           onPress={onEditTask} 
           isActive={params.isActive}
+          isHovered={isHovered}
+          isDragging={isDragging}
         />
         {hasChildren && (
           <View style={styles.childContainer}>
@@ -37,6 +49,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
               }}
               onToggleTask={onToggleTask}
               onEditTask={onEditTask}
+              onNestTask={onNestTask}
             />
           </View>
         )}
@@ -47,9 +60,41 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   return (
     <NestableDraggableFlatList
       data={tasks}
-      onDragEnd={({ data }) => {
-        // Rebuild the tree structure with updated order_index values
-        // NestableDraggableFlatList preserves children, so we just need to update order_index
+      onDragBegin={(drag) => {
+        if (drag && drag.item) {
+          setDraggedTaskId(drag.item.id);
+        }
+      }}
+      onDragEnd={async ({ data, from, to }) => {
+        const currentDraggedId = draggedTaskId;
+        const originalDraggedIndex = tasks.findIndex(t => t.id === currentDraggedId);
+        
+        setDraggedTaskId(null);
+        setHoveredTaskId(null);
+
+        // Check if we dropped on a specific item (not between items)
+        // Heuristic: if we drop at index `to` and that's a valid item different from dragged,
+        // and the position change is small (0-1), we're likely dropping on that item
+        if (currentDraggedId && to !== null && to >= 0 && to < data.length && onNestTask) {
+          const draggedTask = data.find(t => t.id === currentDraggedId);
+          const targetTask = data[to];
+          const positionChange = Math.abs(to - originalDraggedIndex);
+          
+          // If dropping on a different item and position change is small, nest it
+          if (draggedTask && targetTask && targetTask.id !== currentDraggedId && positionChange <= 1) {
+            // Don't nest if already a child, or if trying to nest a parent under its child
+            const isAlreadyChild = draggedTask.parent_task_id === targetTask.id;
+            const wouldCreateCycle = isTaskDescendant(targetTask, currentDraggedId, tasks);
+            
+            if (!isAlreadyChild && !wouldCreateCycle) {
+              // Nest the dragged task under the target task
+              await onNestTask(currentDraggedId, targetTask.id);
+              return; // Don't update tree here, let onNestTask handle it
+            }
+          }
+        }
+
+        // Normal reordering: rebuild the tree structure with updated order_index values
         const reordered = data.map((task, index) => ({
           ...task,
           order_index: index,
@@ -66,6 +111,13 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     />
   );
 };
+
+// Helper function to check if a task is a descendant (to prevent cycles)
+function isTaskDescendant(task: Task, ancestorId: string, allTasks: Task[]): boolean {
+  if (task.id === ancestorId) return true;
+  if (!task.children || task.children.length === 0) return false;
+  return task.children.some(child => isTaskDescendant(child, ancestorId, allTasks));
+}
 
 const styles = StyleSheet.create({
   childContainer: {

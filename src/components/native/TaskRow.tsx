@@ -9,27 +9,49 @@ interface TaskRowProps extends RenderItemParams<Task> {
   onToggle: (task: Task) => void;
   onPress: (task: Task) => void;
   isActive: boolean;
+  isHovered?: boolean;
+  isDragging?: boolean;
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
 }
 
-export const TaskRow: React.FC<TaskRowProps> = ({ item: task, drag, isActive, onToggle, onPress }) => {
+export const TaskRow: React.FC<TaskRowProps> = ({ item: task, drag, isActive, onToggle, onPress, isHovered = false, isDragging = false, onHoverStart, onHoverEnd }) => {
   const depth = task.depth || 0;
   const BRAND_GOLD = '#FEC00F';
 
+  // Calculate styles with hover effect
+  const containerStyle = [
+    styles.container,
+    {
+      paddingLeft: depth * 24 + 12,
+      backgroundColor: isActive ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+      borderColor: isActive ? BRAND_GOLD : 'rgba(255, 255, 255, 0.08)',
+      transform: isHovered ? [{ scale: 1.02 }] : [{ scale: 1 }],
+    },
+  ];
+
+  if (isHovered) {
+    containerStyle.push({
+      backgroundColor: 'rgba(254, 192, 15, 0.25)',
+      borderColor: BRAND_GOLD,
+      borderWidth: 2,
+      shadowColor: BRAND_GOLD,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.8,
+      shadowRadius: 8,
+      elevation: 8,
+    });
+  }
+
   return (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => onPress(task)}
-      onLongPress={drag}
-      delayLongPress={300}
-      style={[
-        styles.container,
-        {
-          paddingLeft: depth * 24 + 12,
-          backgroundColor: isActive ? 'rgba(254, 192, 15, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-          borderColor: isActive ? BRAND_GOLD : 'rgba(255, 255, 255, 0.08)',
-        },
-      ]}
-    >
+    <View style={containerStyle}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => onPress(task)}
+        onLongPress={drag}
+        delayLongPress={300}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+      >
       {/* Drag Handle */}
       <TouchableOpacity 
         onLongPress={drag}
@@ -85,7 +107,8 @@ export const TaskRow: React.FC<TaskRowProps> = ({ item: task, drag, isActive, on
       </View>
 
       <Ionicons name="chevron-forward" size={16} color="rgba(255, 255, 255, 0.3)" />
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </View>
   );
 };
 
