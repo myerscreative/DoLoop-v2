@@ -22,6 +22,20 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   const [, setHoveredTaskId] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [nestTargetId, setNestTargetId] = useState<string | null>(null);
+  // Track which parent tasks have their children expanded
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const toggleExpanded = useCallback((taskId: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
 
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastPlaceholderIndex = useRef<number | null>(null);
@@ -38,6 +52,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
     const hasChildren = item.children && item.children.length > 0;
     const isNestTarget = nestTargetId === item.id;
     const isDragging = draggedTaskId === item.id;
+    const isExpanded = expandedIds.has(item.id);
 
     return (
       <View>
@@ -49,8 +64,11 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
           isActive={params.isActive}
           isHovered={isNestTarget && !isDragging}
           isDragging={isDragging}
+          hasChildren={hasChildren}
+          isExpanded={isExpanded}
+          onToggleExpand={() => toggleExpanded(item.id)}
         />
-        {hasChildren && (
+        {hasChildren && isExpanded && (
           <View style={styles.childContainer}>
             <TaskTree
               tasks={item.children!}

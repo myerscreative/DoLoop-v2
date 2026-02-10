@@ -13,6 +13,12 @@ interface TaskRowProps extends RenderItemParams<Task> {
   isDragging?: boolean;
   /** Nesting level from TaskTree: 0 = main step, 1+ = subtask */
   depth?: number;
+  /** Whether this task has children */
+  hasChildren?: boolean;
+  /** Whether children are currently visible */
+  isExpanded?: boolean;
+  /** Toggle children visibility */
+  onToggleExpand?: () => void;
 }
 
 const SUBTASK_INDENT = 32;
@@ -27,6 +33,9 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   isHovered = false,
   isDragging = false,
   depth: depthProp,
+  hasChildren = false,
+  isExpanded = false,
+  onToggleExpand,
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
@@ -100,13 +109,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               {task.priority !== 'none' && (
                 <PriorityBadge priority={task.priority} size="small" />
               )}
-              {task.children && task.children.length > 0 && (
-                <View style={styles.counts}>
-                  <Text style={styles.countText}>
-                    {task.children.filter((c: Task) => c.completed).length}/{task.children.length}
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
 
@@ -116,6 +118,24 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               <Ionicons name="enter-outline" size={16} color={BRAND_GOLD} />
               <Text style={styles.nestHintText}>Nest</Text>
             </View>
+          ) : hasChildren ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onToggleExpand?.();
+              }}
+              style={styles.expandButton}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons
+                name={isExpanded ? 'chevron-down' : 'chevron-forward'}
+                size={18}
+                color={BRAND_GOLD}
+              />
+              <Text style={styles.childCountText}>
+                {task.children?.filter((c: Task) => c.completed).length}/{task.children?.length}
+              </Text>
+            </Pressable>
           ) : isSubtask ? (
             <View style={styles.subtaskBadge}>
               <Text style={styles.subtaskBadgeText}>Substep</Text>
@@ -218,6 +238,18 @@ const styles = StyleSheet.create({
   nestHintText: {
     color: '#FEC00F',
     fontSize: 11,
+    fontWeight: '700',
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  childCountText: {
+    color: BRAND_GOLD,
+    fontSize: 12,
     fontWeight: '700',
   },
   subtaskBadge: {
