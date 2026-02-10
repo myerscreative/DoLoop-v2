@@ -26,9 +26,10 @@ import { LoopCard } from '../components/native/LoopCard';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { PendingInvitations } from '../components/native/PendingInvitations';
 import { ResponsiveContainer } from '../components/layout/ResponsiveContainer';
-import { WebSidebar } from '../components/layout/WebSidebar';
+import { NavigationBlade } from '../components/dashboard/NavigationBlade';
+import { DynamicStage } from '../components/dashboard/DynamicStage';
+import { CommandBar } from '../components/dashboard/CommandBar';
 import { DesktopLoopDetailPanel } from '../components/dashboard/DesktopLoopDetailPanel';
-import { DashboardGrid } from '../components/dashboard/DashboardGrid';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -494,15 +495,11 @@ export const HomeScreen: React.FC = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ResponsiveContainer
         sidebar={
-          <WebSidebar 
+          <NavigationBlade
             selectedFilter={selectedFilter}
             onSelectFilter={setSelectedFilter}
-            onNavigateToLibrary={() => navigation.navigate('TemplateLibrary')}
-            onNavigateToSommelier={() => navigation.navigate('LoopSommelier')}
-            onNavigateToSettings={() => navigation.navigate('Settings')}
-            counts={counts}
             onCreatePress={openCreateLoopModal}
-            activeItem={selectedFilter}
+            counts={counts}
           />
         }
         rightPanel={RightPanelContent}
@@ -515,15 +512,12 @@ export const HomeScreen: React.FC = () => {
         backgroundColor: colors.background,
       }}>
         {isDesktop ? (
-          <DashboardGrid 
+          <DynamicStage
             loops={allDisplayLoops}
-            onCreateLoop={openCreateLoopModal}
-            onLoopPress={onLoopPress}
-            onLoopEdit={startEditLoop}
-            forcedColumns={1}
-            title={getGridTitle()}
-            activeFilter={selectedFilter}
+            selectedFilter={selectedFilter}
             selectedLoopId={selectedLoopId}
+            onLoopPress={onLoopPress}
+            onCreateLoop={openCreateLoopModal}
           />
         ) : (
           <View style={{ flex: 1 }}>
