@@ -25,6 +25,13 @@ interface ThemeContextType {
     error: string;
     structure: string;
     textOnPrimary: string;
+    // Glassmorphic tokens for Command Center design
+    glassSurface: string;
+    glassBackdrop: string;
+    glassBorder: string;
+    radialGradientCenter: string;
+    radialGradientEdge: string;
+    goldGlow: string;
   };
 }
 
@@ -83,6 +90,13 @@ const getColorsForVibe = (vibe: VibeStyle, isDark: boolean) => {
     accent2: '#8A2BE2',              // Blue Violet (Goals)
     accentYellow: '#FFB800',         // Gold (Daily loops — always gold)
     textOnPrimary: vibeColor.textOnPrimary,
+    // Glassmorphic tokens for Command Center design
+    glassSurface: isDark ? 'rgba(30, 30, 30, 0.6)' : 'rgba(255, 255, 255, 0.6)',
+    glassBackdrop: isDark ? 'rgba(24, 24, 24, 0.95)' : 'rgba(250, 250, 250, 0.95)',
+    glassBorder: isDark ? 'rgba(254, 192, 15, 0.2)' : 'rgba(254, 192, 15, 0.3)',
+    radialGradientCenter: isDark ? '#121212' : '#FFFFFF',
+    radialGradientEdge: isDark ? '#050505' : '#F5F5F5',
+    goldGlow: 'rgba(254, 192, 15, 0.6)',
   };
 };
 
