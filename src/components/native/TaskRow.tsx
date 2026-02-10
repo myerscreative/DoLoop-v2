@@ -73,7 +73,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           </View>
 
           {/* Checkbox */}
-          <Pressable
+          <TouchableOpacity
             onPress={() => onToggle(task)}
             style={[
               styles.checkbox,
@@ -84,7 +84,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             ]}
           >
             {task.completed && <Ionicons name="checkmark" size={14} color="white" />}
-          </Pressable>
+          </TouchableOpacity>
 
           {/* Content */}
           <View style={styles.content}>
@@ -111,11 +111,8 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
           {/* Right side indicator */}
           {hasChildren ? (
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onToggleExpand?.();
-              }}
+            <TouchableOpacity
+              onPress={() => onToggleExpand?.()}
               style={styles.expandButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
@@ -127,21 +124,18 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               <Text style={styles.childCountText}>
                 {task.children?.filter((c: Task) => c.completed).length}/{task.children?.length}
               </Text>
-            </Pressable>
+            </TouchableOpacity>
           ) : isSubtask ? (
             <View style={styles.subtaskRight}>
               {onPromote ? (
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation?.();
-                    onPromote();
-                  }}
+                <TouchableOpacity
+                  onPress={() => onPromote()}
                   style={styles.promoteOutButton}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
                   <Ionicons name="arrow-up-circle-outline" size={20} color={BRAND_GOLD} />
                   <Text style={styles.promoteOutText}>Move out</Text>
-                </Pressable>
+                </TouchableOpacity>
               ) : null}
               <View style={styles.subtaskBadge}>
                 <Text style={styles.subtaskBadgeText}>Substep</Text>
@@ -152,19 +146,13 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           ) : null}
         </Pressable>
           {onDelete ? (
-            <Pressable
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onDelete();
-              }}
-              style={({ pressed }) => [
-                styles.deleteIconButtonOuter,
-                pressed && { opacity: 0.5 }
-              ]}
+            <TouchableOpacity
+              onPress={() => onDelete()}
+              style={styles.deleteIconButtonOuter}
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
               <Ionicons name="trash-outline" size={18} color="rgba(255, 255, 255, 0.5)" />
-            </Pressable>
+            </TouchableOpacity>
           ) : null}
         </View>
       </View>
