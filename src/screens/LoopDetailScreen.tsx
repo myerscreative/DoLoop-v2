@@ -904,26 +904,6 @@ export const LoopDetailScreen: React.FC = () => {
                 }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
-<<<<<<< Updated upstream
-                onSubtaskChange={loadLoopData}
-                loadLoopData={loadLoopData}
-                colors={colors}
-                onOptimisticUpdate={(newTasks) => {
-                    if (loopData) {
-                        // Merge new recurring tasks back into the full list
-                        // We need to keep one-time tasks as they were
-                        const updatedTasks = [
-                            ...newTasks,
-                            ...loopData.tasks.filter(t => t.is_one_time)
-                        ];
-                        setLoopData({
-                            ...loopData,
-                            tasks: updatedTasks
-                        });
-                    }
-                }}
-=======
->>>>>>> Stashed changes
               />
 
               {/* Add Step Button - More Vibrant */}
