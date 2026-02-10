@@ -1,0 +1,75 @@
+diff --git a/node_modules/react-native-draggable-flatlist/lib/typescript/types.d.ts b/node_modules/react-native-draggable-flatlist/lib/typescript/types.d.ts
+index 2abb4a2..50e7f26 100644
+--- a/node_modules/react-native-draggable-flatlist/lib/typescript/types.d.ts
++++ b/node_modules/react-native-draggable-flatlist/lib/typescript/types.d.ts
+@@ -8,6 +8,7 @@ export declare type DragEndParams<T> = {
+     data: T[];
+     from: number;
+     to: number;
++    releaseY?: number;
+ };
+ declare type Modify<T, R> = Omit<T, keyof R> & R;
+ declare type DefaultProps = Readonly<typeof DEFAULT_PROPS>;
+diff --git a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
+index 7c88afc..3e8f06e 100644
+--- a/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
++++ b/node_modules/react-native-draggable-flatlist/src/components/DraggableFlatList.tsx
+@@ -219,7 +219,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+   });
+ 
+   const onDragEnd = useStableCallback(
+-    ({ from, to }: { from: number; to: number }) => {
++    ({ from, to, releaseY }: { from: number; to: number; releaseY?: number }) => {
+       const { onDragEnd, data } = props;
+ 
+       const newData = [...data];
+@@ -228,7 +228,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+         newData.splice(to, 0, data[from]);
+       }
+ 
+-      onDragEnd?.({ from, to, data: newData });
++      onDragEnd?.({ from, to, data: newData, releaseY });
+ 
+       setActiveKey(null);
+     }
+@@ -248,9 +248,11 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+         const hasMoved = !!touchTranslate.value;
+         if (!hasMoved && activeIndexAnim.value >= 0 && !disabled.value) {
+           runOnJS(onRelease)(activeIndexAnim.value);
++          const releaseY = activeCellOffset.value + scrollOffset.value + touchTranslate.value;
+           runOnJS(onDragEnd)({
+             from: activeIndexAnim.value,
+             to: spacerIndexAnim.value,
++            releaseY,
+           });
+         }
+       }
+@@ -301,6 +303,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+       if (activeIndexAnim.value === -1 || disabled.value) return;
+       disabled.value = true;
+       runOnJS(onRelease)(activeIndexAnim.value);
++      const releaseY = activeCellOffset.value + scrollOffset.value + touchTranslate.value;
+       const springTo = placeholderOffset.value - activeCellOffset.value;
+       touchTranslate.value = withSpring(
+         springTo,
+@@ -309,6 +312,7 @@ function DraggableFlatListInner<T>(props: DraggableFlatListProps<T>) {
+           runOnJS(onDragEnd)({
+             from: activeIndexAnim.value,
+             to: spacerIndexAnim.value,
++            releaseY,
+           });
+           disabled.value = false;
+         }
+diff --git a/node_modules/react-native-draggable-flatlist/src/types.ts b/node_modules/react-native-draggable-flatlist/src/types.ts
+index d6755c8..62f3e60 100644
+--- a/node_modules/react-native-draggable-flatlist/src/types.ts
++++ b/node_modules/react-native-draggable-flatlist/src/types.ts
+@@ -17,6 +17,8 @@ export type DragEndParams<T> = {
+   data: T[];
+   from: number;
+   to: number;
++  /** Release Y position in list content coordinates (for drop-on-row vs drop-between detection) */
++  releaseY?: number;
+ };
+ type Modify<T, R> = Omit<T, keyof R> & R;
+ 

@@ -94,6 +94,76 @@ export function promoteTaskInTree(tree: Task[], taskId: string): Task[] {
   return updatedTree;
 }
 
+function collectIds(nodes: Task[]): string[] {
+  return nodes.flatMap(n => [n.id, ...(n.children ? collectIds(n.children) : [])]);
+}
+
+/** Returns ids of taskId and all its descendants so we can detect cycle (parent must not be in this set). */
+function selfAndDescendantIds(tree: Task[], taskId: string): Set<string> {
+  const set = new Set<string>();
+  function walk(nodes: Task[]): Task | null {
+    for (const node of nodes) {
+      if (node.id === taskId) {
+        set.add(node.id);
+        if (node.children) collectIds(node.children).forEach(id => set.add(id));
+        return node;
+      }
+      if (node.children) {
+        const found = walk(node.children);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  walk(tree);
+  return set;
+}
+
+/**
+ * Nests a task under a new parent (moves it from its current position to be a child of parentTaskId).
+ * Returns the updated tree. Does nothing if taskId === parentTaskId or parent is a descendant of task.
+ */
+export function nestTaskInTree(tree: Task[], taskId: string, parentTaskId: string): Task[] {
+  if (taskId === parentTaskId) return tree;
+
+  let extracted: Task | null = null;
+
+  function removeTask(nodes: Task[]): Task[] {
+    return nodes.flatMap(node => {
+      if (node.id === taskId) {
+        extracted = { ...node, parent_task_id: parentTaskId };
+        return [];
+      }
+      return [{
+        ...node,
+        children: node.children ? removeTask(node.children) : undefined,
+      }];
+    });
+  }
+
+  const withoutTask = removeTask(tree);
+  if (!extracted) return tree;
+
+  // Prevent nesting onto self or onto a descendant (cycle)
+  const selfAndDesc = selfAndDescendantIds(tree, taskId);
+  if (selfAndDesc.has(parentTaskId)) return tree;
+
+  function addAsChild(nodes: Task[]): Task[] {
+    return nodes.map(node => {
+      if (node.id === parentTaskId) {
+        const children = [...(node.children || []), extracted!];
+        return { ...node, children };
+      }
+      return {
+        ...node,
+        children: node.children ? addAsChild(node.children) : undefined,
+      };
+    });
+  }
+
+  return addAsChild(withoutTask);
+}
+
 /**
  * Converts a flat array of tasks from database into a nested tree structure.
  */

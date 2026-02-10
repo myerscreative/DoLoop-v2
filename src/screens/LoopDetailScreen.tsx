@@ -902,6 +902,9 @@ export const LoopDetailScreen: React.FC = () => {
                     console.error('Failed to sync tree reorder:', err);
                   }
                 }}
+                onNestTask={async () => {
+                  await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+                }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}
               />
@@ -946,6 +949,9 @@ export const LoopDetailScreen: React.FC = () => {
                   } catch (err) {
                     console.error('Failed to sync one-time tree:', err);
                   }
+                }}
+                onNestTask={async () => {
+                  await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
                 }}
                 onEditTask={handleEditTask}
                 onToggleTask={toggleTask}

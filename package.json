@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "lint": "eslint",
     "test": "jest",
-    "generate-assets": "node generate-assets.js"
+    "generate-assets": "node generate-assets.js",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
@@ -48,6 +49,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "patch-package": "^8.0.0",
     "@babel/core": "^7.25.2",
     "@types/react": "~18.3.12",
     "@typescript-eslint/eslint-plugin": "^8.46.3",
