@@ -425,13 +425,13 @@ export const HomeScreen: React.FC = () => {
           />
       ) : (
           /* Empty State for Wide 3rd Column - Matches User Mockup */
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff', paddingHorizontal: 40 }}>
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, paddingHorizontal: 40 }}>
              <Text style={{ fontSize: 72, marginBottom: 24, opacity: 0.2 }}>📋</Text>
              
              <Text style={{ 
                fontSize: 20, 
                fontWeight: '600', 
-               color: '#374151', 
+               color: colors.text, 
                marginBottom: 8,
                textAlign: 'center'
              }}>
@@ -440,7 +440,7 @@ export const HomeScreen: React.FC = () => {
              
              <Text style={{ 
                fontSize: 16, 
-               color: '#6B7280', 
+               color: colors.textSecondary, 
                textAlign: 'center',
                maxWidth: 320,
                lineHeight: 24,

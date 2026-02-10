@@ -27,7 +27,7 @@ export const ResponsiveContainer: React.FC<Props> = ({
     const isProductivity = layout === 'productivity';
 
     return (
-      <View style={[styles.container, { backgroundColor: colors.backgroundSecondary }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.sidebarContainer}>
           {sidebar}
         </View>
@@ -35,7 +35,7 @@ export const ResponsiveContainer: React.FC<Props> = ({
         {/* Middle Column (Main Content) */}
         <View style={[
           styles.mainContent, 
-          isProductivity ? styles.mainContentFixed : styles.mainContentFlex
+          isProductivity ? [styles.mainContentFixed, { backgroundColor: colors.surface }] : styles.mainContentFlex
         ]}>
           {children}
         </View>
@@ -44,15 +44,11 @@ export const ResponsiveContainer: React.FC<Props> = ({
         {rightPanel ? (
           <View style={[
             styles.rightPanelContainer,
-            isProductivity ? styles.rightPanelFlex : styles.rightPanelFixed
+            isProductivity ? [styles.rightPanelFlex, { backgroundColor: colors.background }] : [styles.rightPanelFixed, { backgroundColor: colors.background }]
           ]}>
             {rightPanel}
           </View>
         ) : (
-             // If productivity mode and no right panel, we might want to fill space or show empty? 
-             // For now, if no right panel in productivity, let main content take space if flexible? 
-             // Actually, if rightPanel is missing in productivity mode, mainContentFixed acts as a sidebar...
-             // Let's keep it simple: if rightPanel is missing, render nothing there.
              isProductivity && <View style={{ flex: 1, backgroundColor: colors.background }} />
         )}
       </View>
@@ -72,8 +68,6 @@ const styles = StyleSheet.create({
   },
   sidebarContainer: {
     width: 260,
-    borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
     height: '100%',
     overflow: 'hidden',
     zIndex: 10,
@@ -91,9 +85,6 @@ const styles = StyleSheet.create({
   mainContentFixed: {
     width: 340, // Fixed width for "List" view
     flexShrink: 0,
-    borderRightWidth: 1,
-    borderRightColor: '#e5e7eb',
-    backgroundColor: '#ffffff', // Often lists are white
   },
 
   // Right Panel Styles
@@ -103,12 +94,8 @@ const styles = StyleSheet.create({
   },
   rightPanelFixed: {
     width: 350,
-    borderLeftWidth: 1,
-    borderLeftColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
   },
   rightPanelFlex: {
     flex: 1,
-    backgroundColor: '#ffffff', // The "Canvas" is usually white
   }
 });

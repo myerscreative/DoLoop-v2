@@ -37,7 +37,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   });
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface, borderRightColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.surface }]}>
       {/* Scrollable Content */}
       <ScrollView 
         style={styles.scrollView} 
@@ -45,7 +45,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* Header Section */}
-        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
            <Text style={[styles.greeting, { color: colors.text }]}>
             Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}, {user?.user_metadata?.first_name || 'Friend'} 👋
           </Text>
@@ -85,7 +85,6 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderRightWidth: 1,
   },
   scrollView: {
     flex: 1,
@@ -95,7 +94,6 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 24,
-    borderBottomWidth: 1,
     marginBottom: 16,
   },
   greeting: {

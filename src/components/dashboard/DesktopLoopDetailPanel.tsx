@@ -582,7 +582,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const oneTimeTasks = loopData.tasks.filter((task: Task) => task.is_one_time) as Task[];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* HEADER SECTION */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -590,18 +590,21 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             {FOLDER_ICONS[loopData.category as LoopType] || '📋'}
           </Text>
           <View style={styles.headerMain}>
-            <Text style={styles.heroTitle}>{loopData.name}</Text>
+            <Text style={[styles.heroTitle, { color: colors.text }]}>{loopData.name}</Text>
             <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>{loopData.description}</Text>
           </View>
           <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.editButton} onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}>
-              <Text style={styles.editButtonText}>Edit</Text>
+            <TouchableOpacity 
+              style={[styles.editButton, { backgroundColor: colors.surface, borderColor: colors.border }]} 
+              onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}
+            >
+              <Text style={[styles.editButtonText, { color: colors.text }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={styles.completeButton}
+              style={[styles.completeButton, { backgroundColor: colors.primary }]}
               onPress={resetLoop}
             >
-              <Text style={styles.completeButtonText}>
+              <Text style={[styles.completeButtonText, { color: colors.textOnPrimary }]}>
                 {currentProgress >= 100 ? 'Reloop' : 'Reloop Early'}
               </Text>
             </TouchableOpacity>
@@ -615,7 +618,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         showsVerticalScrollIndicator={false}
       >
         {/* PROGRESS CARD */}
-        <View style={styles.progressCard}>
+        <View style={[styles.progressCard, { backgroundColor: colors.surface }]}>
           <View style={styles.progressInfo}>
             {loopData.function_type === 'practice' ? (
                 <MomentumRing size={100} strokeWidth={10} streak={loopData.currentStreak || 0} />
@@ -624,27 +627,27 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                 size={100}
                 width={10}
                 fill={currentProgress}
-                tintColor={BRAND_GOLD}
-                backgroundColor={colors.surface}
+                tintColor={colors.primary}
+                backgroundColor={colors.structure}
                 >
                 <View style={styles.progressCircle}>
                 <Text style={[styles.progressStatus, { color: colors.text }]}>
-              {Math.round(currentProgress)}% Done
-            </Text>
+                  {Math.round(currentProgress)}% Done
+                </Text>
                 </View>
                 </AnimatedCircularProgress>
             )}
             
             <View style={styles.progressTextContainer}>
-              <Text style={styles.progressLabel}>TODAY'S PROGRESS</Text>
-              <Text style={styles.progressStatus}>
+              <Text style={[styles.progressLabel, { color: colors.primary }]}>TODAY'S PROGRESS</Text>
+              <Text style={[styles.progressStatus, { color: colors.text }]}>
                 {loopData.function_type === 'practice' 
                     ? `${loopData.currentStreak || 0} Day Streak`
                     : `${loopData.completedCount} of ${loopData.totalCount} tasks`}
               </Text>
               
-              <View style={styles.streakBadge}>
-                <Text style={styles.streakText}>
+              <View style={[styles.streakBadge, { backgroundColor: colors.surface, borderColor: `${colors.primary}40` }]}>
+                <Text style={[styles.streakText, { color: colors.primary }]}>
                     {loopData.function_type === 'practice' ? '🧘 PRACTICE MODE' : `🔥 ${streak} day streak`}
                 </Text>
               </View>
@@ -655,11 +658,11 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         {/* TASKS SECTION - Drag-and-drop reorder and nest; promote subtasks from edit modal */}
         <View style={styles.tasksSection}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-             <Text style={styles.sectionTitle}>Tasks</Text>
+             <Text style={[styles.sectionTitle, { color: colors.text }]}>Tasks</Text>
              {saving && (
                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                 <ActivityIndicator size="small" color="#FEC00F" />
-                 <Text style={{ fontSize: 12, color: '#9CA3AF' }}>Saving...</Text>
+                 <ActivityIndicator size="small" color={colors.primary} />
+                 <Text style={{ fontSize: 12, color: colors.textSecondary }}>Saving...</Text>
                </View>
              )}
           </View>
@@ -695,18 +698,18 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           )}
 
           <TouchableOpacity 
-            style={styles.addTaskButton} 
+            style={[styles.addTaskButton, { borderColor: `${colors.primary}60`, backgroundColor: `${colors.primary}12` }]} 
             onPress={openAddTaskModal}
           >
-            <Ionicons name="add" size={18} color="#FEC00F" />
-            <Text style={styles.addTaskText}>Add new step</Text>
+            <Ionicons name="add" size={18} color={colors.primary} />
+            <Text style={[styles.addTaskText, { color: colors.primary }]}>Add new step</Text>
           </TouchableOpacity>
         </View>
 
         {/* ONE-TIME TASKS SECTION */}
         {oneTimeTasks.length > 0 && (
           <View style={[styles.tasksSection, { marginTop: 24 }]}>
-            <Text style={[styles.sectionTitle, { marginBottom: 16 }]}>One-time Tasks</Text>
+            <Text style={[styles.sectionTitle, { marginBottom: 16, color: colors.text }]}>One-time Tasks</Text>
             <TaskTree
               tasks={oneTimeTasks}
               onDeleteTask={handleDeleteTask}
@@ -747,21 +750,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           endGoalDescription={loopData.end_goal_description}
         />
 
-        {/* STAR RATING SECTION */}
-        <View style={styles.ratingSection}>
-          <Text style={styles.ratingSectionTitle}>Rate this Loop</Text>
-          <StarRatingInput 
-            value={userRating}
-            onChange={handleSubmitRating}
-            disabled={isSubmittingRating}
-            size={36}
-          />
-          {loopData.total_ratings !== undefined && loopData.total_ratings > 0 && (
-            <Text style={styles.ratingStats}>
-              Average: {(loopData.average_rating || 0).toFixed(1)} ({loopData.total_ratings} {loopData.total_ratings === 1 ? 'rating' : 'ratings'})
-            </Text>
-          )}
-        </View>
+        {/* Rate this Loop - hidden from main view; can be shown contextually later (e.g. after Reloop) */}
       </NestableScrollContainer>
 
       <TaskEditModal
@@ -798,12 +787,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212',
   },
   header: {
     padding: 40,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
   },
   headerTop: {
     flexDirection: 'row',
@@ -819,12 +805,10 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 40,
     fontFamily: 'Outfit_700Bold',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
   heroDescription: {
     fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.4)',
     lineHeight: 24,
   },
   headerButtons: {
@@ -836,22 +820,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    backgroundColor: '#ffffff',
   },
   editButtonText: {
     fontWeight: '600',
-    color: '#1a1a1a',
   },
   completeButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#FEC00F',
   },
   completeButtonText: {
     fontWeight: '700',
-    color: '#1a1a1a',
   },
   completeButtonDisabled: {
     backgroundColor: '#E5E7EB',
@@ -866,12 +845,9 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   progressCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 20,
     padding: 32,
     marginBottom: 40,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   progressInfo: {
     flexDirection: 'row',
@@ -893,29 +869,24 @@ const styles = StyleSheet.create({
   progressLabel: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#E6A200',
     letterSpacing: 1,
     marginBottom: 8,
   },
   progressStatus: {
     fontSize: 32,
     fontFamily: 'Outfit_700Bold',
-    color: '#000', // Override inline
     marginBottom: 12,
   },
   streakBadge: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#FEC00F40',
   },
   streakText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#E6A200',
   },
   tasksSection: {
     flex: 1,
@@ -931,7 +902,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontFamily: 'Outfit_700Bold',
-    color: '#FFFFFF',
     marginBottom: 24,
   },
   taskContainer: {
@@ -999,34 +969,26 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
     borderStyle: 'solid',
-    borderColor: '#FEC00F60',
-    backgroundColor: '#FEC00F12',
     marginTop: 12,
     gap: 10,
   },
   addTaskText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#FEC00F',
   },
   ratingSection: {
     marginTop: 32,
     padding: 24,
-    backgroundColor: '#FFFBF0',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#FFF4D1',
     alignItems: 'center',
   },
   ratingSectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#374151',
     marginBottom: 16,
   },
   ratingStats: {
     fontSize: 14,
-    color: '#6B7280',
     marginTop: 16,
   },
   ketchupSlot: {

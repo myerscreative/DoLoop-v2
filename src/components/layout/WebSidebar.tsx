@@ -97,14 +97,17 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
             </Text>
         </View>
         {count !== undefined && count > 0 && (
-            <Text style={[styles.navCount, { color: colors.textSecondary }]}>{count}</Text>
+            <Text style={[
+              styles.navCount, 
+              { color: active ? colors.text : colors.textSecondary }
+            ]}>{count}</Text>
         )}
       </Pressable>
     );
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background, borderRightColor: colors.border }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* DoLoop Branding */}
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <DoLoopLogo size={86} color={colors.text} showText={true} />
@@ -135,9 +138,6 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
           <NavItem id="manual" label="Planned" iconName="calendar-outline" count={counts.manual} />
         </View>
 
-        {/* Section Divider */}
-        <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 16, opacity: 0.3 }} />
-
         {/* ===== SECTION 2: LOOP LIBRARY ===== */}
         <View style={styles.navSection}>
           <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LOOP LIBRARY</Text>
@@ -147,13 +147,11 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
           <NavItem id="library" label="Shared Libraries" iconName="share-social-outline" />
           <NavItem id="library" label="Premium" iconName="diamond-outline" />
           
-          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 8, opacity: 0.2 }} />
-          
           <NavItem id="sommelier" label="AI Loop Recommender" iconName="sparkles-outline" />
         </View>
 
         {/* Create Action */}
-        <View style={[styles.createContainer, { borderTopColor: colors.border }]}>
+        <View style={styles.createContainer}>
             <TouchableOpacity 
                 style={[styles.createButton, { 
                     backgroundColor: colors.primary,
@@ -183,7 +181,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    borderRightWidth: 1,
   },
   branding: {
     flexDirection: 'row',
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
   createContainer: {
     marginTop: 24,
     paddingTop: 16,
-    borderTopWidth: 1,
   },
   createButton: {
     flexDirection: 'row',

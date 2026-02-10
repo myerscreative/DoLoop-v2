@@ -717,6 +717,7 @@ export function TemplateLibraryScreen({ navigation }: Props) {
                   name={`${item.title} (${item.category})`}
                   description={loopDescriptions[item.title] || item.description}
                   isSelected={selectedTemplateId === item.id}
+                  colors={colors}
                   onPress={() => {
                     if (Platform.OS !== 'web') {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

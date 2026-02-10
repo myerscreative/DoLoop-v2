@@ -11,6 +11,10 @@ interface StarRatingInputProps {
   onChange: (rating: number) => void;
   disabled?: boolean;
   size?: number;
+  /** Theme-aware: filled star color (default: brand gold) */
+  filledColor?: string;
+  /** Theme-aware: empty star color (default: light gray) */
+  emptyColor?: string;
 }
 
 // SVG star path (5-pointed star)
@@ -22,7 +26,9 @@ const AnimatedStar: React.FC<{
   size: number;
   onPress: () => void;
   disabled: boolean;
-}> = ({ index, filled, size, onPress, disabled }) => {
+  filledColor: string;
+  emptyColor: string;
+}> = ({ index, filled, size, onPress, disabled, filledColor, emptyColor }) => {
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const [isHovered, setIsHovered] = useState(false);
 
@@ -62,7 +68,7 @@ const AnimatedStar: React.FC<{
     onPress();
   };
 
-  const fillColor = filled || isHovered ? STAR_GOLD : STAR_EMPTY;
+  const fillColor = filled || isHovered ? filledColor : emptyColor;
 
   return (
     <TouchableOpacity
@@ -95,6 +101,8 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
   onChange,
   disabled = false,
   size = 32,
+  filledColor = STAR_GOLD,
+  emptyColor = STAR_EMPTY,
 }) => {
   return (
     <View style={styles.container}>
@@ -106,6 +114,8 @@ export const StarRatingInput: React.FC<StarRatingInputProps> = ({
           size={size}
           onPress={() => onChange(star)}
           disabled={disabled}
+          filledColor={filledColor}
+          emptyColor={emptyColor}
         />
       ))}
     </View>
