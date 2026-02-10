@@ -427,24 +427,29 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleDeleteTask = async (task: Task) => {
-    Alert.alert('Delete Task', `Delete "${task.description}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const { error } = await supabase.from('tasks').delete().eq('id', task.id);
-            if (error) throw error;
-            await loadLoopData();
-          } catch (e: any) {
-            console.error('Delete task error:', e);
-            const errorMessage = e?.message || e?.error?.message || String(e) || 'Failed to delete task';
-            Alert.alert('Error', errorMessage);
-          }
-        },
-      },
-    ]);
+    try {
+      // Optimistic UI removal
+      setLoopData(prev => {
+        if (!prev) return null;
+        const removeTask = (tasks: Task[]): Task[] =>
+          tasks.filter(t => t.id !== task.id).map(t => ({
+            ...t,
+            children: t.children ? removeTask(t.children) : undefined,
+          }));
+        const newTasks = removeTask(prev.tasks);
+        const completedCount = newTasks.filter(t => t.completed && !t.is_one_time).length;
+        const totalCount = newTasks.filter(t => !t.is_one_time).length;
+        return { ...prev, tasks: newTasks, completedCount, totalCount };
+      });
+
+      const { error } = await supabase.from('tasks').delete().eq('id', task.id);
+      if (error) throw error;
+      await loadLoopData();
+    } catch (e: any) {
+      console.error('Delete task error:', e);
+      Alert.alert('Error', e?.message || 'Failed to delete task');
+      await loadLoopData(); // Reload to restore state on error
+    }
   };
 
   const handleSaveTask = async (
