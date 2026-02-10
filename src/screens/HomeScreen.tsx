@@ -55,6 +55,7 @@ export const HomeScreen: React.FC = () => {
   // Loop editing state
   const [editingLoop, setEditingLoop] = useState<any | null>(null);
   const [isEditingLoop, setIsEditingLoop] = useState(false);
+  const [commandBarVisible, setCommandBarVisible] = useState(false);
 
   useEffect(() => {
     updateDate();
@@ -210,6 +211,7 @@ export const HomeScreen: React.FC = () => {
     setIsEditingLoop(false);
     setEditingLoop(null);
     setModalVisible(true);
+    setCommandBarVisible(false); // Close command bar if open
   };
 
   const handleCreateLoop = async (data: any) => {
@@ -418,6 +420,21 @@ export const HomeScreen: React.FC = () => {
       }
   };
 
+  // Cmd+K keyboard shortcut for Command Bar (desktop only)
+  useEffect(() => {
+    if (!isDesktop || Platform.OS !== 'web') return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandBarVisible(true);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDesktop]);
+
   const RightPanelContent = isDesktop ? (
       selectedLoopId ? (
           <DesktopLoopDetailPanel 
@@ -502,7 +519,7 @@ export const HomeScreen: React.FC = () => {
             counts={counts}
           />
         }
-        rightPanel={RightPanelContent}
+        rightPanel={null}
         layout="productivity"
       >
       <View style={{
@@ -512,13 +529,76 @@ export const HomeScreen: React.FC = () => {
         backgroundColor: colors.background,
       }}>
         {isDesktop ? (
-          <DynamicStage
-            loops={allDisplayLoops}
-            selectedFilter={selectedFilter}
-            selectedLoopId={selectedLoopId}
-            onLoopPress={onLoopPress}
-            onCreateLoop={openCreateLoopModal}
-          />
+          <>
+            <DynamicStage
+              loops={allDisplayLoops}
+              selectedFilter={selectedFilter}
+              selectedLoopId={selectedLoopId}
+              onLoopPress={onLoopPress}
+              onCreateLoop={openCreateLoopModal}
+              totalStreak={totalStreak}
+            />
+            
+            {/* Overlay Detail Panel */}
+            {selectedLoopId && (
+              <>
+                {/* Backdrop */}
+                <TouchableOpacity
+                  activeOpacity={1}
+                  onPress={() => setSelectedLoopId(null)}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                    zIndex: 99,
+                  }}
+                />
+                
+                {/* Detail Panel */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: 480,
+                    backgroundColor: Platform.OS === 'web' ? 'rgba(24, 24, 24, 0.95)' : colors.background,
+                    zIndex: 100,
+                    shadowColor: '#000',
+                    shadowOffset: { width: -4, height: 0 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 20,
+                    elevation: 20,
+                    ...(Platform.OS === 'web' && {
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                    } as any),
+                  }}
+                >
+                  <DesktopLoopDetailPanel 
+                    loopId={selectedLoopId} 
+                    onClose={() => setSelectedLoopId(null)}
+                  />
+                </View>
+              </>
+            )}
+            
+            {/* CommandBar */}
+            <CommandBar 
+              visible={commandBarVisible}
+              onClose={() => setCommandBarVisible(false)}
+              onCreate={(text) => {
+                // For now, just open the create loop modal with the text as name
+                // Could be enhanced to parse the text for loop creation
+                setCommandBarVisible(false);
+                openCreateLoopModal();
+              }}
+              placeholder="Create a new loop... (Cmd+K)"
+            />
+          </>
         ) : (
           <View style={{ flex: 1 }}>
             {/* Header - Mobile Only */}

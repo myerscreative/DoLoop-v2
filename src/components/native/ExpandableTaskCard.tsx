@@ -181,7 +181,13 @@ export const ExpandableTaskCard: React.FC<ExpandableTaskCardProps> = ({
     <>
       <View style={styles.mainRow}>
         <TouchableOpacity 
-          onPress={onToggle} 
+          onPress={(e) => {
+            // Stop event propagation to prevent parent card's onPress from firing
+            if (e && typeof e.stopPropagation === 'function') {
+              e.stopPropagation();
+            }
+            onToggle();
+          }}
           style={styles.toggleArea}
           activeOpacity={0.7}
         >

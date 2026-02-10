@@ -7,14 +7,19 @@ interface MomentumRingProps {
   strokeWidth?: number;
   streak?: number;
   active?: boolean;
+  displayMode?: 'hero' | 'compact' | 'inline';
 }
 
 export const MomentumRing: React.FC<MomentumRingProps> = ({
-  size = 48,
-  strokeWidth = 6,
+  size: customSize,
+  strokeWidth: customStrokeWidth,
   streak = 0,
   active = true,
+  displayMode = 'inline',
 }) => {
+  // Determine size based on display mode
+  const size = customSize ?? (displayMode === 'hero' ? 350 : displayMode === 'compact' ? 40 : 48);
+  const strokeWidth = customStrokeWidth ?? (displayMode === 'hero' ? 16 : 6);
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -91,13 +96,19 @@ export const MomentumRing: React.FC<MomentumRingProps> = ({
         />
       </Svg>
       <View style={styles.textContainer}>
-        {streak > 0 ? (
-            <>
-                <Text style={[styles.streakText, { fontSize: size * 0.35 }]}>{streak}</Text>
-                <Text style={[styles.label, { fontSize: size * 0.15 }]}>DAYS</Text>
-            </>
+        {displayMode === 'hero' ? (
+          <>
+            <Text style={[styles.streakText, { fontSize: 72, fontWeight: '900' }]}>{streak}</Text>
+            <Text style={[styles.heroLabel, { fontSize: 20, marginTop: 8 }]}>DAY STREAK</Text>
+            <Text style={[styles.heroSubtitle, { fontSize: 14, marginTop: 4 }]}>Momentum</Text>
+          </>
+        ) : streak > 0 ? (
+          <>
+            <Text style={[styles.streakText, { fontSize: size * 0.35 }]}>{streak}</Text>
+            <Text style={[styles.label, { fontSize: size * 0.15 }]}>DAYS</Text>
+          </>
         ) : (
-            <Text style={{ fontSize: size * 0.4 }}>🧘</Text>
+          <Text style={{ fontSize: size * 0.4 }}>🧘</Text>
         )}
       </View>
     </View>
@@ -127,5 +138,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFB800',
     marginTop: -2,
+  },
+  heroLabel: {
+    fontWeight: '800',
+    color: '#FFB800',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  heroSubtitle: {
+    fontWeight: '600',
+    color: '#FFB800',
+    opacity: 0.7,
   },
 });

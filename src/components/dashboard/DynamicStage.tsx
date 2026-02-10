@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DashboardGrid } from '../dashboard/DashboardGrid';
+import { MomentumRing } from '../native/MomentumRing';
 import { LoopWithTasks, FilterType } from '../../types/loop';
 
 interface DynamicStageProps {
@@ -11,6 +12,7 @@ interface DynamicStageProps {
   selectedLoopId: string | null;
   onLoopPress: (loop: LoopWithTasks) => void;
   onCreateLoop: () => void;
+  totalStreak: number;
 }
 
 /**
@@ -23,6 +25,7 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
   selectedLoopId,
   onLoopPress,
   onCreateLoop,
+  totalStreak,
 }) => {
   const { colors } = useTheme();
 
@@ -49,16 +52,32 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Bento Grid Content */}
-      <DashboardGrid
-        loops={loops}
-        layout="bento"
-        onCreateLoop={onCreateLoop}
-        onLoopPress={onLoopPress}
-        title={getGridTitle()}
-        activeFilter={selectedFilter}
-        selectedLoopId={selectedLoopId}
-      />
+      {/* Scrollable Content */}
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* MomentumRing Hero */}
+        <View style={styles.heroContainer}>
+          <MomentumRing 
+            displayMode="hero" 
+            streak={totalStreak} 
+            active={true} 
+          />
+        </View>
+
+        {/* Bento Grid Content */}
+        <DashboardGrid
+          loops={loops}
+          layout="bento"
+          onCreateLoop={onCreateLoop}
+          onLoopPress={onLoopPress}
+          title={getGridTitle()}
+          activeFilter={selectedFilter}
+          selectedLoopId={selectedLoopId}
+        />
+      </ScrollView>
     </View>
   );
 };
@@ -67,5 +86,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 100, // Extra padding for CommandBar
+  },
+  heroContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 24,
   },
 });
