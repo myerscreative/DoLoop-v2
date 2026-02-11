@@ -874,10 +874,13 @@ const styles = StyleSheet.create({
   progressCircle: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
   },
   progressCircleStatus: {
     fontSize: 16,
     fontFamily: 'Outfit_700Bold',
+    textAlign: 'center',
+    width: 60, // Fixed width to help centering
   },
   progressTextContainer: {
     flex: 1,

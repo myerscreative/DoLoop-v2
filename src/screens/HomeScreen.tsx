@@ -526,6 +526,7 @@ export const HomeScreen: React.FC = () => {
         width: '100%',
         alignSelf: 'center',
         backgroundColor: colors.background,
+        paddingRight: (isDesktop && selectedLoopId) ? 480 : 0,
       }}>
         {isDesktop ? (
           <>
