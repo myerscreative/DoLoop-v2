@@ -602,22 +602,23 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             <Text style={[styles.heroTitle, { color: colors.text }]}>{loopData.name}</Text>
             <Text style={[styles.heroDescription, { color: colors.textSecondary }]}>{loopData.description}</Text>
           </View>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={[styles.editButton, { backgroundColor: colors.surface }]} 
-              onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}
-            >
-              <Text style={[styles.editButtonText, { color: colors.text }]}>Edit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.completeButton, { backgroundColor: colors.primary }]}
-              onPress={resetLoop}
-            >
-              <Text style={[styles.completeButtonText, { color: colors.textOnPrimary }]}>
-                {currentProgress >= 100 ? 'Reloop' : 'Reloop Early'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+        </View>
+        
+        <View style={styles.headerButtonsRow}>
+          <TouchableOpacity 
+            style={[styles.editButton, { backgroundColor: colors.surface }]} 
+            onPress={() => navigation.navigate('LoopDetail', { loopId: loopData.id })}
+          >
+            <Text style={[styles.editButtonText, { color: colors.text }]}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.completeButton, { backgroundColor: colors.primary }]}
+            onPress={resetLoop}
+          >
+            <Text style={[styles.completeButtonText, { color: colors.textOnPrimary }]}>
+              {currentProgress >= 100 ? 'Reloop' : 'Reloop Early'}
+            </Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -640,7 +641,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
                 backgroundColor={colors.structure}
                 >
                 <View style={styles.progressCircle}>
-                <Text style={[styles.progressStatus, { color: colors.text }]}>
+                <Text style={[styles.progressCircleStatus, { color: colors.text }]}>
                   {Math.round(currentProgress)}% Done
                 </Text>
                 </View>
@@ -802,27 +803,30 @@ const styles = StyleSheet.create({
   },
   headerTop: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 24,
+    alignItems: 'flex-start',
+    gap: 16,
   },
   heroEmoji: {
-    fontSize: 60,
+    fontSize: 48,
   },
   headerMain: {
     flex: 1,
   },
   heroTitle: {
-    fontSize: 40,
+    fontSize: 28,
     fontFamily: 'Outfit_700Bold',
+    lineHeight: 34,
     marginBottom: 4,
   },
   heroDescription: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 16,
+    lineHeight: 22,
   },
-  headerButtons: {
+  headerButtonsRow: {
     flexDirection: 'row',
     gap: 12,
+    marginTop: 20,
+    marginLeft: 64, // Align with the start of the title (emoji width is 48 + gap 16)
   },
   editButton: {
     paddingHorizontal: 20,
@@ -871,6 +875,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  progressCircleStatus: {
+    fontSize: 16,
+    fontFamily: 'Outfit_700Bold',
+  },
   progressTextContainer: {
     flex: 1,
   },
@@ -881,9 +889,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressStatus: {
-    fontSize: 32,
+    fontSize: 24,
     fontFamily: 'Outfit_700Bold',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   streakBadge: {
     alignSelf: 'flex-start',
