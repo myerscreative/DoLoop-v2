@@ -20,7 +20,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { LoopType, FOLDER_COLORS } from '../types/loop';
-import { Header } from '../components/Header';
 import { LoopSelectionModal } from '../components/LoopSelectionModal';
 import { LoopCard } from '../components/native/LoopCard';
 import CreateLoopModal from '../components/native/CreateLoopModal';
@@ -535,6 +534,7 @@ export const HomeScreen: React.FC = () => {
               selectedFilter={selectedFilter}
               selectedLoopId={selectedLoopId}
               onLoopPress={onLoopPress}
+              onSelectFilter={setSelectedFilter}
               onCreateLoop={openCreateLoopModal}
               totalStreak={totalStreak}
             />
@@ -602,7 +602,20 @@ export const HomeScreen: React.FC = () => {
         ) : (
           <View style={{ flex: 1 }}>
             {/* Header - Mobile Only */}
-            <Header currentDate={currentDate} streak={totalStreak} colors={colors} />
+            <View style={{ paddingHorizontal: 20, paddingTop: 10, marginBottom: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <Text style={{ fontSize: 24, marginRight: 8 }}>🐝</Text>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text }}>
+                  Good{' '}
+                  {new Date().getHours() < 12
+                    ? 'morning'
+                    : new Date().getHours() < 18
+                    ? 'afternoon'
+                    : 'evening'}! 🌅
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>{currentDate}</Text>
+            </View>
 
             {/* Pending Invitations */}
             <PendingInvitations onInvitationHandled={loadData} />

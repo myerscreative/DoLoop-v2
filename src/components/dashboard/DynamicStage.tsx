@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DashboardGrid } from '../dashboard/DashboardGrid';
-import { MomentumRing } from '../native/MomentumRing';
+
 import { LoopWithTasks, FilterType } from '../../types/loop';
 
 interface DynamicStageProps {
@@ -11,8 +11,9 @@ interface DynamicStageProps {
   selectedFilter: FilterType;
   selectedLoopId: string | null;
   onLoopPress: (loop: LoopWithTasks) => void;
+  onSelectFilter: (filter: FilterType) => void;
   onCreateLoop: () => void;
-  totalStreak: number;
+
 }
 
 /**
@@ -24,8 +25,8 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
   selectedFilter,
   selectedLoopId,
   onLoopPress,
+  onSelectFilter,
   onCreateLoop,
-  totalStreak,
 }) => {
   const { colors } = useTheme();
 
@@ -58,25 +59,19 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* MomentumRing Hero */}
-        <View style={styles.heroContainer}>
-          <MomentumRing 
-            displayMode="hero" 
-            streak={totalStreak} 
-            active={true} 
+        {/* Bento Grid Content */}
+        <View style={styles.gridContainer}>
+          <DashboardGrid
+            loops={loops}
+            layout="list"
+            onCreateLoop={onCreateLoop}
+            onLoopPress={onLoopPress}
+            title={getGridTitle()}
+            activeFilter={selectedFilter}
+            onSelectFilter={onSelectFilter}
+            selectedLoopId={selectedLoopId}
           />
         </View>
-
-        {/* Bento Grid Content */}
-        <DashboardGrid
-          loops={loops}
-          layout="bento"
-          onCreateLoop={onCreateLoop}
-          onLoopPress={onLoopPress}
-          title={getGridTitle()}
-          activeFilter={selectedFilter}
-          selectedLoopId={selectedLoopId}
-        />
       </ScrollView>
     </View>
   );
@@ -93,10 +88,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100, // Extra padding for CommandBar
   },
-  heroContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
+  gridContainer: {
+    paddingVertical: 12,
   },
 });

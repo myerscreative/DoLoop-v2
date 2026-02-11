@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LoopCard } from './LoopCard';
 import { LoopWithTasks, FilterType } from '../../types/loop';
@@ -15,6 +15,7 @@ interface DashboardGridProps {
   forcedColumns?: number;
   title?: string;
   activeFilter?: FilterType;
+  onSelectFilter?: (filter: FilterType) => void;
   selectedLoopId?: string | null;
 }
 
@@ -22,22 +23,17 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   loops,
   onCreateLoop,
   onLoopPress,
-  onLoopEdit,
   layout = 'list',
   forcedColumns,
   title,
   activeFilter = 'all',
+  onSelectFilter,
   selectedLoopId,
 }) => {
-  const { user } = useAuth();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
 
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+
 
   // Calculate number of columns for Bento Grid
   const getColumns = (): number => {
@@ -79,22 +75,126 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
       >
         {/* Header Section */}
         <View style={[styles.header, { backgroundColor: layout === 'bento' ? 'transparent' : colors.background }]}>
-          <Text style={[styles.greeting, { color: colors.text }]}>
-            Good{' '}
-            {new Date().getHours() < 12
-              ? 'Morning'
-              : new Date().getHours() < 18
-              ? 'Afternoon'
-              : 'Evening'}
-            , {user?.user_metadata?.first_name || 'Friend'} 👋
+          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </Text>
-          <Text style={[styles.dateText, { color: colors.textSecondary }]}>{currentDate}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+            <Text style={{ fontSize: 32, marginRight: 12 }}>🐝</Text>
+            <Text style={[styles.greeting, { color: colors.text }]}>
+              Good{' '}
+              {new Date().getHours() < 12
+                ? 'morning'
+                : new Date().getHours() < 18
+                ? 'afternoon'
+                : 'evening'}! {new Date().getHours() >= 18 ? '🌙' : '🌅'}
+            </Text>
+          </View>
         </View>
 
-        {/* Section Label */}
+        {/* Filter Tabs - Mobile/Desk Unified */}
+        <View style={{
+          paddingHorizontal: 24,
+          paddingVertical: 16,
+        }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: colors.text,
+            marginBottom: 16,
+          }}>
+            Your Loops
+          </Text>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {[
+              { id: 'all' as FilterType, label: 'All', icon: '⭐' },
+              { id: 'manual' as FilterType, label: 'Checklists', icon: '✓' },
+              { id: 'daily' as FilterType, label: 'Daily', icon: '☀️' },
+              { id: 'weekly' as FilterType, label: 'Weekly', icon: '🎯' },
+            ].map((tab) => {
+              // UNIFIED GOLD BRAND - all tabs use gold
+              const activeColor = colors.primary; // #FEC00F
+              const isActive = activeFilter === tab.id;
+              
+              return (
+              <TouchableOpacity
+                key={tab.id}
+                style={{
+                  paddingHorizontal: 20,
+                  paddingVertical: 10,
+                  borderRadius: 24,
+                  borderWidth: 2,
+                  borderColor: isActive ? activeColor : '#333333',
+                  backgroundColor: isActive ? `${activeColor}15` : 'transparent',
+                }}
+                onPress={() => onSelectFilter?.(tab.id)}
+              >
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: isActive ? '800' : '600',
+                  color: isActive ? activeColor : colors.textSecondary,
+                }}>
+                  {tab.icon} {tab.label}
+                </Text>
+              </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Quick Add Banner */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
+          <TouchableOpacity 
+            onPress={onCreateLoop}
+            activeOpacity={0.8}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.background,
+              padding: 16,
+              borderRadius: 20,
+              borderWidth: 1.5,
+              borderStyle: 'dashed',
+              borderColor: colors.primary,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.1,
+              shadowRadius: 10,
+              elevation: 2,
+            }}
+          >
+            <View style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              backgroundColor: `${colors.primary}20`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 16,
+            }}>
+              <Ionicons name="add" size={24} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={{ 
+                fontSize: 16, 
+                fontWeight: '700', 
+                color: colors.text 
+              }}>Create a new loop</Text>
+              <Text style={{ 
+                fontSize: 13, 
+                color: colors.textSecondary 
+              }}>Track your own custom routine</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            {title || "TODAY'S LOOPS"}
+            {title || "Your Loops"}
           </Text>
         </View>
 
@@ -135,6 +235,83 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
             ))}
           </View>
         )}
+
+        {/* Discover Loops Section */}
+        <View style={{ paddingHorizontal: 24, marginTop: 40, paddingBottom: 60 }}>
+          <Text style={{
+            fontSize: 18,
+            fontWeight: 'bold',
+            color: colors.text,
+            marginBottom: 20,
+          }}>
+            Discover Loops
+          </Text>
+
+          {/* Loop Library Card */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={{
+              borderRadius: 20,
+              overflow: 'hidden',
+              marginBottom: 16,
+            }}
+          >
+            <LinearGradient
+              colors={['#2E1065', '#1E1B4B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                padding: 24,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>📚</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#FFFFFF' }}>Loop Library</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: 'rgba(255, 255, 255, 0.7)', lineHeight: 18 }}>
+                  Explore loops inspired by top teachers, coaches, and business leaders
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={24} color="#FFFFFF" style={{ opacity: 0.8 }} />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* AI Recommender Card */}
+          <TouchableOpacity
+            activeOpacity={0.8}
+            style={{
+              borderRadius: 20,
+              overflow: 'hidden',
+            }}
+          >
+            <LinearGradient
+              colors={['#FEC00F', '#F59E0B']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{
+                padding: 24,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 24, marginRight: 12 }}>✨</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#000000' }}>AI Loop Recommender</Text>
+                </View>
+                <Text style={{ fontSize: 13, color: 'rgba(0, 0, 0, 0.6)', lineHeight: 18 }}>
+                  Describe what you want to achieve and get personalized loop recommendations
+                </Text>
+              </View>
+              <Ionicons name="arrow-forward" size={24} color="#000000" style={{ opacity: 0.6 }} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </View>
   );
@@ -170,13 +347,13 @@ const styles = StyleSheet.create({
     minWidth: 300,
   },
   greeting: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
-    marginBottom: 4,
   },
-  dateText: {
-    fontSize: 14,
+  dateLabel: {
+    fontSize: 16,
     fontWeight: '600',
+    opacity: 0.8,
   },
   sectionHeader: {
     paddingHorizontal: 24,
@@ -184,10 +361,10 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 18,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: '#FFFFFF',
+    marginBottom: 8,
   },
   bentoGrid: {
     paddingHorizontal: 24,
