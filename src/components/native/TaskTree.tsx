@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, ListRenderItemInfo } from 'react-native';
+import React, { useState, useMemo, useCallback } from 'react';
+import { StyleSheet } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { Task } from '../../types/loop';
 import { TaskRow } from './TaskRow';
@@ -15,6 +15,10 @@ interface TaskTreeProps {
   onPromoteTask?: (taskId: string) => void;
   /** Delete a task. */
   onDeleteTask?: (task: Task) => void;
+  /** Header component for the list (passed from screen) */
+  ListHeaderComponent?: React.ReactElement;
+  /** Footer component for the list (passed from screen) */
+  ListFooterComponent?: React.ReactElement;
   /** Custom empty component */
   ListEmptyComponent?: React.ReactElement;
   /** Whether the list should scroll (default true) */
@@ -26,7 +30,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
   onUpdateTree, 
   onToggleTask, 
   onEditTask, 
-  onNestTask, 
   onPromoteTask, 
   onDeleteTask,
   ListHeaderComponent,
@@ -58,9 +61,6 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
     const isExpanded = expandedIds.has(item.id);
     const isSubtask = item.depth > 0;
     
-    // Check if task is actually completed in the source data
-    // (flatTasks has ...task props so it should be up to date)
-
     return (
       <ScaleDecorator>
         <TaskRow
@@ -100,9 +100,3 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
     />
   );
 };
-
-const styles = StyleSheet.create({
-  childContainer: {
-    // Indentation is handled inside TaskRow via depth
-  },
-});
