@@ -59,6 +59,7 @@ export const LoopDetailScreen: React.FC = () => {
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [initialShowDetails, setInitialShowDetails] = useState(false); // NEW: Control initial modal state
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [showThemePrompt, setShowThemePrompt] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -380,8 +381,9 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
-  const handleEditTask = (task: TaskWithDetails) => {
+  const handleEditTask = (task: TaskWithDetails, shouldExpand: boolean = false) => {
     setEditingTask(task);
+    setInitialShowDetails(shouldExpand);
     setModalVisible(true);
   };
 
@@ -557,6 +559,7 @@ export const LoopDetailScreen: React.FC = () => {
 
   const openAddTaskModal = () => {
     setEditingTask(null);
+    setInitialShowDetails(false); // Default to collapsed for new tasks
     setModalVisible(true);
   };
 
@@ -1180,14 +1183,11 @@ export const LoopDetailScreen: React.FC = () => {
         {/* Task Edit Modal */}
         <TaskEditModal
           visible={modalVisible}
-          onClose={() => {
-              setModalVisible(false);
-              setEditingTask(null);
-              loadLoopData();
-          }}
+          onClose={() => setModalVisible(false)}
           onSave={handleSaveTask}
           task={editingTask}
           user={user}
+          initialShowDetails={initialShowDetails}
           availableTags={availableTags}
           onCreateTag={handleCreateTag}
           onPromote={editingTask?.parent_task_id ? () => handlePromoteTask(editingTask.id) : undefined}

@@ -9,7 +9,7 @@ interface TaskTreeProps {
   tasks: Task[];
   onUpdateTree: (newTree: Task[]) => void;
   onToggleTask: (task: Task) => void;
-  onEditTask: (task: Task) => void;
+  onEditTask: (task: Task, shouldExpand?: boolean) => void;
   onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
   /** Promote a subtask to top-level (move back to main list). */
   onPromoteTask?: (taskId: string) => void;

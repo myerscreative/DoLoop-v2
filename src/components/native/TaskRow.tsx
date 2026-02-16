@@ -16,7 +16,7 @@ import {
 
 interface TaskRowProps extends RenderItemParams<Task> {
   onToggle: (task: Task) => void;
-  onPress: (task: Task) => void;
+  onPress: (task: Task, shouldExpand?: boolean) => void;
   isActive: boolean;
   isDragging?: boolean;
   /** Nesting level from TaskTree: 0 = main step, 1+ = subtask */
@@ -69,11 +69,24 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
         {isSubtask && <View style={styles.subtaskConnector} />}
         <View style={styles.rowOuter}>
-        <Pressable
+    <Pressable
           delayLongPress={200}
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            onPress(task);
+            
+            // Smart Navigation Logic:
+            // IF data exists (notes, attachments, recurring, subtasks, etc.) -> Expand Details
+            // IF empty -> Show "Add Item Details" prompt (collapsed)
+            const shouldExpand = 
+                hasNotes || 
+                hasAttachments || 
+                isRecurring || 
+                hasChildren || 
+                task.priority !== 'none' || 
+                hasDueDate || 
+                isAssigned;
+
+            onPress(task, shouldExpand);
           }}
           disabled={isDragActive}
           style={[

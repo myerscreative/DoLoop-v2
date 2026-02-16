@@ -46,6 +46,7 @@ interface TaskEditModalProps {
   onNestUnder?: (parentTaskId: string) => void;
   /** When set, show a "Delete item" button when editing an existing task. */
   onDeleteTask?: (task: TaskWithDetails) => void;
+  initialShowDetails?: boolean; // NEW: Control initial expansion
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -60,6 +61,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   availableParentTasks,
   onNestUnder,
   onDeleteTask,
+  initialShowDetails = false,
 }) => {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
@@ -98,7 +100,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
   // Interactive State
   const [saving, setSaving] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
+  const [showDetails, setShowDetails] = useState(initialShowDetails);
   
   // Picker Visibilities
   const [showTagInput, setShowTagInput] = useState(false);
@@ -129,6 +131,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         setChildTasks(children);
         
         setExistingAttachments(task.attachments || []);
+        // Initialize details view based on passed prop OR if task has relevant metadata that implies details
+        // The prop initialShowDetails comes from TaskRow logic
+        setShowDetails(initialShowDetails);
       } else {
         resetForm();
       }
@@ -169,7 +174,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setExistingAttachments([]);
     setChildTasks([]); // Reset children
     setTaskStack([]); // Reset stack
-    setShowDetails(false);
+    setShowDetails(false);   
     setShowDatePicker(false);
     setShowTagInput(false);
     setShowSubtaskInput(false);
