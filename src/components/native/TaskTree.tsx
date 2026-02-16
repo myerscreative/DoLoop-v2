@@ -143,7 +143,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
       }}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
-      activationDistance={8}
+      activationDistance={30}
       dragItemOverflow={true}
       scrollEnabled={false}
     />
