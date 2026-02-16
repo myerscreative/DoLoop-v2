@@ -812,199 +812,195 @@ export const LoopDetailScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1, flexBasis: 0 }} edges={['top']}>
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ 
-            paddingBottom: 250 // Ensure "Add Step" is clear of the FAB
-          }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={colors.primary} />
-          }
-        >
-          {/* Header Row: Back + Title + Icons */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              onPress={() => {
-                if (navigation.canGoBack()) {
-                  navigation.goBack();
-                } else {
-                  navigation.navigate('Home');
-                }
-              }}
-              style={styles.backButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={[styles.backChevron, { color: colors.primary }]}>‹</Text>
-              <Text style={[styles.backText, { color: colors.primary }]}>Back</Text>
-            </TouchableOpacity>
-          </View>
+          <TaskTree
+            tasks={recurringTasks as Task[]}
+            onDeleteTask={handleDeleteTask}
+            onUpdateTree={async (newTree) => {
+              setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
+              // Sync to DB
+              try {
+                const flatUpdates = flattenTreeForSync(newTree);
+                const updates = flatUpdates.map(u => 
+                  supabase.from('tasks').update({ 
+                    order_index: u.order_index, 
+                    parent_task_id: u.parent_task_id,
+                    updated_at: new Date().toISOString()
+                  }).eq('id', u.id)
+                );
+                await Promise.all(updates);
+              } catch (err) {
+                console.error('Failed to sync tree reorder:', err);
+              }
+            }}
+            onNestTask={async () => {
+              await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+            }}
+            onPromoteTask={handlePromoteTask}
+            onEditTask={handleEditTask}
+            onToggleTask={toggleTask}
+            ListHeaderComponent={
+              <View>
+                {/* Header Row: Back + Title + Icons */}
+                <View style={styles.headerRow}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (navigation.canGoBack()) {
+                        navigation.goBack();
+                      } else {
+                        navigation.navigate('Home');
+                      }
+                    }}
+                    style={styles.backButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text style={[styles.backChevron, { color: colors.primary }]}>‹</Text>
+                    <Text style={[styles.backText, { color: colors.primary }]}>Back</Text>
+                  </TouchableOpacity>
+                </View>
 
-          {/* Compact Header: Icon + Title + Actions in one row */}
-          <View style={styles.compactHeader}>
-            <View style={styles.compactRingWrapper}>
-              <LoopIcon
-                size={48}
-                color={loopData.color || colors.primary}
-              />
-              <View style={styles.ringCountOverlay}>
-                <Text style={[styles.compactRingCountText, { color: colors.text }]}>
-                  {loopData.completedCount}/{loopData.totalCount}
-                </Text>
-              </View>
-            </View>
+                {/* Compact Header: Icon + Title + Actions in one row */}
+                <View style={styles.compactHeader}>
+                  <View style={styles.compactRingWrapper}>
+                    <LoopIcon
+                      size={48}
+                      color={loopData.color || colors.primary}
+                    />
+                    <View style={styles.ringCountOverlay}>
+                      <Text style={[styles.compactRingCountText, { color: colors.text }]}>
+                        {loopData.completedCount}/{loopData.totalCount}
+                      </Text>
+                    </View>
+                  </View>
 
-            <View style={styles.compactTitleArea}>
-              <Text style={[styles.compactLoopTitle, { fontFamily: 'Outfit_700Bold', color: colors.text }]} numberOfLines={1}>
-                {loopData.name}
-              </Text>
-              <View style={styles.compactTitleActions}>
-                {loopMembers.length > 0 && (
-                  <MemberAvatars
-                    members={loopMembers}
-                    maxVisible={3}
-                    size={22}
-                    onPress={() => setShowMemberList(true)}
-                  />
+                  <View style={styles.compactTitleArea}>
+                    <Text style={[styles.compactLoopTitle, { fontFamily: 'Outfit_700Bold', color: colors.text }]} numberOfLines={1}>
+                      {loopData.name}
+                    </Text>
+                    <View style={styles.compactTitleActions}>
+                      {loopMembers.length > 0 && (
+                        <MemberAvatars
+                          members={loopMembers}
+                          maxVisible={3}
+                          size={22}
+                          onPress={() => setShowMemberList(true)}
+                        />
+                      )}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setShowLoopInfoModal(true)}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons name="eye-outline" size={22} color={colors.primary} />
+                    {loopData.description && (
+                      <View style={styles.unreadBadge} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Section Header (Only if tasks exist) */}
+                {recurringTasks.length > 0 && (
+                  <View style={[styles.stepsSection, { marginBottom: 10 }]}>
+                    <View style={styles.sectionHeaderRow}>
+                      <Text style={[styles.sectionHeader, { color: colors.text }]}>
+                        Steps 
+                        <Text style={[styles.sectionHeaderCount, { color: colors.textSecondary }]}> ({loopData.completedCount}/{loopData.totalCount})</Text>
+                      </Text>
+
+                      <TouchableOpacity 
+                         onPress={() => {
+                           if (currentProgress < 100) {
+                               Alert.alert(
+                                   'Reset Incomplete Loop?',
+                                   'You haven\'t finished all tasks. Do you want to reset anyway?',
+                                   [
+                                       { text: 'Cancel', style: 'cancel' },
+                                       { text: 'Reset Loop', onPress: () => resetLoop() }
+                                   ]
+                               );
+                           } else {
+                               resetLoop();
+                           }
+                         }}
+                         activeOpacity={0.6}
+                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                       >
+                         <Text style={styles.resetLoopText}>Reset Loop</Text>
+                       </TouchableOpacity>
+                    </View>
+                  </View>
                 )}
               </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => setShowLoopInfoModal(true)}
-              style={styles.eyeButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Ionicons name="eye-outline" size={22} color={colors.primary} />
-              {loopData.description && (
-                <View style={styles.unreadBadge} />
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Steps Section */}
-          {recurringTasks.length === 0 ? (
-            <View style={styles.emptyState}>
-              <BeeIcon size={100} />
-              <Text style={styles.emptyTitle}>No steps yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Tap the + button to add your first step
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyAddButton}
-                onPress={openAddTaskModal}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.emptyAddButtonText}>+</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.stepsSection}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={[styles.sectionHeader, { color: colors.text }]}>
-                  Steps 
-                  <Text style={[styles.sectionHeaderCount, { color: colors.textSecondary }]}> ({loopData.completedCount}/{loopData.totalCount})</Text>
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <BeeIcon size={100} />
+                <Text style={styles.emptyTitle}>No steps yet</Text>
+                <Text style={styles.emptySubtitle}>
+                  Tap the + button to add your first step
                 </Text>
-
-                <TouchableOpacity 
-                   onPress={() => {
-                     if (currentProgress < 100) {
-                         Alert.alert(
-                             'Reset Incomplete Loop?',
-                             'You haven\'t finished all tasks. Do you want to reset anyway?',
-                             [
-                                 { text: 'Cancel', style: 'cancel' },
-                                 { text: 'Reset Loop', onPress: () => resetLoop() }
-                             ]
-                         );
-                     } else {
-                         resetLoop();
-                     }
-                   }}
-                   activeOpacity={0.6}
-                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                 >
-                   <Text style={styles.resetLoopText}>Reset Loop</Text>
-                 </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.emptyAddButton}
+                  onPress={openAddTaskModal}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.emptyAddButtonText}>+</Text>
+                </TouchableOpacity>
               </View>
+            }
+            ListFooterComponent={
+              <View style={{ paddingBottom: 250 }}>
+                {recurringTasks.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.floatingAddStepButton}
+                    onPress={openAddTaskModal}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.addStepInner}>
+                      <Ionicons name="add" size={20} color={colors.primary} />
+                      <Text style={styles.addStepText}>Add new step</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
 
-              {/* Draggable Task Cards with reorder and nesting */}
-              <TaskTree
-                tasks={recurringTasks as Task[]}
-                onDeleteTask={handleDeleteTask}
-                onUpdateTree={async (newTree) => {
-                  setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
-                  // Sync to DB
-                  try {
-                    const flatUpdates = flattenTreeForSync(newTree);
-                    const updates = flatUpdates.map(u => 
-                      supabase.from('tasks').update({ 
-                        order_index: u.order_index, 
-                        parent_task_id: u.parent_task_id,
-                        updated_at: new Date().toISOString()
-                      }).eq('id', u.id)
-                    );
-                    await Promise.all(updates);
-                  } catch (err) {
-                    console.error('Failed to sync tree reorder:', err);
-                  }
-                }}
-                onNestTask={async () => {
-                  await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                onPromoteTask={handlePromoteTask}
-                onEditTask={handleEditTask}
-                onToggleTask={toggleTask}
-              />
-
-              {/* Add Step Button */}
-              <TouchableOpacity
-                style={styles.floatingAddStepButton}
-                onPress={openAddTaskModal}
-                activeOpacity={0.7}
-              >
-                <View style={styles.addStepInner}>
-                  <Ionicons name="add" size={20} color={colors.primary} />
-                  <Text style={styles.addStepText}>Add new step</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* One-time Tasks */}
-          {oneTimeTasks.length > 0 && (
-            <View style={styles.stepsSection}>
-              <Text style={styles.sectionHeader}>One-time Tasks</Text>
-              <TaskTree
-                tasks={oneTimeTasks as Task[]}
-                onDeleteTask={handleDeleteTask}
-                onUpdateTree={async (newTree) => {
-                  setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
-                  try {
-                    const flatUpdates = flattenTreeForSync(newTree);
-                    const updates = flatUpdates.map(u => 
-                      supabase.from('tasks').update({ 
-                        order_index: u.order_index, 
-                        parent_task_id: u.parent_task_id,
-                        updated_at: new Date().toISOString()
-                      }).eq('id', u.id)
-                    );
-                    await Promise.all(updates);
-                  } catch (err) {
-                    console.error('Failed to sync one-time tree:', err);
-                  }
-                }}
-                onNestTask={async () => {
-                  await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                onPromoteTask={handlePromoteTask}
-                onEditTask={handleEditTask}
-                onToggleTask={toggleTask}
-              />
-            </View>
-          )}
-
-        </ScrollView>
+                {/* One-time Tasks */}
+                {oneTimeTasks.length > 0 && (
+                  <View style={styles.stepsSection}>
+                    <Text style={styles.sectionHeader}>One-time Tasks</Text>
+                    <TaskTree
+                      tasks={oneTimeTasks as Task[]}
+                      onDeleteTask={handleDeleteTask}
+                      onUpdateTree={async (newTree) => {
+                        setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
+                        try {
+                          const flatUpdates = flattenTreeForSync(newTree);
+                          const updates = flatUpdates.map(u => 
+                            supabase.from('tasks').update({ 
+                              order_index: u.order_index, 
+                              parent_task_id: u.parent_task_id,
+                              updated_at: new Date().toISOString()
+                            }).eq('id', u.id)
+                          );
+                          await Promise.all(updates);
+                        } catch (err) {
+                          console.error('Failed to sync one-time tree:', err);
+                        }
+                      }}
+                      onNestTask={async () => {
+                        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                      onPromoteTask={handlePromoteTask}
+                      onEditTask={handleEditTask}
+                      onToggleTask={toggleTask}
+                      scrollEnabled={false}
+                    />
+                  </View>
+                )}
+              </View>
+            }
+          />
 
         {/* Readability Anchor: Dark gradient at bottom to isolate floating buttons */}
         <LinearGradient
