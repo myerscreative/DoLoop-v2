@@ -811,10 +811,13 @@ export const LoopDetailScreen: React.FC = () => {
   
   return (
     <View style={styles.container}>
-      <SafeAreaView style={{ flex: 1, flexBasis: 0, userSelect: 'none', touchAction: 'auto' }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <NestableScrollContainer
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 200 }}
+          contentContainerStyle={{ 
+            flexGrow: 1,
+            paddingBottom: 250 // Increased padding to ensure "Add Step" is clear of the FAB
+          }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={colors.primary} />
