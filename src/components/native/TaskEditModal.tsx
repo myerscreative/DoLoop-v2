@@ -878,6 +878,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   content: {
+    flex: 1,
     paddingTop: 20,
   },
   nameSection: {

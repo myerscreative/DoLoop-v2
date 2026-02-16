@@ -814,7 +814,7 @@ export const LoopDetailScreen: React.FC = () => {
       <SafeAreaView style={{ flex: 1, flexBasis: 0, userSelect: 'none', touchAction: 'auto' }} edges={['top']}>
         <NestableScrollContainer
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 120 }}
+          contentContainerStyle={{ paddingBottom: 200 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={loadLoopData} tintColor={colors.primary} />
@@ -1097,7 +1097,7 @@ export const LoopDetailScreen: React.FC = () => {
                 </TouchableOpacity>
               </View>
 
-              <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false}>
+              <ScrollView style={{ flex: 1, maxHeight: 500 }} showsVerticalScrollIndicator={false}>
                 {/* Loop Specs Section */}
                 <View style={styles.infoSection}>
                   <Text style={styles.infoSectionTitle}>Loop Specs</Text>
