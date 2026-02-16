@@ -20,13 +20,16 @@ import * as Haptics from 'expo-haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAdmin } from '../../hooks/useAdmin';
+import {
+  getAllAffiliateClicks,
+  AffiliateClick,
+} from '../../lib/admin';
+import { formatDateTimePST } from '../../utils/dateHelpers';
 import {
   getTemplatePerformance,
   TemplatePerformance,
   getUnconvertedClicks,
   markAffiliateConversion,
-  AffiliateClick,
 } from '../../lib/admin';
 import { AdminHelpModal } from '../../components/AdminHelpModal';
 import { ADMIN_HELP_CONTENT } from '../../constants/adminHelp';
@@ -348,7 +351,7 @@ export function AdminAffiliatesScreen({ navigation }: Props) {
                       {item.template_title}
                     </Text>
                     <Text style={[styles.clickUser, { color: colors.textSecondary }]}>
-                      {item.user_email} • {new Date(item.clicked_at).toLocaleDateString()}
+                      {item.user_email} • {formatDateTimePST(item.clicked_at)}
                     </Text>
                   </View>
                   <TouchableOpacity

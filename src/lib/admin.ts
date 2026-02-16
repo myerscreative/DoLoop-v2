@@ -4,7 +4,9 @@
  */
 
 import { supabase } from './supabase';
+import { formatDatePST, formatDateTimePST } from '../utils/dateHelpers';
 import { LoopTemplate, TemplateCreator, TemplateTask } from '../types/loop';
+
 
 /**
  * Check if the current user is an admin
@@ -1986,7 +1988,7 @@ export async function exportTemplatesToCSV(): Promise<string> {
       t.status || 'published',
       t.average_rating || 0,
       t.review_count || 0,
-      new Date(t.created_at).toLocaleDateString(),
+      formatDateTimePST(t.created_at),
     ]) || [];
 
     const csv = [
@@ -2009,12 +2011,12 @@ export async function exportUsersToCSV(): Promise<string> {
     const rows = users.map(u => [
       u.id,
       u.email,
-      new Date(u.created_at).toLocaleDateString(),
+      formatDateTimePST(u.created_at),
       u.is_admin ? 'Yes' : 'No',
       u.loop_count,
       u.task_count,
       u.templates_used,
-      u.last_activity ? new Date(u.last_activity).toLocaleDateString() : 'Never',
+      u.last_activity ? formatDateTimePST(u.last_activity) : 'Never',
     ]);
 
     const csv = [
@@ -2045,7 +2047,7 @@ export async function exportAuditLogsToCSV(params?: {
       log.action,
       log.resource_type,
       log.resource_id || '',
-      new Date(log.created_at).toLocaleString(),
+      formatDateTimePST(new Date(log.created_at)),
     ]);
 
     const csv = [

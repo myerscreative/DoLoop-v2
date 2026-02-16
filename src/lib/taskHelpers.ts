@@ -592,3 +592,55 @@ export async function ensureLoopMember(userId: string, loopId: string): Promise<
     return null;
   }
 }
+
+/**
+ * Creates a new task in the database.
+ */
+export async function createTask(
+  loopId: string, 
+  description: string, 
+  parentTaskId?: string, 
+  orderIndex: number = 0
+): Promise<TaskWithDetails | null> {
+  const { supabase } = await import('../lib/supabase'); // Ensure supabase is available
+  try {
+     const { data, error } = await supabase
+       .from('tasks')
+       .insert({
+         loop_id: loopId,
+         description: description,
+         parent_task_id: parentTaskId || null,
+         order_index: orderIndex,
+         completed: false,
+         is_one_time: false, 
+         priority: 'none'
+       })
+       .select()
+       .single();
+
+     if (error) throw error;
+     return data;
+  } catch (error) {
+     console.error('Error creating task:', error);
+     return null;
+  }
+}
+
+/**
+ * Deletes a task from the database.
+ */
+export async function deleteTask(taskId: string): Promise<boolean> {
+  const { supabase } = await import('../lib/supabase');
+  try {
+     const { error } = await supabase
+       .from('tasks')
+       .delete()
+       .eq('id', taskId);
+
+     if (error) throw error;
+     return true;
+  } catch (error) {
+     console.error('Error deleting task:', error);
+     return false;
+  }
+}

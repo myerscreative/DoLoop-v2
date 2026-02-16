@@ -12,6 +12,8 @@ interface ReflectionHistoryModalProps {
   taskTitle: string;
 }
 
+import { formatDatePST } from '../../utils/dateHelpers';
+
 export const ReflectionHistoryModal: React.FC<ReflectionHistoryModalProps> = ({
   visible,
   onClose,
@@ -36,14 +38,11 @@ export const ReflectionHistoryModal: React.FC<ReflectionHistoryModalProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString); // Note: Date string is YYYY-MM-DD
-    // Adjust for timezone if needed, but usually we just want the date part
-    // Using UTC to avoid shifting dates
-    return new Date(date.valueOf() + date.getTimezoneOffset() * 60000).toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric'
-    });
+      return formatDatePST(dateString, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
   };
 
   return (

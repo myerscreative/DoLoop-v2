@@ -124,11 +124,13 @@ export function generateMomentumData(
   return result;
 }
 
+import { getNowPST, formatRelativePST } from '../utils/dateHelpers';
+
 /**
  * Get time of day greeting
  */
 export function getGreeting(): string {
-  const hour = new Date().getHours();
+  const hour = getNowPST().getHours();
   
   if (hour < 12) return 'Good morning';
   if (hour < 18) return 'Good afternoon';
@@ -139,19 +141,7 @@ export function getGreeting(): string {
  * Format a date relative to now
  */
 export function formatRelativeDate(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-  
-  if (diffMins < 1) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  
-  return date.toLocaleDateString();
+  return formatRelativePST(date);
 }
 
 /**

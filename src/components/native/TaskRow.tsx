@@ -31,6 +31,8 @@ interface TaskRowProps extends RenderItemParams<Task> {
   onPromote?: () => void;
   /** When set, show a delete icon that calls this (e.g. swipe alternative on web). */
   onDelete?: () => void;
+  /** Visual variant: 'default' (dashboard) or 'modal' (inside edit modal) */
+  variant?: 'default' | 'modal';
 }
 
 const SUBTASK_INDENT = 32;
@@ -50,6 +52,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   onToggleExpand,
   onPromote,
   onDelete,
+  variant = 'default',
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
@@ -77,10 +80,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             styles.container,
             {
               backgroundColor: isSubtask
-                ? 'rgba(255, 255, 255, 0.04)'
+                ? (variant === 'modal' ? 'rgba(0,0,0,0.05)' : 'rgba(255, 255, 255, 0.04)')
                 : isDragging 
                   ? 'rgba(255, 255, 255, 0.12)' // More visible when dragging
-                  : 'rgba(255, 255, 255, 0.06)',
+                  : (variant === 'modal' ? 'rgba(0,0,0,0.02)' : 'rgba(255, 255, 255, 0.06)'),
               opacity: isDragging ? 0.9 : 1, // Keep it visible (glassmorphism)
               transform: [{ scale: isDragging ? 1.02 : 1 }], // Slight pop
               // Add shadow for "lifted" effect
@@ -132,6 +135,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
                   textDecorationLine: task.completed ? 'line-through' : 'none',
                   opacity: task.completed ? 0.5 : 1,
                   fontSize: isSubtask ? 14 : 16,
+                  color: 'white', // Always white for readability
                 },
               ]}
               numberOfLines={1}
@@ -240,7 +244,7 @@ const styles = StyleSheet.create({
     paddingLeft: 4,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.08)', // We might want to override this in modal too, but it's subtle enough
     maxWidth: '100%', // Prevent expansion on drag
   },
   containerFlex: {

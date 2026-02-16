@@ -19,14 +19,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../../App';
-import { useTheme } from '../../contexts/ThemeContext';
-import { useAdmin } from '../../hooks/useAdmin';
 import {
   getAllTemplateReviews,
   updateTemplateReview,
   deleteTemplateReview,
   TemplateReview,
 } from '../../lib/admin';
+import { useTheme } from '../../contexts/ThemeContext';
+import { formatDatePST } from '../../utils/dateHelpers';
 
 type AdminReviewsNavigationProp = NativeStackNavigationProp<RootStackParamList, 'AdminReviews'>;
 
@@ -239,7 +239,7 @@ export function AdminReviewsScreen({ navigation }: Props) {
                 by {item.user_email}
               </Text>
               <Text style={[styles.reviewDate, { color: colors.textSecondary }]}>
-                {new Date(item.created_at).toLocaleDateString()}
+                {formatDatePST(item.created_at)}
               </Text>
             </View>
             <View style={styles.reviewActions}>

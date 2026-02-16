@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform, useWindowDimensions, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+
 import { useTheme } from '../../contexts/ThemeContext';
+import { formatDatePST } from '../../utils/dateHelpers';
 import { LoopCard } from './LoopCard';
 import { LoopWithTasks, FilterType } from '../../types/loop';
 
@@ -76,7 +78,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
         {/* Header Section */}
         <View style={[styles.header, { backgroundColor: layout === 'bento' ? 'transparent' : colors.background }]}>
           <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {formatDatePST(new Date(), { weekday: 'long', month: 'long', day: 'numeric' })}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
             <Text style={{ fontSize: 32, marginRight: 12 }}>🐝</Text>

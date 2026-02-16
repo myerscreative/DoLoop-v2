@@ -1,11 +1,12 @@
 import { supabase } from './supabase';
 import { TaskReflection } from '../types/loop';
+import { getIsoDatePST } from '../utils/dateHelpers';
 
 /**
  * Get the reflection for a specific task for today (local time)
  */
 export async function getTodayReflection(taskId: string, userId: string): Promise<string | null> {
-  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const today = getIsoDatePST(); // YYYY-MM-DD
   
   const { data, error } = await supabase
     .from('task_reflections')
@@ -27,7 +28,7 @@ export async function getTodayReflection(taskId: string, userId: string): Promis
  * Save or update a reflection for today
  */
 export async function saveReflection(taskId: string, userId: string, text: string): Promise<boolean> {
-  const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const today = getIsoDatePST(); // YYYY-MM-DD
   
   // If text is empty, we might want to delete it or save empty string
   // For now, let's just save whatever is there.

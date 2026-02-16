@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { formatDatePST } from '../../utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
@@ -12,12 +13,14 @@ import {
   Tag, 
   Attachment, 
   Subtask, 
-  PendingAttachment 
+  PendingAttachment, 
+  Task 
 } from '../../types/loop';
+import { ImageViewer } from './ImageViewer'; // Platform-agnostic import
 import { TaskTag } from './TaskTag';
-import { deleteSubtask } from '../../lib/taskHelpers';
+import { createTask } from '../../lib/taskHelpers';
+import { TaskRow } from './TaskRow';
 import { RecurringIcon } from './TaskIcons';
-
 // Conditionally import DateTimePicker only for native platforms
 let DateTimePicker: any;
 if (Platform.OS !== 'web') {
@@ -78,8 +81,12 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [reminderDate, setReminderDate] = useState<Date | undefined>();
   const [timeEstimate, setTimeEstimate] = useState('');
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
-  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  // const [subtasks, setSubtasks] = useState<Subtask[]>([]); // REMOVED old subtasks
+  const [childTasks, setChildTasks] = useState<TaskWithDetails[]>([]); // NEW child tasks
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
+  
+  // Navigation Stack for nested tasks
+  const [taskStack, setTaskStack] = useState<TaskWithDetails[]>([]);
 
   // Attachment state
   const [pendingAttachments, setPendingAttachments] = useState<{
@@ -98,6 +105,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [newTagName, setNewTagName] = useState('');
   const [showSubtaskInput, setShowSubtaskInput] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const isProcessingSubtask = useRef(false);
 
@@ -114,22 +123,36 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         setReminderDate(task.reminder_at ? new Date(task.reminder_at) : undefined);
         setTimeEstimate(task.time_estimate_minutes?.toString() || '');
         setSelectedTags(task.tag_details || []);
-        // Show nested steps: prefer task.children (from drag-to-nest) so substeps always appear in detail view
-        const rawSubitems = (task.children ?? task.subtasks ?? []) as Array<{ id: string; description?: string; completed?: boolean; status?: string; task_id?: string; order_index?: number }>;
-        const normalized: Subtask[] = rawSubitems.map((s, i) => ({
-          id: s.id,
-          task_id: s.task_id ?? task.id,
-          description: s.description ?? '',
-          completed: s.completed ?? (s.status === 'done'),
-          order_index: s.order_index ?? i,
-        }));
-        setSubtasks(normalized);
+        
+        // Load children as Tasks
+        const children = (task.children as TaskWithDetails[]) || []; 
+        setChildTasks(children);
+        
         setExistingAttachments(task.attachments || []);
       } else {
         resetForm();
       }
     }
   }, [visible, task, initialValues]);
+
+  // Effect to re-initialize form when stack changes (drilling down/up)
+  useEffect(() => {
+      const current = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
+      if (current) {
+          // Re-populate form with current task in stack
+          setDescription(current.description);
+          setNotes(current.notes || '');
+          setPriority(current.priority);
+          setAssignedTo(current.assigned_to || current.assigned_user_id || null);
+          setIsOneTime(current.is_one_time);
+          setDueDate(current.due_date ? new Date(current.due_date) : undefined);
+          setReminderDate(current.reminder_at ? new Date(current.reminder_at) : undefined);
+          setTimeEstimate(current.time_estimate_minutes?.toString() || '');
+          setSelectedTags(current.tag_details || []);
+          setChildTasks((current.children as TaskWithDetails[]) || []);
+          setExistingAttachments(current.attachments || []);
+      }
+  }, [taskStack]);
 
   const resetForm = () => {
     setDescription('');
@@ -144,7 +167,8 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setSelectedTags([]);
     setPendingAttachments([]);
     setExistingAttachments([]);
-    setSubtasks([]);
+    setChildTasks([]); // Reset children
+    setTaskStack([]); // Reset stack
     setShowDetails(false);
     setShowDatePicker(false);
     setShowTagInput(false);
@@ -270,10 +294,31 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         tags: selectedTags.map(t => t.id),
       };
 
-      // Pass pending subtasks (only temp ones, as existing ones are already saved)
-      const pendingSubtasks = subtasks.filter(s => s.id.startsWith('temp_'));
-      // Pass pending attachments to be uploaded after task is created
-      await onSave(taskData, pendingSubtasks, pendingAttachments.length > 0 ? pendingAttachments : undefined, closeModal);
+      // Determine correct ID to save to
+      const currentStackItem = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
+      
+      // If in stack, UPDATE THE CHILD DIRECTLY.
+      if (taskStack.length > 0 && currentStackItem) {
+           const didUpdate = await import('../../lib/taskHelpers').then(m => m.updateTaskExtended(currentStackItem.id, taskData));
+           if (didUpdate) {
+               // Update local stack state to reflect changes
+               const updatedItem = { ...currentStackItem, ...taskData };
+               
+               // Update parent's children list in stack
+               if (taskStack.length > 1) {
+                   const parent = taskStack[taskStack.length - 2];
+                   parent.children = parent.children?.map(c => c.id === updatedItem.id ? updatedItem as TaskWithDetails : c);
+                   // Update stack
+                }
+               if (closeModal) {
+                   await onSave({}, [], undefined, true); 
+               }
+           }
+      } else {
+          // Root task save - standard flow
+          await onSave(taskData, [], pendingAttachments.length > 0 ? pendingAttachments : undefined, closeModal); 
+      }
+
       if (closeModal) {
         onClose();
         resetForm();
@@ -293,53 +338,88 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
 
-  // Subtask Helpers
-  const handleAddSubtask = () => {
+  // Subtask Management (Now Tasks)
+  const handleAddSubtask = async () => {
     const textToAdd = newSubtaskText.trim();
     if (!textToAdd) return;
     
-    // Debounce check to prevent double-entry from Enter key triggering both Submit and KeyPress
+    // Create REAL task immediately
     if (isProcessingSubtask.current) return;
     isProcessingSubtask.current = true;
     
-    // Clear immediately (Optimistic UI)
-    setNewSubtaskText('');
+    try {
+        const currentParent = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
+        
+        // We can only add subtasks if parent exists and has ID.
+        // If creating a NEW main task, we can't add subtasks yet until main is saved. 
+        if (!currentParent || !currentParent.id) {
+            Alert.alert('Save Required', 'Please save this item first before adding sub-steps.');
+            isProcessingSubtask.current = false;
+            return;
+        }
 
-    // Add to local state
-    const tempSubtask: Subtask = {
-        id: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        task_id: task?.id || 'temp',
-        description: textToAdd,
-        completed: false,
-        order_index: subtasks.length,
-        created_at: new Date().toISOString()
-    };
-    
-    setSubtasks(prev => [...prev, tempSubtask]);
 
-    // Release lock quickly
-    setTimeout(() => {
-        isProcessingSubtask.current = false;
-    }, 100);
+        
+        // We need loop_id.
+        const loopId = currentParent.loop_id;
+        
+        // Use local helper to create
+        const newTask = await createTask(loopId, textToAdd, currentParent.id, childTasks.length);
+        
+        if (newTask) {
+             setNewSubtaskText('');
+             // convert to Details
+             const newTaskDetails = { ...newTask, children: [], subtasks: [] } as TaskWithDetails;
+             setChildTasks(prev => [...prev, newTaskDetails]);
+             
+             // Also update the parent in the stack if needed
+             if (taskStack.length > 0) {
+                 const stackCopy = [...taskStack];
+                 const tip = stackCopy[stackCopy.length - 1];
+                 if (tip.id === currentParent.id) {
+                     tip.children = [...(tip.children || []), newTaskDetails];
+                     setTaskStack(stackCopy);
+                 }
+             }
+        }
+        
+    } catch (e) {
+        console.error(e);
+        Alert.alert('Error', 'Failed to create sub-item');
+    } finally {
+        setTimeout(() => {
+             isProcessingSubtask.current = false;
+             // Keep input open for rapid entry
+        }, 100);
+    }
   };
 
-  const handleDeleteSubtask = async (id: string) => {
-    if (id.startsWith('temp_')) {
-        setSubtasks(subtasks.filter(s => s.id !== id));
-        return;
-    }
+  const handleDeleteChildTask = async (childId: string) => {
+      try {
+          const { deleteTask } = await import('../../lib/taskHelpers');
+          const success = await deleteTask(childId);
+          if (success) {
+              setChildTasks(prev => prev.filter(c => c.id !== childId));
+          }
+      } catch {
+          Alert.alert('Error', 'Could not delete item');
+      }
+  };
 
-    // If it's an existing subtask, attempt to delete it from the backend
-    try {
-        const success = await deleteSubtask(id);
-        if (success) {
-            setSubtasks(subtasks.filter(s => s.id !== id));
-        } else {
-            Alert.alert('Error', 'Failed to delete subtask from server.');
-        }
-    } catch {
-        Alert.alert('Error', 'Could not delete subtask.');
-    }
+  const handleToggleChild = async (childTask: Task) => {
+      // Optimistic toggle
+      setChildTasks(prev => prev.map(t => t.id === childTask.id ? { ...t, completed: !t.completed } : t));
+      
+      const { toggleTaskWithChildren } = await import('../../lib/taskHelpers');
+      await toggleTaskWithChildren(childTask.id, !childTask.completed);
+  };
+  
+  const handlePushTask = (childTask: TaskWithDetails) => {
+      setTaskStack(prev => [...prev, childTask]);
+  };
+  
+  const handlePopTask = () => {
+      setTaskStack(prev => prev.slice(0, prev.length - 1));
   };
 
   const handleSaveAndClose = () => {
@@ -387,15 +467,10 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     </View>
   );
 
-  const SubtaskRow = ({ item }: { item: Subtask }) => (
-      <View style={styles.subtaskRow}>
-          <View style={[styles.subtaskDot, { backgroundColor: colors.textSecondary }]} />
-          <Text style={[styles.subtaskText, { color: colors.text }]}>{item.description}</Text>
-          <TouchableOpacity onPress={() => handleDeleteSubtask(item.id)} style={{ padding: 4 }}>
-              <Ionicons name="close" size={16} color={colors.textSecondary} />
-          </TouchableOpacity>
-      </View>
-  );
+
+
+  // SubtaskRow Removed
+
 
   return (
     <Modal
@@ -407,12 +482,18 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         <View style={[styles.modalContentWrapper, { backgroundColor: isDark ? colors.structure : 'white' }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.primary }]}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={28} color={colors.textOnPrimary} />
-            </TouchableOpacity>
+            {taskStack.length > 0 ? (
+                 <TouchableOpacity onPress={handlePopTask} style={styles.closeButton}>
+                    <Ionicons name="chevron-back" size={28} color={colors.textOnPrimary} />
+                 </TouchableOpacity>
+            ) : (
+                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                    <Ionicons name="close" size={28} color={colors.textOnPrimary} />
+                 </TouchableOpacity>
+            )}
             
             <View style={styles.headerTitleContainer}>
-                <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>{task ? 'Item Details' : 'Add Item'}</Text>
+                <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>{taskStack.length > 0 ? 'Edit Sub-Item' : (task ? 'Item Details' : 'Add Item')}</Text>
             </View>
 
             <TouchableOpacity 
@@ -491,10 +572,23 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             </View>
 
             <View style={styles.subtasksContainer}>
-                {subtasks.length > 0 && (
+                {(childTasks.length > 0 || taskStack.length > 0) && (
                   <Text style={[styles.substepsLabel, { color: colors.textSecondary }]}>Steps inside this item</Text>
                 )}
-                {subtasks.map(st => <SubtaskRow key={st.id} item={st} />)}
+                
+                {childTasks.map((child, index) => (
+                   <TaskRow
+                      key={child.id}
+                      item={child}
+                      drag={() => {}} // No drag in modal
+                      isActive={false}
+                      onToggle={handleToggleChild}
+                      onPress={(t) => handlePushTask(t as TaskWithDetails)}
+                      onDelete={() => handleDeleteChildTask(child.id)}
+                      variant="modal"
+                      getIndex={() => index}
+                   />
+                ))}
                 
                 <View style={styles.addSubtaskContainer}>
                     {!showSubtaskInput ? (
@@ -557,7 +651,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     <OptionRow
                         icon="calendar-outline"
                         label="Add Due Date"
-                        value={dueDate ? dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null}
+                        value={dueDate ? formatDatePST(dueDate, { month: 'short', day: 'numeric', year: 'numeric' }) : null}
                         onPress={() => setShowDatePicker(!showDatePicker)}
                         onClear={() => setDueDate(undefined)}
                         isBlue
@@ -737,28 +831,72 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                      {/* Combined Images Strip */}
                      {(existingAttachments.filter(a => a.file_type?.startsWith('image/')).length > 0 || pendingAttachments.filter(a => a.type === 'image').length > 0) && (
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 20, paddingBottom: 10, gap: 8 }}>
-                            {existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(att => (
+                            {/* Existing Images */}
+                            {existingAttachments.filter(a => a.file_type?.startsWith('image/')).map((att, index) => (
                                 <View key={att.id} style={{ position: 'relative' }}>
-                                    <Image source={{ uri: att.file_url }} style={{ width: 45, height: 45, borderRadius: 6 }} />
+                                    <TouchableOpacity 
+                                        onPress={() => {
+                                            setCurrentImageIndex(index);
+                                            setIsImageViewerVisible(true);
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Image source={{ uri: att.file_url }} style={{ width: 60, height: 60, borderRadius: 8 }} />
+                                        <View style={{ 
+                                            position: 'absolute', 
+                                            bottom: 2, 
+                                            right: 2, 
+                                            backgroundColor: 'rgba(0,0,0,0.4)', 
+                                            borderRadius: 4,
+                                            padding: 2
+                                        }}>
+                                            <Ionicons name="expand-outline" size={12} color="white" />
+                                        </View>
+                                    </TouchableOpacity>
                                     <TouchableOpacity 
                                       onPress={() => handleDeleteExistingAttachment(att.id)}
-                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10 }}
+                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10, zIndex: 10 }}
+                                      hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
                                     >
                                         <Ionicons name="close-circle" size={18} color="#ef4444" />
                                     </TouchableOpacity>
                                 </View>
                             ))}
-                            {pendingAttachments.filter(a => a.type === 'image').map((att, i) => (
-                                <View key={`pending-${i}`} style={{ position: 'relative' }}>
-                                    <Image source={{ uri: att.uri }} style={{ width: 45, height: 45, borderRadius: 6, opacity: 0.7 }} />
-                                    <TouchableOpacity 
-                                      onPress={() => removeAttachment(i)}
-                                      style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10 }}
-                                    >
-                                        <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-                                    </TouchableOpacity>
-                                </View>
-                            ))}
+                            
+                            {/* Pending Images */}
+                            {pendingAttachments.filter(a => a.type === 'image').map((att, i) => {
+                                const offset = existingAttachments.filter(a => a.file_type?.startsWith('image/')).length;
+                                return (
+                                    <View key={`pending-${i}`} style={{ position: 'relative' }}>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                setCurrentImageIndex(offset + i);
+                                                setIsImageViewerVisible(true);
+                                            }}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Image source={{ uri: att.uri }} style={{ width: 60, height: 60, borderRadius: 8, opacity: 0.8 }} />
+                                            <View style={{ 
+                                                position: 'absolute', 
+                                                bottom: 2, 
+                                                right: 2, 
+                                                backgroundColor: 'rgba(0,0,0,0.4)', 
+                                                borderRadius: 4,
+                                                padding: 2
+                                            }}>
+                                                <Ionicons name="expand-outline" size={12} color="white" />
+                                            </View>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                          onPress={() => removeAttachment(i)}
+                                          style={{ position: 'absolute', top: -6, right: -6, backgroundColor: isDark ? colors.structure : 'white', borderRadius: 10, zIndex: 10 }}
+                                          hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+                                        >
+                                            <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                );
+                            })}
                         </View>
                      )}
 
@@ -826,6 +964,16 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
         </View>
       </View>
+      <ImageViewer
+        images={[
+            ...existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(a => ({ uri: a.file_url })),
+            ...pendingAttachments.filter(a => a.type === 'image').map(a => ({ uri: a.uri }))
+        ]}
+        imageIndex={currentImageIndex}
+        visible={isImageViewerVisible}
+        onRequestClose={() => setIsImageViewerVisible(false)}
+        description={description}
+      />
     </Modal>
   );
 };
@@ -923,23 +1071,7 @@ const styles = StyleSheet.create({
       color: '#94a3b8',
       marginBottom: 8,
   },
-  subtaskRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 8,
-  },
-  subtaskDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-      backgroundColor: '#94a3b8',
-      marginRight: 10,
-  },
-  subtaskText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#334155',
-  },
+
   footer: {
       padding: 20,
       borderTopWidth: 1,

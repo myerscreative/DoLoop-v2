@@ -1,7 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+
 import { Ionicons } from '@expo/vector-icons';
 import { StarRating } from './StarRating';
+import { formatDatePST } from '../../utils/dateHelpers';
 import { Loop } from '../../types/loop';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -94,7 +96,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
           )}
           {isUpcoming ? (
              <Text style={[styles.dueDateText, { color: colors.primary }]}>
-               {loop.due_date ? `Due ${new Date(loop.due_date).toLocaleDateString()}` : 'Future Task'}
+               {loop.due_date ? `Due ${formatDatePST(loop.due_date)}` : 'Future Task'}
              </Text>
           ) : (
             <View>

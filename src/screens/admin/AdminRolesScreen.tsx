@@ -20,6 +20,7 @@ import {
   AdminRoleAssignment,
 } from '../../lib/admin';
 import { useTheme } from '../../contexts/ThemeContext';
+import { formatDateTimePST } from '../../utils/dateHelpers';
 
 const ROLE_DESCRIPTIONS: Record<AdminRole, string> = {
   super_admin: 'Full access to everything, including role management',
@@ -223,6 +224,11 @@ export function AdminRolesScreen() {
       color: theme.colors.textSecondary,
       marginTop: 4,
     },
+    metadataText: {
+      fontSize: 12,
+      fontStyle: 'italic',
+      marginTop: 2,
+    },
     revokeButton: {
       padding: 8,
       backgroundColor: theme.colors.error + '20',
@@ -393,11 +399,11 @@ export function AdminRolesScreen() {
                       </View>
                     )}
                     <Text style={styles.roleDetails}>
-                      Granted: {new Date(assignment.granted_at).toLocaleDateString()}
+                      Granted: {formatDateTimePST(assignment.granted_at)}
                     </Text>
                     {assignment.expires_at && (
-                      <Text style={styles.roleDetails}>
-                        Expires: {new Date(assignment.expires_at).toLocaleDateString()}
+                      <Text style={[styles.metadataText, { color: theme.colors.textSecondary }]}>
+                        Expires: {formatDateTimePST(assignment.expires_at)}
                       </Text>
                     )}
                     <Text style={styles.roleDetails}>

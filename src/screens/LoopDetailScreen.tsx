@@ -1183,6 +1183,7 @@ export const LoopDetailScreen: React.FC = () => {
           onClose={() => {
               setModalVisible(false);
               setEditingTask(null);
+              loadLoopData();
           }}
           onSave={handleSaveTask}
           task={editingTask}

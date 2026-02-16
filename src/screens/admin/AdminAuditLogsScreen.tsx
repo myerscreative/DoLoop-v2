@@ -10,6 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { getAuditLogs, exportAuditLogsToCSV, downloadCSV, AuditLog } from '../../lib/admin';
+import { formatDateTimePST } from '../../utils/dateHelpers';
 import { useTheme } from '../../contexts/ThemeContext';
 
 export function AdminAuditLogsScreen() {
@@ -321,7 +322,7 @@ export function AdminAuditLogsScreen() {
               <View key={log.id} style={styles.tableRow}>
                 <View style={{ flex: 1.5 }}>
                   <Text style={styles.timestamp}>
-                    {new Date(log.created_at).toLocaleString()}
+                    {formatDateTimePST(new Date(log.created_at))}
                   </Text>
                 </View>
                 <Text style={[styles.tableCell, { flex: 1.5 }]}>

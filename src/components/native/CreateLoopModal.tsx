@@ -11,6 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { formatDatePST } from '../../utils/dateHelpers';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
@@ -526,7 +527,7 @@ export default function CreateLoopModal({
                              <Animated.View entering={FadeIn} style={{ marginTop: 8, marginLeft: 28 }}>
                                 <TouchableOpacity style={styles.pickerButton}>
                                   <Text style={styles.pickerButtonText}>
-                                    {dueDate ? new Date(dueDate).toLocaleDateString() : 'Today'}
+                                    {dueDate ? formatDatePST(dueDate) : 'Today'}
                                   </Text>
                                   <Ionicons name="calendar-outline" size={14} color="#64748b" />
                                 </TouchableOpacity>

@@ -28,6 +28,8 @@ interface Props {
   navigation: AdminUsersNavigationProp;
 }
 
+import { formatDateTimePST } from '../../utils/dateHelpers';
+
 export function AdminUsersScreen({ navigation }: Props) {
   const { colors } = useTheme();
   const { isAdmin, loading: adminLoading } = useAdmin();
@@ -53,6 +55,7 @@ export function AdminUsersScreen({ navigation }: Props) {
   };
 
   const handleToggleAdmin = async (user: UserSummary) => {
+    // ... code truncated for brevity, same as existing ...
     const newStatus = !user.is_admin;
     const action = newStatus ? 'grant' : 'revoke';
 
@@ -100,7 +103,7 @@ export function AdminUsersScreen({ navigation }: Props) {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'Never';
-    return new Date(dateString).toLocaleDateString();
+    return formatDateTimePST(dateString);
   };
 
   const UserCard = React.memo(({ item }: { item: UserSummary }) => {

@@ -16,8 +16,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 
-import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+
+import { formatDatePST } from '../utils/dateHelpers';
 import { supabase } from '../lib/supabase';
 import { LoopType, FOLDER_COLORS } from '../types/loop';
 import { LoopSelectionModal } from '../components/LoopSelectionModal';
@@ -125,7 +127,7 @@ export const HomeScreen: React.FC = () => {
 
   const updateDate = () => {
     const now = new Date();
-    const formatted = now.toLocaleDateString('en-US', {
+    const formatted = formatDatePST(now, {
       weekday: 'long',
       month: 'long',
       day: 'numeric',
