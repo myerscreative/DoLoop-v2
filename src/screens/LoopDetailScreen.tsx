@@ -812,7 +812,7 @@ export const LoopDetailScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1, flexBasis: 0 }} edges={['top']}>
-        <NestableScrollContainer
+        <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ 
             paddingBottom: 250 // Ensure "Add Step" is clear of the FAB
@@ -1004,7 +1004,7 @@ export const LoopDetailScreen: React.FC = () => {
             </View>
           )}
 
-        </NestableScrollContainer>
+        </ScrollView>
 
         {/* Readability Anchor: Dark gradient at bottom to isolate floating buttons */}
         <LinearGradient

@@ -1,9 +1,8 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { NestableDraggableFlatList, RenderItemParams } from 'react-native-draggable-flatlist';
+import { RenderItemParams } from 'react-native-draggable-flatlist';
 import { Task } from '../../types/loop';
 import { TaskRow } from './TaskRow';
-import { nestTaskInTree } from '../../lib/treeHelpers';
 
 interface TaskTreeProps {
   tasks: Task[];
@@ -87,66 +86,19 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onUpdateTree, onToggl
   };
 
   return (
-    <NestableDraggableFlatList
-      data={tasks}
-      onDragBegin={(index: number) => {
-        if (index >= 0 && index < tasks.length) {
-          setDraggedTaskId(tasks[index].id);
-        }
-      }}
-      onDragEnd={async ({ data, from, releaseY }) => {
-        setDraggedTaskId(null);
-
-        const draggedId = tasks[from]?.id;
-        if (!draggedId) {
-          const reordered = data.map((task, index) => ({
-            ...task,
-            order_index: index,
-            children: task.children || undefined,
-          }));
-          onUpdateTree(reordered);
-          return;
-        }
-
-        let didNest = false;
-        if (releaseY != null && typeof releaseY === 'number') {
-          const layouts = rowLayoutsRef.current;
-          for (let i = 0; i < tasks.length; i++) {
-            const t = tasks[i];
-            const layout = layouts[t.id];
-            if (!layout) continue;
-            const { y, height } = layout;
-            if (releaseY >= y && releaseY < y + height) {
-              if (t.id === draggedId) {
-                break;
-              }
-              const newTree = nestTaskInTree(tasks, draggedId, t.id);
-              if (newTree !== tasks) {
-                onUpdateTree(newTree);
-                setExpandedIds(prev => new Set(prev).add(t.id));
-                if (onNestTask) await onNestTask(draggedId, t.id);
-                didNest = true;
-              }
-              break;
-            }
-          }
-        }
-
-        if (!didNest) {
-          const reordered = data.map((task, index) => ({
-            ...task,
-            order_index: index,
-            children: task.children || undefined,
-          }));
-          onUpdateTree(reordered);
-        }
-      }}
-      keyExtractor={(item) => item.id}
-      renderItem={renderItem}
-      activationDistance={30}
-      dragItemOverflow={true}
-      scrollEnabled={false}
-    />
+    <View>
+      {tasks.map((task, index) => (
+        <React.Fragment key={task.id}>
+          {renderItem({
+            item: task,
+            drag: () => {},
+            isActive: false,
+            getIndex: () => index,
+            // extraData removed as it's not part of RenderItemParams
+          })}
+        </React.Fragment>
+      ))}
+    </View>
   );
 };
 
