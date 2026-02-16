@@ -4,7 +4,7 @@ import { TouchableOpacity } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
-import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { RenderItemParams } from 'react-native-draggable-flatlist';
 
 interface TaskRowProps extends RenderItemParams<Task> {
   onToggle: (task: Task) => void;
@@ -46,8 +46,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const isSubtask = depth > 0 || !!task.parent_task_id;
 
   return (
-    <ScaleDecorator activeScale={1.04}>
-      <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
+    <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
         {isSubtask && <View style={styles.subtaskConnector} />}
         <View style={styles.rowOuter}>
         <Pressable
@@ -156,7 +155,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({
           ) : null}
         </View>
       </View>
-    </ScaleDecorator>
   );
 };
 
