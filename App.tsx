@@ -18,7 +18,7 @@ import {
   Outfit_600SemiBold,
   Outfit_700Bold,
 } from "@expo-google-fonts/outfit";
-import { Platform } from "react-native";
+import { Platform, View, Text } from "react-native";
 import { useState, useEffect, useCallback } from "react";
 
 import { ThemeProvider } from "./src/contexts/ThemeContext";
@@ -166,8 +166,9 @@ export default function App() {
     }
   }, []);
 
+  console.log("[App] RENDER CHECK - State:", { fontsReady, isNavReady });
+
   if (!fontsReady || !isNavReady) {
-    console.log("[App] Rendering Loading Placeholder (null)");
     return null; // or loading spinner
   }
 

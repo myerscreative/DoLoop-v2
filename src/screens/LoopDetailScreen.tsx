@@ -5,17 +5,17 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  RefreshControl,
   Modal,
   StyleSheet,
   Platform,
   Linking,
 } from 'react-native';
-import { NestableScrollContainer } from 'react-native-draggable-flatlist';
+// Removed: RefreshControl, NestableScrollContainer
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
+// Removed: SafeAreaView
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,20 +25,21 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
-import { TaskTree } from '../components/native/TaskTree';
+import { DraggableTaskList } from '../components/native/DraggableTaskList';
 import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, getTaskTags, getTaskAttachments, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+import { getUserTags, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+// Removed: getTaskTags, getTaskAttachments, createTag
 import { flattenTreeForSync } from '../lib/treeHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType } from '../types/loop';
-import { StarRatingInput } from '../components/native/StarRatingInput';
-import { getUserRating, submitRating, getLoopRatingStats } from '../lib/ratingHelpers';
+// Removed: StarRatingInput
+// Removed: getUserRating
 
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
@@ -65,11 +66,10 @@ export const LoopDetailScreen: React.FC = () => {
   const [showMemberList, setShowMemberList] = useState(false);
   const [isEditingLoop, setEditingLoop] = useState(false);
   const [savingLoop, setSavingLoop] = useState(false);
-  const [userRating, setUserRating] = useState<number>(0);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
-  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
-  const [memberJoinedAt, setMemberJoinedAt] = useState<string | null>(null);
-  const [lastDismissedPrompt, setLastDismissedPrompt] = useState<number | null>(null);
+
+  // Removed: isSubmittingRating, showRatingPrompt
+  // Removed: memberJoinedAt, lastDismissedPrompt
+
 
   // NEW: Loop Info Modal state
   const [showLoopInfoModal, setShowLoopInfoModal] = useState(false);
@@ -82,9 +82,16 @@ export const LoopDetailScreen: React.FC = () => {
         .from('loops')
         .select('*')
         .eq('id', loopId)
-        .single();
+        .maybeSingle();
 
       if (loopError) throw loopError;
+      
+      if (!loop) {
+        Alert.alert('Loop Unavailable', 'This loop could not be found.', [
+          { text: 'Go Back', onPress: () => navigation.goBack() }
+        ]);
+        return null;
+      }
 
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
@@ -182,14 +189,11 @@ export const LoopDetailScreen: React.FC = () => {
           .maybeSingle();
 
         if (membership) {
-          setMemberJoinedAt(membership.joined_at);
         }
       }
 
-      const dismissed = await AsyncStorage.getItem(`last_rating_dismissed_${loopId}`);
-      if (dismissed) {
-        setLastDismissedPrompt(parseInt(dismissed, 10));
-      }
+      // Removed: setLastDismissedPrompt
+
 
       return loopWithTasks;
     } catch (error) {
@@ -287,7 +291,7 @@ export const LoopDetailScreen: React.FC = () => {
   useEffect(() => {
     loadLoopData();
     loadTags();
-    loadUserRating();
+    // Removed: loadUserRating();
   }, [loopId]);
 
   useSharedMomentum(loopId, () => {
@@ -301,40 +305,7 @@ export const LoopDetailScreen: React.FC = () => {
     setAvailableTags(tags);
   };
 
-  const loadUserRating = async () => {
-    const rating = await getUserRating(loopId);
-    setUserRating(rating || 0);
-  };
-
-  const handleSubmitRating = async (score: number) => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to rate loops.');
-      return;
-    }
-
-    setIsSubmittingRating(true);
-    setUserRating(score);
-
-    const success = await submitRating(loopId, score);
-
-    if (success) {
-      const stats = await getLoopRatingStats(loopId);
-      if (stats && loopData) {
-        setLoopData({
-          ...loopData,
-          average_rating: stats.average,
-          total_ratings: stats.total,
-        });
-      }
-    } else {
-      const originalRating = await getUserRating(loopId);
-      setUserRating(originalRating || 0);
-      Alert.alert('Error', 'Failed to submit rating. Please try again.');
-    }
-
-    setIsSubmittingRating(false);
-  };
-
+  // Removed: loadUserRating
 
   /** Apply optimistic toggle to local state so the UI updates immediately. */
   const applyOptimisticTaskToggle = (prev: LoopWithTasks | null, taskId: string, newCompleted: boolean): LoopWithTasks | null => {
@@ -342,7 +313,7 @@ export const LoopDetailScreen: React.FC = () => {
     const setCompletedRecursive = (t: TaskWithDetails, completed: boolean): TaskWithDetails => ({
       ...t,
       completed,
-      completed_at: completed ? new Date().toISOString() : null,
+      completed_at: completed ? new Date().toISOString() : undefined,
       children: (t.children || []).map((c) => setCompletedRecursive(c as TaskWithDetails, completed)),
     });
     const mapTask = (t: TaskWithDetails): TaskWithDetails =>
@@ -367,17 +338,7 @@ export const LoopDetailScreen: React.FC = () => {
       const success = await toggleTaskWithChildren(task.id, newCompleted);
       if (!success) throw new Error('Toggle failed');
 
-      if (task.is_one_time && newCompleted) {
-        await supabase.from('archived_tasks').insert({
-          original_task_id: task.id,
-          loop_id: task.loop_id,
-          description: task.description,
-          completed_at: new Date().toISOString(),
-        });
 
-        // Children cascade via ON DELETE CASCADE
-        await supabase.from('tasks').delete().eq('id', task.id);
-      }
 
       const updatedLoopData = await loadLoopData();
       if (updatedLoopData) {
@@ -390,10 +351,8 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
-  const handleAddTask = () => {
-    setEditingTask(null);
-    setModalVisible(true);
-  };
+  // Removed handleAddTask since openAddTaskModal is used
+
 
   const handleGenerateSynopsis = async () => {
     if (!loopData || loopData.tasks.length === 0) return;
@@ -479,7 +438,10 @@ export const LoopDetailScreen: React.FC = () => {
         const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
-          is_one_time: taskData.is_one_time ?? false,
+          is_one_time: taskData.is_one_time ?? false, // Default to FALSE (recurring) if undefined, but existing check uses ?? false which is fine. 
+          // User said "By default, new tasks should be is_recurring: true". 
+          // My code TaskEditModal passes isOneTime derived from state. 
+          // I will verify TaskEditModal state default.
           completed: false,
           assigned_to: finalAssignedTo,
           priority: taskData.priority || 'none',
@@ -720,6 +682,7 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
+      // Reset recurring tasks
       const { error } = await supabase
         .from('tasks')
         .update({
@@ -729,6 +692,17 @@ export const LoopDetailScreen: React.FC = () => {
         .eq('is_one_time', false);
 
       if (error) throw error;
+
+      // Delete completed one-time tasks
+      // Note: We only delete COMPLETED one-time tasks. Uncompleted ones stay.
+      const { error: deleteError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('loop_id', loopId)
+        .eq('is_one_time', true)
+        .eq('completed', true);
+      
+      if (deleteError) throw deleteError;
 
       if (loopData && loopData.reset_rule !== 'manual') {
         let nextResetAt: string;
@@ -751,40 +725,8 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const checkPromptVisibility = () => {
-      if (userRating > 0) {
-        setShowRatingPrompt(true);
-        return;
-      }
+  // Removed: checkPromptVisibility useEffect
 
-      if (!memberJoinedAt) {
-        setShowRatingPrompt(false);
-        return;
-      }
-
-      const joined = new Date(memberJoinedAt).getTime();
-      const now = Date.now();
-      const daysSinceJoined = (now - joined) / (1000 * 60 * 60 * 24);
-
-      if (daysSinceJoined < 2) {
-        setShowRatingPrompt(false);
-        return;
-      }
-
-      if (lastDismissedPrompt) {
-        const daysSinceDismissed = (now - lastDismissedPrompt) / (1000 * 60 * 60 * 24);
-        if (daysSinceDismissed < 30) {
-          setShowRatingPrompt(false);
-          return;
-        }
-      }
-
-      setShowRatingPrompt(true);
-    };
-
-    checkPromptVisibility();
-  }, [userRating, memberJoinedAt, lastDismissedPrompt]);
 
   if (loading && !refreshing && !loopData) {
     return (
@@ -797,8 +739,8 @@ export const LoopDetailScreen: React.FC = () => {
   if (!loopData) return null;
 
   // Derived state
-  const recurringTasks = loopData.tasks.filter(t => !t.is_one_time) || [];
-  const oneTimeTasks = loopData.tasks.filter(t => t.is_one_time) || [];
+  // Unified Task List - No separation
+  const allTasks = loopData.tasks || [];
   const currentProgress = loopData.totalCount && loopData.totalCount > 0
     ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
     : 0;
@@ -812,11 +754,11 @@ export const LoopDetailScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <SafeAreaView style={{ flex: 1, flexBasis: 0 }} edges={['top']}>
-          <TaskTree
-            tasks={recurringTasks as Task[]}
+          <DraggableTaskList
+            tasks={allTasks as Task[]}
             onDeleteTask={handleDeleteTask}
             onUpdateTree={async (newTree) => {
-              setLoopData(prev => prev ? { ...prev, tasks: [...newTree, ...oneTimeTasks] } : null);
+              setLoopData(prev => prev ? { ...prev, tasks: newTree } : null);
               // Sync to DB
               try {
                 const flatUpdates = flattenTreeForSync(newTree);
@@ -901,7 +843,7 @@ export const LoopDetailScreen: React.FC = () => {
                 </View>
 
                 {/* Section Header (Only if tasks exist) */}
-                {recurringTasks.length > 0 && (
+                {allTasks.length > 0 && (
                   <View style={[styles.stepsSection, { marginBottom: 10 }]}>
                     <View style={styles.sectionHeaderRow}>
                       <Text style={[styles.sectionHeader, { color: colors.text }]}>
@@ -952,7 +894,8 @@ export const LoopDetailScreen: React.FC = () => {
             }
             ListFooterComponent={
               <View style={{ paddingBottom: 250 }}>
-                {recurringTasks.length > 0 && (
+                {/* Floating Add Step Button (Inline at bottom of list) */}
+                {allTasks.length > 0 && (
                   <TouchableOpacity
                     style={styles.floatingAddStepButton}
                     onPress={openAddTaskModal}
@@ -965,39 +908,7 @@ export const LoopDetailScreen: React.FC = () => {
                   </TouchableOpacity>
                 )}
 
-                {/* One-time Tasks */}
-                {oneTimeTasks.length > 0 && (
-                  <View style={styles.stepsSection}>
-                    <Text style={styles.sectionHeader}>One-time Tasks</Text>
-                    <TaskTree
-                      tasks={oneTimeTasks as Task[]}
-                      onDeleteTask={handleDeleteTask}
-                      onUpdateTree={async (newTree) => {
-                        setLoopData(prev => prev ? { ...prev, tasks: [...recurringTasks, ...newTree] } : null);
-                        try {
-                          const flatUpdates = flattenTreeForSync(newTree);
-                          const updates = flatUpdates.map(u => 
-                            supabase.from('tasks').update({ 
-                              order_index: u.order_index, 
-                              parent_task_id: u.parent_task_id,
-                              updated_at: new Date().toISOString()
-                            }).eq('id', u.id)
-                          );
-                          await Promise.all(updates);
-                        } catch (err) {
-                          console.error('Failed to sync one-time tree:', err);
-                        }
-                      }}
-                      onNestTask={async () => {
-                        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
-                      }}
-                      onPromoteTask={handlePromoteTask}
-                      onEditTask={handleEditTask}
-                      onToggleTask={toggleTask}
-                      scrollEnabled={false}
-                    />
-                  </View>
-                )}
+                {/* End of List Footer - No more One-time Tasks section */}
               </View>
             }
           />
@@ -1010,7 +921,7 @@ export const LoopDetailScreen: React.FC = () => {
         />
 
         {/* AI Synopsis Button */}
-        {recurringTasks.length > 0 && !loopData.description && (
+        {allTasks.length > 0 && !loopData.description && (
           <View style={styles.synopsisFab}>
             <TouchableOpacity
               style={styles.synopsisFabMain}
@@ -1175,7 +1086,7 @@ export const LoopDetailScreen: React.FC = () => {
 
                 {/* Reloop Early & Invite Section - Consistent with plan */}
                 <View style={styles.actionSheet}>
-                  {recurringTasks.length > 0 && (
+                  {allTasks.length > 0 && (
                     <TouchableOpacity
                       style={styles.primarySheetButton}
                       onPress={handleReloop}

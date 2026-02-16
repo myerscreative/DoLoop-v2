@@ -26,13 +26,9 @@ export const getUserRating = async (loopId: string): Promise<number | null> => {
       .select('score')
       .eq('loop_id', loopId)
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        // No rating found - that's okay
-        return null;
-      }
       console.error('Error fetching user rating:', error);
       return null;
     }
@@ -99,7 +95,7 @@ export const getLoopRatingStats = async (loopId: string): Promise<{ average: num
       .from('loops')
       .select('average_rating, total_ratings')
       .eq('id', loopId)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching loop rating stats:', error);

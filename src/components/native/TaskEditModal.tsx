@@ -16,6 +16,7 @@ import {
 } from '../../types/loop';
 import { TaskTag } from './TaskTag';
 import { deleteSubtask } from '../../lib/taskHelpers';
+import { RecurringIcon } from './TaskIcons';
 
 // Conditionally import DateTimePicker only for native platforms
 let DateTimePicker: any;
@@ -336,7 +337,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         } else {
             Alert.alert('Error', 'Failed to delete subtask from server.');
         }
-    } catch (error) {
+    } catch {
         Alert.alert('Error', 'Could not delete subtask.');
     }
   };
@@ -347,13 +348,15 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
   const OptionRow = ({ 
     icon, 
+    customIcon,
     label, 
     value, 
     onPress, 
     onClear,
     isBlue = false
   }: { 
-    icon: any, 
+    icon?: any, 
+    customIcon?: React.ReactNode,
     label: string, 
     value?: string | null, 
     onPress: () => void,
@@ -366,7 +369,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
         onPress={onPress}
       >
         <View style={styles.optionIconContainer}>
-            <Ionicons name={icon} size={22} color={value ? (isBlue ? '#0EA5E9' : colors.text) : colors.text} />
+            {customIcon ? customIcon : <Ionicons name={icon} size={22} color={value ? (isBlue ? '#0EA5E9' : colors.text) : colors.text} />}
         </View>
         
         {value ? (
@@ -542,7 +545,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     
                     {/* Loop Type */}
                     <OptionRow
-                        icon="sync" // or refresh
+                        customIcon={<RecurringIcon size={22} color={!isOneTime ? '#FEC00F' : colors.text} />}
                         label="Set as Loop item or one time task"
                         value={isOneTime ? "One time task" : "Loop item"}
                         onPress={() => setIsOneTime(!isOneTime)}

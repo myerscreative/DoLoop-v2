@@ -1,193 +1,102 @@
-import React, { useCallback } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { TaskWithDetails, Task } from '../../types/loop';
-import { DraggableTaskCard } from './DraggableTaskCard';
-import { reorderTasks } from '../../lib/taskHelpers';
+import React, { useState, useMemo, useCallback } from 'react';
+import { StyleSheet, View } from 'react-native';
+import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { Task } from '../../types/loop';
+import { TaskRow } from './TaskRow';
+import { flattenTaskTree, rebuildTreeFromFlat, FlatTask } from '../../lib/flatTreeHelpers';
 
 interface DraggableTaskListProps {
-  tasks: TaskWithDetails[];
-  loopId: string;
-  isPracticeLoop: boolean;
-  showTrail: boolean;
-  onEditTask: (task: TaskWithDetails) => void;
+  tasks: Task[];
+  onUpdateTree: (newTree: Task[]) => void;
   onToggleTask: (task: Task) => void;
-  onSubtaskChange: () => void;
-  loadLoopData: () => Promise<any>;
-  colors: any;
-  onOptimisticUpdate?: (tasks: TaskWithDetails[]) => void;
+  onEditTask: (task: Task) => void;
+  onNestTask?: (taskId: string, parentTaskId: string) => Promise<void>;
+  /** Promote a subtask to top-level (move back to main list). */
+  onPromoteTask?: (taskId: string) => void;
+  /** Delete a task. */
+  onDeleteTask?: (task: Task) => void;
+  /** Header component for the list (passed from screen) */
+  ListHeaderComponent?: React.ReactElement;
+  /** Footer component for the list (passed from screen) */
+  ListFooterComponent?: React.ReactElement;
+  /** Custom empty component */
+  ListEmptyComponent?: React.ReactElement;
+  /** Whether the list should scroll (default true) */
+  scrollEnabled?: boolean;
 }
 
-export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({
-  tasks,
-  loopId,
-  isPracticeLoop,
-  showTrail,
-  onEditTask,
-  onToggleTask,
-  onSubtaskChange,
-  loadLoopData,
-  colors,
-  onOptimisticUpdate,
+export const DraggableTaskList: React.FC<DraggableTaskListProps> = ({ 
+  tasks, 
+  onUpdateTree, 
+  onToggleTask, 
+  onEditTask, 
+  onPromoteTask, 
+  onDeleteTask,
+  ListHeaderComponent,
+  ListFooterComponent,
+  ListEmptyComponent,
+  scrollEnabled = true
 }) => {
-  const handleReorder = useCallback(async (taskIndex: number, direction: 'up' | 'down') => {
-    const swapIndex = direction === 'up' ? taskIndex - 1 : taskIndex + 1;
-    if (swapIndex < 0 || swapIndex >= tasks.length) return;
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  
+  // Flatten tree for display
+  const flatTasks = useMemo(() => {
+    return flattenTaskTree(tasks, expandedIds);
+  }, [tasks, expandedIds]);
 
-    const reordered = [...tasks];
-    [reordered[taskIndex], reordered[swapIndex]] = [reordered[swapIndex], reordered[taskIndex]];
+  const toggleExpanded = useCallback((taskId: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }, []);
 
-    const orderedIds = reordered.map((t, i) => ({
-      id: t.id,
-      order_index: i,
-      parent_task_id: t.parent_task_id || null,
-    }));
-
-    await reorderTasks(loopId, orderedIds);
-    await loadLoopData();
-  }, [tasks, loopId, loadLoopData]);
-
-  const firstIncompleteIndex = tasks.findIndex(t => !t.completed);
+  const renderItem = ({ item, drag, isActive, getIndex }: RenderItemParams<FlatTask>) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedIds.has(item.id);
+    const isSubtask = item.depth > 0;
+    
+    return (
+      <View style={{ zIndex: isActive ? 999 : 1, elevation: isActive ? 5 : 0 }}>
+        <TaskRow
+          item={item} // Types compatibility: FlatTask extends Task
+          drag={drag}
+          isActive={isActive}
+          getIndex={getIndex}
+          depth={item.depth}
+          onToggle={onToggleTask}
+          onPress={onEditTask}
+          isDragging={isActive}
+          hasChildren={hasChildren}
+          isExpanded={isExpanded}
+          onToggleExpand={() => toggleExpanded(item.id)}
+          onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
+          onDelete={onDeleteTask ? () => onDeleteTask(item) : undefined}
+        />
+      </View>
+    );
+  };
 
   return (
-    <View style={styles.container}>
-      {tasks.map((task, index) => {
-        const isActive = index === firstIncompleteIndex;
-        const isShelved = task.completed;
-
-        return (
-          <View key={task.id}>
-            {/* Trail connector */}
-            {showTrail && (
-              <View style={styles.taskCardWrapper}>
-                <View
-                  style={[
-                    styles.trailConnector,
-                    {
-                      backgroundColor: task.completed
-                        ? colors.primary + '40'
-                        : colors.primary,
-                      opacity: task.completed ? 0.3 : 1,
-                    },
-                  ]}
-                />
-              </View>
-            )}
-
-            {/* Task Row with Reorder Buttons */}
-            <View style={styles.taskRow}>
-              <View style={styles.reorderButtons}>
-                <TouchableOpacity
-                  onPress={() => handleReorder(index, 'up')}
-                  disabled={index === 0}
-                  style={[styles.reorderBtn, index === 0 && styles.reorderBtnDisabled]}
-                >
-                  <Ionicons name="chevron-up" size={18} color={index === 0 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleReorder(index, 'down')}
-                  disabled={index === tasks.length - 1}
-                  style={[styles.reorderBtn, index === tasks.length - 1 && styles.reorderBtnDisabled]}
-                >
-                  <Ionicons name="chevron-down" size={18} color={index === tasks.length - 1 ? 'rgba(255,255,255,0.15)' : '#FEC00F'} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.taskCardFlex}>
-                <DraggableTaskCard
-                  task={task}
-                  index={index}
-                  isActive={isActive}
-                  isShelved={isShelved}
-                  isNested={false}
-                  isPracticeLoop={isPracticeLoop}
-                  onPress={() => onEditTask(task)}
-                  onToggle={() => onToggleTask(task)}
-                  onSubtaskChange={onSubtaskChange}
-                />
-              </View>
-            </View>
-
-            {/* Child tasks (nested under parent) */}
-            {task.children && task.children.length > 0 && (
-              <View style={styles.childrenContainer}>
-                <View style={[styles.nestingLine, { backgroundColor: colors.primary + '40' }]} />
-                <View style={styles.childrenList}>
-                  {task.children.map((child, childIndex) => {
-                    return (
-                      <DraggableTaskCard
-                        key={child.id}
-                        task={child}
-                        index={childIndex}
-                        isActive={false}
-                        isShelved={child.completed}
-                        isNested={true}
-                        isPracticeLoop={isPracticeLoop}
-                        onPress={() => onEditTask(child)}
-                        onToggle={() => onToggleTask(child)}
-                        onSubtaskChange={onSubtaskChange}
-                      />
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-          </View>
-        );
-      })}
-    </View>
+    <DraggableFlatList
+      data={flatTasks}
+      onDragEnd={({ data }) => {
+        const newTree = rebuildTreeFromFlat(data);
+        onUpdateTree(newTree);
+      }}
+      keyExtractor={(item) => item.id}
+      renderItem={renderItem}
+      ListHeaderComponent={ListHeaderComponent}
+      ListFooterComponent={ListFooterComponent}
+      ListEmptyComponent={ListEmptyComponent}
+      scrollEnabled={scrollEnabled}
+      activationDistance={10}
+      containerStyle={{ flex: 1 }}
+    />
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    gap: 0,
-  },
-  taskCardWrapper: {
-    position: 'relative',
-  },
-  trailConnector: {
-    position: 'absolute',
-    left: 44, // Adjusted for reorder buttons
-    top: -8,
-    width: 2,
-    height: 8,
-    borderRadius: 1,
-  },
-  childrenContainer: {
-    flexDirection: 'row',
-    marginLeft: 38, // Adjusted for reorder buttons
-    paddingLeft: 10,
-  },
-  nestingLine: {
-    width: 2,
-    borderRadius: 1,
-    marginRight: 0,
-  },
-  childrenList: {
-    flex: 1,
-    paddingLeft: 8,
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  taskCardFlex: {
-    flex: 1,
-  },
-  reorderButtons: {
-    marginRight: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    width: 32,
-  },
-  reorderBtn: {
-    padding: 2,
-    borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
-  reorderBtnDisabled: {
-    opacity: 0.3,
-  },
-});

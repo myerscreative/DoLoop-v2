@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { View, Text } from 'react-native';
 import { Platform } from 'react-native';
 import { supabase, getCurrentUser } from '../lib/supabase';
 import { User, Session } from '@supabase/supabase-js';
@@ -116,6 +117,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error: { message: 'Account not found. Please sign up first with these credentials:\n\nEmail: dev@dev.com\nPassword: dev123' } };
   };
 
+
+
   return (
     <AuthContext.Provider
       value={{
@@ -129,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         devModeLogin,
       }}
     >
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
