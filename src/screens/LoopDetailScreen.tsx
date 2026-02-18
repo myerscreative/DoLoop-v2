@@ -339,6 +339,11 @@ export const LoopDetailScreen: React.FC = () => {
       const success = await toggleTaskWithChildren(task.id, newCompleted);
       if (!success) throw new Error('Toggle failed');
 
+      if (task.parent_task_id) {
+         const { updateParentCompletionStatus } = await import('../lib/taskHelpers');
+         await updateParentCompletionStatus(task.parent_task_id);
+      }
+
 
 
       const updatedLoopData = await loadLoopData();

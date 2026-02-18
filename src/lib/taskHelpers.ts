@@ -644,3 +644,56 @@ export async function deleteTask(taskId: string): Promise<boolean> {
      return false;
   }
 }
+/**
+ * Checks if all children of a parent task are completed, and updates the parent's status.
+ * Returns true if parent was updated, false otherwise.
+ */
+export async function updateParentCompletionStatus(parentTaskId: string): Promise<boolean> {
+  try {
+    // 1. Get all children
+    const { data: children, error: childrenError } = await supabase
+      .from('tasks')
+      .select('id, completed')
+      .eq('parent_task_id', parentTaskId);
+
+    if (childrenError) throw childrenError;
+
+    if (!children || children.length === 0) {
+      // No children? Should not happen if we called this, but if so, maybe do nothing or mark incomlpete?
+      // Logic: A parent with no children can be whatever. We only automate if it HAS children.
+      return false;
+    }
+
+    // 2. Check if ALL are completed
+    const allCompleted = children.every(c => c.completed);
+
+    // 3. Get current parent status to see if update is needed
+    const { data: parent, error: parentError } = await supabase
+      .from('tasks')
+      .select('completed')
+      .eq('id', parentTaskId)
+      .single();
+    
+    if (parentError) throw parentError;
+
+    // 4. Update if different
+    if (parent.completed !== allCompleted) {
+       const { error: updateError } = await supabase
+         .from('tasks')
+         .update({ 
+            completed: allCompleted,
+            completed_at: allCompleted ? new Date().toISOString() : null
+         })
+         .eq('id', parentTaskId);
+       
+       if (updateError) throw updateError;
+       return true;
+    }
+
+    return false;
+
+  } catch (error) {
+    console.error('Error updating parent completion status:', error);
+    return false;
+  }
+}

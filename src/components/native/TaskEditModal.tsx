@@ -412,11 +412,41 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
   const handleToggleChild = async (childTask: Task) => {
-      // Optimistic toggle
-      setChildTasks(prev => prev.map(t => t.id === childTask.id ? { ...t, completed: !t.completed } : t));
+      const newCompleted = !childTask.completed;
       
-      const { toggleTaskWithChildren } = await import('../../lib/taskHelpers');
-      await toggleTaskWithChildren(childTask.id, !childTask.completed);
+      // 1. Optimistic toggle local state
+      const updatedChildren = childTasks.map(t => t.id === childTask.id ? { ...t, completed: newCompleted } : t);
+      setChildTasks(updatedChildren);
+
+      // 2. Sync to Stack (Critical for persistence on navigation)
+      if (taskStack.length > 0) {
+          const stackCopy = [...taskStack];
+          const currentParent = stackCopy[stackCopy.length - 1];
+          currentParent.children = updatedChildren; // Update the reference
+          setTaskStack(stackCopy);
+      } else if (task) {
+          // If we are at root, we might want to update the 'task' prop's internal cache if possible, 
+          // but usually props are read-only. However, if we drill down and come back, we rely on 'task' 
+          // or 'taskStack' if we pushed something. 
+          // Since 'task' is from props, we can't mutate it effectively for the parent component, 
+          // but 'TaskEditModal' uses 'taskStack' for navigation. 
+          // If we are at root, 'taskStack' is empty. State is driven by 'childTasks'.
+          // If we drill DOWN, we push to stack. 
+          // The issue is likely when we are IN a sub-task, and we modify IT, then come back.
+      }
+      
+      // 3. API Call
+      try {
+          const { toggleTaskWithChildren, updateParentCompletionStatus } = await import('../../lib/taskHelpers');
+          await toggleTaskWithChildren(childTask.id, newCompleted);
+          
+          // 4. Check if this child's completion triggers Parent Auto-Complete
+          if (childTask.parent_task_id) {
+             await updateParentCompletionStatus(childTask.parent_task_id);
+          }
+      } catch (e) {
+          console.error('Error toggling child:', e);
+      }
   };
   
   const handlePushTask = (childTask: TaskWithDetails) => {
