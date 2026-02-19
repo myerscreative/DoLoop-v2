@@ -782,6 +782,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         }
         onNestUnder={editingTask && !editingTask.parent_task_id ? handleNestTask : undefined}
         onDeleteTask={handleDeleteTask}
+        onToggle={toggleTask}
       />
 
       <InviteModal

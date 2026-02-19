@@ -47,6 +47,8 @@ interface TaskEditModalProps {
   /** When set, show a "Delete item" button when editing an existing task. */
   onDeleteTask?: (task: TaskWithDetails) => void;
   initialShowDetails?: boolean; // NEW: Control initial expansion
+  /** Toggle task completion from the detail view header circle */
+  onToggle?: (task: Task) => void;
 }
 
 export const TaskEditModal: React.FC<TaskEditModalProps> = ({
@@ -62,6 +64,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   onNestUnder,
   onDeleteTask,
   initialShowDetails = false,
+  onToggle,
 }) => {
   const { user } = useAuth();
   const { colors, isDark } = useTheme();
@@ -85,6 +88,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   // const [subtasks, setSubtasks] = useState<Subtask[]>([]); // REMOVED old subtasks
   const [childTasks, setChildTasks] = useState<TaskWithDetails[]>([]); // NEW child tasks
+  const [isCompleted, setIsCompleted] = useState(false); // Track completion for header circle
   const [existingAttachments, setExistingAttachments] = useState<Attachment[]>([]);
   
   // Navigation Stack for nested tasks
@@ -118,6 +122,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
       if (task) {
         setDescription(task.description);
         setNotes(task.notes || '');
+        setIsCompleted(!!task.completed);
         setPriority(task.priority);
         setAssignedTo(task.assigned_to || task.assigned_user_id || null);
         setIsOneTime(task.is_one_time);
@@ -147,6 +152,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
           // Re-populate form with current task in stack
           setDescription(current.description);
           setNotes(current.notes || '');
+          setIsCompleted(!!current.completed);
           setPriority(current.priority);
           setAssignedTo(current.assigned_to || current.assigned_user_id || null);
           setIsOneTime(current.is_one_time);
@@ -578,9 +584,31 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             {/* Name Input Row */}
             <View style={styles.nameInputContainer}>
                 <View style={styles.nameSection}>
-                    <TouchableOpacity style={styles.radioPlaceholder}>
-                        <View style={[styles.radioCircle, { borderColor: colors.text }]} />
-                    </TouchableOpacity>
+                    {task || taskStack.length > 0 ? (
+                        <TouchableOpacity 
+                            style={styles.radioPlaceholder}
+                            onPress={() => {
+                                const currentTask = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
+                                if (currentTask && onToggle) {
+                                    const newCompleted = !isCompleted;
+                                    setIsCompleted(newCompleted);
+                                    onToggle({ ...currentTask, completed: !newCompleted } as Task);
+                                }
+                            }}
+                            activeOpacity={0.6}
+                        >
+                            <View style={[
+                                styles.radioCircle, 
+                                isCompleted 
+                                    ? { backgroundColor: '#FEC00F', borderColor: '#FEC00F' } 
+                                    : { borderColor: colors.textSecondary }
+                            ]}>
+                                {isCompleted && (
+                                    <Ionicons name="checkmark" size={16} color="#fff" />
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                    ) : null}
                     <TextInput
                         ref={descriptionInputRef}
                         style={[styles.nameInput, { color: colors.text, backgroundColor: isDark ? colors.surface : '#f8fafc', borderColor: colors.border }]}
@@ -1082,6 +1110,8 @@ const styles = StyleSheet.create({
       borderRadius: 12,
       borderWidth: 2,
       borderColor: '#0f172a',
+      justifyContent: 'center',
+      alignItems: 'center',
   },
   nameInput: {
       flex: 1,
