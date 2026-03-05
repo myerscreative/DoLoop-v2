@@ -9,6 +9,7 @@ interface LoopCardProps {
   onPress: (loop: LoopWithTasks) => void;
   onEdit?: (loop: LoopWithTasks) => void;
   onDelete?: (loop: LoopWithTasks) => void;
+  onArchive?: (loop: LoopWithTasks) => void;
   isSelected?: boolean;
 }
 
@@ -20,6 +21,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
   onPress, 
   onEdit, 
   onDelete,
+  onArchive,
   isSelected = false 
 }) => {
   const { colors } = useTheme();
@@ -104,6 +106,15 @@ export const LoopCard: React.FC<LoopCardProps> = ({
             style={styles.actionButton}
           >
             <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '600' }}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              onArchive?.(loop);
+            }}
+            style={styles.actionButton}
+          >
+            <Text style={{ fontSize: 13, color: colors.primary, fontWeight: '600' }}>Remove</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             onPress={(e) => {

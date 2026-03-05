@@ -10,9 +10,13 @@ import { LoopWithTasks, FilterType } from '../../types/loop';
 
 interface DashboardGridProps {
   loops: LoopWithTasks[];
+  archivedChecklists?: LoopWithTasks[];
   onCreateLoop: () => void;
   onLoopPress: (loop: LoopWithTasks) => void;
   onLoopEdit?: (loop: LoopWithTasks) => void;
+  onLoopDelete?: (loop: LoopWithTasks) => void;
+  onLoopArchive?: (loop: LoopWithTasks) => void;
+  onRestoreChecklist?: (loop: LoopWithTasks) => void;
   layout?: 'list' | 'bento';
   forcedColumns?: number;
   title?: string;
@@ -23,8 +27,13 @@ interface DashboardGridProps {
 
 export const DashboardGrid: React.FC<DashboardGridProps> = ({
   loops,
+  archivedChecklists = [],
   onCreateLoop,
   onLoopPress,
+  onLoopEdit,
+  onLoopDelete,
+  onLoopArchive,
+  onRestoreChecklist,
   layout = 'list',
   forcedColumns,
   title,
@@ -221,6 +230,9 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                 key={loop.id}
                 loop={loop}
                 onPress={() => onLoopPress(loop)}
+                onEdit={() => onLoopEdit?.(loop)}
+                onDelete={() => onLoopDelete?.(loop)}
+                onArchive={() => onLoopArchive?.(loop)}
                 isSelected={selectedLoopId === loop.id}
               />
             ))}
@@ -232,9 +244,61 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
                 key={loop.id}
                 loop={loop}
                 onPress={() => onLoopPress(loop)}
+                onEdit={() => onLoopEdit?.(loop)}
+                onDelete={() => onLoopDelete?.(loop)}
+                onArchive={() => onLoopArchive?.(loop)}
                 isSelected={selectedLoopId === loop.id}
               />
             ))}
+          </View>
+        )}
+
+        {archivedChecklists.length > 0 && (
+          <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
+            <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginBottom: 10 }]}>
+              ARCHIVED CHECKLISTS
+            </Text>
+            <View style={{ gap: 8 }}>
+              {archivedChecklists.slice(0, 8).map((loop) => (
+                <View
+                  key={loop.id}
+                  style={{
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 12,
+                    padding: 12,
+                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <View style={{ flex: 1, paddingRight: 10 }}>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+                      {loop.name || 'Untitled checklist'}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                      {loop.due_date ? `Originally for ${formatDatePST(loop.due_date)}` : 'No specific date'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => onRestoreChecklist?.(loop)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: colors.primary,
+                      borderRadius: 9,
+                      paddingHorizontal: 10,
+                      paddingVertical: 6,
+                      backgroundColor: `${colors.primary}20`,
+                    }}
+                  >
+                    <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>
+                      Restore
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 

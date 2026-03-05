@@ -220,7 +220,8 @@ export const LoopDetailScreen: React.FC = () => {
     try {
       const isGoal = data.type === 'goals';
       const category = (data.type ?? loopData.category ?? 'manual') as LoopType;
-      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
+      const selectedType = data.type ?? (loopData.reset_rule ?? 'manual');
+      const dbResetRule = isGoal ? 'manual' : selectedType;
 
       let nextResetAt: string | null = loopData.next_reset_at || null;
 
@@ -245,7 +246,7 @@ export const LoopDetailScreen: React.FC = () => {
           function_type: data.function_type,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
-          due_date: data.due_date,
+          due_date: data.one_time_checklist ? (data.due_date || new Date().toISOString()) : (data.due_date || null),
         })
         .eq('id', loopId);
 

@@ -43,6 +43,7 @@ export const HomeScreen: React.FC = () => {
   const [loops, setLoops] = useState<any[]>([]);
   const [todayLoops, setTodayLoops] = useState<any[]>([]);
   const [upcomingLoops, setUpcomingLoops] = useState<any[]>([]);
+  const [archivedChecklists, setArchivedChecklists] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
   const [totalStreak, setTotalStreak] = useState(0);
@@ -103,11 +104,11 @@ export const HomeScreen: React.FC = () => {
 
     const today = filtered.filter(loop => {
       if (loop.reset_rule !== 'manual' && loop.reset_rule != null) return true;
-      if (!loop.due_date) return true;
-      
+      if (!loop.due_date) return true; // Legacy unscheduled checklists remain visible
+
       const dueMidnight = getDueMidnight(loop.due_date);
-      // If due date is today or in the past
-      return dueMidnight <= todayMidnight;
+      // Dated manual checklists only show on their exact date
+      return dueMidnight.getTime() === todayMidnight.getTime();
     });
 
     const upcoming = filtered.filter(loop => {
@@ -182,6 +183,71 @@ export const HomeScreen: React.FC = () => {
         });
       }
 
+      // Auto-archive stale dated checklists so they don't linger in active lists.
+      const now = new Date();
+      const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const staleDatedChecklistIds = loopsWithStats
+        .filter(loop => loop.reset_rule === 'manual' && !!loop.due_date)
+        .filter(loop => {
+          const due = new Date(loop.due_date);
+          const dueMidnight = new Date(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+          return dueMidnight.getTime() < todayMidnight.getTime();
+        })
+        .map(loop => loop.id);
+
+      if (staleDatedChecklistIds.length > 0) {
+        const { error: archiveError } = await supabase
+          .from('loops')
+          .update({
+            status: 'archived',
+            archived_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .in('id', staleDatedChecklistIds);
+
+        if (archiveError) {
+          console.warn('[HomeScreen] Failed to auto-archive stale dated checklists:', archiveError);
+        } else {
+          loopsWithStats = loopsWithStats.filter(loop => !staleDatedChecklistIds.includes(loop.id));
+        }
+      }
+
+      // Fetch archived manual checklists for one-tap restore UI.
+      const { data: archivedLoops, error: archivedLoopsError } = await supabase
+        .from('loops')
+        .select('*, loop_streaks(*)')
+        .eq('owner_id', user.id)
+        .eq('status', 'archived')
+        .eq('reset_rule', 'manual')
+        .order('archived_at', { ascending: false })
+        .limit(25);
+
+      if (archivedLoopsError) {
+        console.warn('[HomeScreen] Error loading archived checklists:', archivedLoopsError);
+        setArchivedChecklists([]);
+      } else {
+        const archivedIds = (archivedLoops || []).map(l => l.id);
+        let archivedWithStats = archivedLoops || [];
+        if (archivedIds.length > 0) {
+          const { data: archivedTasks, error: archivedTasksError } = await supabase
+            .from('tasks')
+            .select('loop_id, completed, is_one_time')
+            .in('loop_id', archivedIds);
+
+          if (!archivedTasksError && archivedTasks) {
+            archivedWithStats = (archivedLoops || []).map(loop => {
+              const loopTasks = archivedTasks.filter(t => t.loop_id === loop.id && !t.is_one_time);
+              return {
+                ...loop,
+                completedCount: loopTasks.filter(t => t.completed).length,
+                totalCount: loopTasks.length,
+              };
+            });
+          }
+        }
+        setArchivedChecklists(archivedWithStats);
+      }
+
       // Get global user streak
       const { data: streakData, error: streaksError } = await supabase
         .from('user_streaks')
@@ -229,7 +295,8 @@ export const HomeScreen: React.FC = () => {
       const isGoal = data.type === 'goals';
       const category = (data.type ?? 'manual') as LoopType;
       // 'goals' uses 'manual' reset rule in DB
-      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
+      const selectedType = data.type ?? 'manual';
+      const dbResetRule = isGoal ? 'manual' : selectedType;
 
       let nextResetAt: string | null = null;
       if (dbResetRule === 'daily' || dbResetRule === 'weekdays') {
@@ -253,7 +320,7 @@ export const HomeScreen: React.FC = () => {
           reset_rule: dbResetRule,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
-          due_date: data.due_date,
+          due_date: data.one_time_checklist ? (data.due_date || new Date().toISOString()) : (data.due_date || null),
           reset_time: data.reset_time || '04:00:00',
           reset_day_of_week: data.reset_day_of_week,
           function_type: data.function_type,
@@ -288,7 +355,8 @@ export const HomeScreen: React.FC = () => {
     try {
       const isGoal = data.type === 'goals';
       const category = (data.type ?? editingLoop.loop_type ?? 'manual') as LoopType;
-      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
+      const selectedType = data.type ?? (editingLoop.reset_rule ?? 'manual');
+      const dbResetRule = isGoal ? 'manual' : selectedType;
 
       let nextResetAt: string | null = editingLoop.next_reset_at ?? null;
 
@@ -313,7 +381,7 @@ export const HomeScreen: React.FC = () => {
           reset_rule: dbResetRule,
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
-          due_date: data.due_date,
+          due_date: data.one_time_checklist ? (data.due_date || new Date().toISOString()) : (data.due_date || null),
           function_type: data.function_type,
         })
         .eq('id', editingLoop.id);
@@ -357,6 +425,88 @@ export const HomeScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const confirmArchiveLoop = (loop: any) => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(
+        `Move "${loop.name}" out of Today's Loops? You can restore it later from archived loops.`
+      );
+      if (confirmed) {
+        handleArchiveLoop(loop);
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Remove from Today's Loops",
+      `Move "${loop.name}" out of Today's Loops? You can restore it later.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => handleArchiveLoop(loop),
+        },
+      ]
+    );
+  };
+
+  const handleArchiveLoop = async (loop: any) => {
+    try {
+      const { error } = await supabase
+        .from('loops')
+        .update({
+          status: 'archived',
+          archived_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', loop.id);
+
+      if (error) throw error;
+
+      if (selectedLoopId === loop.id) {
+        setSelectedLoopId(null);
+      }
+
+      await loadData();
+    } catch (error: any) {
+      console.error('[HomeScreen] Error archiving loop:', error);
+      Alert.alert('Error', `Failed to archive loop: ${error?.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleRestoreChecklist = async (loop: any) => {
+    try {
+      let nextDueDate = loop.due_date || null;
+
+      // If restoring an old dated checklist, bring it back to today.
+      if (loop.due_date) {
+        const now = new Date();
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const d = new Date(loop.due_date);
+        const dueMidnight = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+        if (dueMidnight.getTime() < todayMidnight.getTime()) {
+          nextDueDate = new Date().toISOString();
+        }
+      }
+
+      const { error } = await supabase
+        .from('loops')
+        .update({
+          status: 'active',
+          archived_at: null,
+          due_date: nextDueDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', loop.id);
+
+      if (error) throw error;
+      await loadData();
+    } catch (error: any) {
+      console.error('[HomeScreen] Error restoring checklist:', error);
+      Alert.alert('Error', `Failed to restore checklist: ${error?.message || 'Unknown error'}`);
+    }
   };
 
   const handleDeleteLoop = async (loop: any) => {
@@ -542,9 +692,14 @@ export const HomeScreen: React.FC = () => {
           <>
             <DynamicStage
               loops={allDisplayLoops}
+              archivedChecklists={archivedChecklists}
               selectedFilter={selectedFilter}
               selectedLoopId={selectedLoopId}
               onLoopPress={onLoopPress}
+              onLoopEdit={startEditLoop}
+              onLoopDelete={confirmDeleteLoop}
+              onLoopArchive={confirmArchiveLoop}
+              onRestoreChecklist={handleRestoreChecklist}
               onSelectFilter={setSelectedFilter}
               onCreateLoop={openCreateLoopModal}
             />
@@ -760,6 +915,7 @@ export const HomeScreen: React.FC = () => {
                       loop={loop}
                       onPress={onLoopPress}
                       onEdit={startEditLoop}
+                      onArchive={confirmArchiveLoop}
                       onDelete={confirmDeleteLoop}
                     />
                   ))}
@@ -798,8 +954,62 @@ export const HomeScreen: React.FC = () => {
                       isUpcoming={true}
                       onPress={onLoopPress}
                       onEdit={startEditLoop}
+                      onArchive={confirmArchiveLoop}
                       onDelete={confirmDeleteLoop}
                     />
+                  ))}
+                </View>
+              )}
+
+              {archivedChecklists.length > 0 && (
+                <View style={{ marginTop: 12 }}>
+                  <Text style={{
+                    fontSize: 14,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    marginBottom: 12,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                    Archived Checklists
+                  </Text>
+                  {archivedChecklists.slice(0, 8).map((loop) => (
+                    <View
+                      key={loop.id}
+                      style={{
+                        padding: 12,
+                        borderRadius: 12,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        backgroundColor: `${colors.surface}66`,
+                        marginBottom: 8,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <View style={{ flex: 1, paddingRight: 12 }}>
+                        <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }} numberOfLines={1}>
+                          {loop.name}
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                          {loop.due_date ? `Originally for ${formatDatePST(loop.due_date)}` : 'No specific date'}
+                        </Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleRestoreChecklist(loop)}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 8,
+                          borderRadius: 10,
+                          backgroundColor: `${colors.primary}20`,
+                          borderWidth: 1,
+                          borderColor: colors.primary,
+                        }}
+                      >
+                        <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>Restore</Text>
+                      </TouchableOpacity>
+                    </View>
                   ))}
                 </View>
               )}

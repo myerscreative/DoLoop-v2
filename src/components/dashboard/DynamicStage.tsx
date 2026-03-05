@@ -8,9 +8,14 @@ import { LoopWithTasks, FilterType } from '../../types/loop';
 
 interface DynamicStageProps {
   loops: LoopWithTasks[];
+  archivedChecklists?: LoopWithTasks[];
   selectedFilter: FilterType;
   selectedLoopId: string | null;
   onLoopPress: (loop: LoopWithTasks) => void;
+  onLoopEdit?: (loop: LoopWithTasks) => void;
+  onLoopDelete?: (loop: LoopWithTasks) => void;
+  onLoopArchive?: (loop: LoopWithTasks) => void;
+  onRestoreChecklist?: (loop: LoopWithTasks) => void;
   onSelectFilter: (filter: FilterType) => void;
   onCreateLoop: () => void;
 
@@ -22,9 +27,14 @@ interface DynamicStageProps {
  */
 export const DynamicStage: React.FC<DynamicStageProps> = ({
   loops,
+  archivedChecklists = [],
   selectedFilter,
   selectedLoopId,
   onLoopPress,
+  onLoopEdit,
+  onLoopDelete,
+  onLoopArchive,
+  onRestoreChecklist,
   onSelectFilter,
   onCreateLoop,
 }) => {
@@ -63,9 +73,14 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
         <View style={styles.gridContainer}>
           <DashboardGrid
             loops={loops}
+            archivedChecklists={archivedChecklists}
             layout="list"
             onCreateLoop={onCreateLoop}
             onLoopPress={onLoopPress}
+            onLoopEdit={onLoopEdit}
+            onLoopDelete={onLoopDelete}
+            onLoopArchive={onLoopArchive}
+            onRestoreChecklist={onRestoreChecklist}
             title={getGridTitle()}
             activeFilter={selectedFilter}
             onSelectFilter={onSelectFilter}

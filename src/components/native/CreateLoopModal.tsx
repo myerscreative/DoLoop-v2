@@ -28,6 +28,12 @@ import { TimePicker } from './TimePicker';
 import { DayOfWeekPicker } from './DayOfWeekPicker';
 import { ResetRule, RESET_RULE_DESCRIPTIONS } from '../../types/loop';
 
+// Conditionally import DateTimePicker only for native platforms
+let DateTimePicker: any;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
+}
+
 interface CreateLoopModalProps {
   visible: boolean;
   onClose: () => void;
@@ -84,6 +90,7 @@ export default function CreateLoopModal({
   const [isFocused, setIsFocused] = useState(false);
   const [functionType, setFunctionType] = useState<'execution' | 'practice'>('execution');
   const [oneTimeChecklist, setOneTimeChecklist] = useState(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
 
   // Optional Field Toggles
   const [hasPriority, setHasPriority] = useState(false);
@@ -126,6 +133,52 @@ export default function CreateLoopModal({
 
   const themeColors = getThemeColors(type);
 
+  const normalizeDateToUtcNoonIso = (date: Date) => {
+    const utcNoon = new Date(Date.UTC(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      12, 0, 0
+    ));
+    return utcNoon.toISOString();
+  };
+
+  const getDateInputValue = (isoDate?: string) => {
+    if (!isoDate) return '';
+    const d = new Date(isoDate);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(d.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const isIsoOnDate = (isoDate: string | undefined, date: Date) => {
+    if (!isoDate) return false;
+    const iso = getDateInputValue(isoDate);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return iso === `${y}-${m}-${d}`;
+  };
+
+  const getNextWeekendDate = () => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 6=Sat
+    const offsetToSaturday = (6 - day + 7) % 7;
+    const next = new Date(now);
+    next.setDate(now.getDate() + offsetToSaturday);
+    return next;
+  };
+
+  const getNextMondayDate = () => {
+    const now = new Date();
+    const day = now.getDay(); // 0=Sun, 1=Mon
+    const offsetToMonday = (1 - day + 7) % 7 || 7;
+    const next = new Date(now);
+    next.setDate(now.getDate() + offsetToMonday);
+    return next;
+  };
+
   // Format time for display (convert 24-hour to 12-hour with am/pm)
   const formatTimeDisplay = (time24: string) => {
     const [hours, minutes] = time24.split(':').map(Number);
@@ -137,7 +190,7 @@ export default function CreateLoopModal({
   // Get dynamic reset description
   const getResetDescription = () => {
     if (oneTimeChecklist) {
-      return 'Simple list mode: checks persist, no reloop';
+      return 'Shows in Today only for the selected date';
     }
     const timeLabel = formatTimeDisplay(resetTime);
     const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -166,8 +219,9 @@ export default function CreateLoopModal({
       setDescription(initialData.description || '');
       setAffiliateLink(initialData.affiliate_link || '');
       setType((initialData.reset_rule as any) || 'manual');
-      setOneTimeChecklist(initialData.reset_rule == null);
+      setOneTimeChecklist(initialData.reset_rule === 'manual' && !!initialData.due_date);
       setFunctionType((initialData.function_type as any) || 'execution');
+      setShowDueDatePicker(false);
       
       // Initialize optional flags
       if (initialData.priority) {
@@ -191,10 +245,11 @@ export default function CreateLoopModal({
       setPriority('Medium');
       setDueDate(new Date().toISOString());
       setTimeEstimate('');
-      setType('manual');
+      setType('daily');
       setFunctionType('execution');
-      setOneTimeChecklist(false);
+      setOneTimeChecklist(true);
       setShowDetails(false);
+      setShowDueDatePicker(false);
       
       // Reset optional flags
       setHasPriority(false);
@@ -205,14 +260,16 @@ export default function CreateLoopModal({
 
   const handleSave = () => {
     if (!name.trim()) return;
-    const selectedType = oneTimeChecklist ? null : type;
+    const selectedType = oneTimeChecklist ? 'manual' : type;
     onSave({
       name: name.trim(),
       description: description.trim(),
       affiliate_link: affiliateLink.trim(),
       type: selectedType,
       custom_days: selectedType === 'custom' ? customDays : undefined,
-      due_date: hasDueDate ? (dueDate || new Date().toISOString()) : undefined,
+      due_date: oneTimeChecklist
+        ? (dueDate || new Date().toISOString())
+        : (hasDueDate ? (dueDate || new Date().toISOString()) : undefined),
       reset_time: resetTime,
       reset_day_of_week: selectedType === 'weekly' ? resetDayOfWeek : undefined,
       color: selectedColor,
@@ -337,7 +394,15 @@ export default function CreateLoopModal({
                       onPress={() => {
                         const next = !oneTimeChecklist;
                         setOneTimeChecklist(next);
-                        if (next) setType('manual');
+                        if (next) {
+                          setType('manual');
+                          setHasDueDate(true);
+                          setDueDate(prev => prev || new Date().toISOString());
+                        } else {
+                          setHasDueDate(false);
+                          setShowDueDatePicker(false);
+                          if (type === 'manual') setType('daily');
+                        }
                       }}
                       style={styles.simpleListToggle}
                       activeOpacity={0.8}
@@ -348,9 +413,9 @@ export default function CreateLoopModal({
                         color={oneTimeChecklist ? '#FFB800' : '#94a3b8'}
                       />
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.simpleListTitle}>One-time Checklist</Text>
+                        <Text style={styles.simpleListTitle}>Today-only Checklist</Text>
                         <Text style={styles.simpleListHint}>
-                          Treat this loop as a simple list with persistent checkmarks
+                          Show this checklist on one date only (defaults to today)
                         </Text>
                       </View>
                     </TouchableOpacity>
@@ -363,6 +428,98 @@ export default function CreateLoopModal({
                     <Text style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
                       {getResetDescription()}
                     </Text>
+                    {oneTimeChecklist && (
+                      <View style={{ marginTop: 12 }}>
+                        <View style={styles.quickDateRow}>
+                          {[
+                            { id: 'today', label: 'Today', date: new Date() },
+                            { id: 'tomorrow', label: 'Tomorrow', date: new Date(Date.now() + 24 * 60 * 60 * 1000) },
+                            { id: 'weekend', label: 'This Weekend', date: getNextWeekendDate() },
+                            { id: 'monday', label: 'Next Monday', date: getNextMondayDate() },
+                          ].map((preset) => {
+                            const active = isIsoOnDate(dueDate, preset.date);
+                            return (
+                              <TouchableOpacity
+                                key={preset.id}
+                                style={[
+                                  styles.quickDateChip,
+                                  active && { backgroundColor: `${themeColors.strong}20`, borderColor: themeColors.strong },
+                                ]}
+                                onPress={() => setDueDate(normalizeDateToUtcNoonIso(preset.date))}
+                              >
+                                <Text
+                                  style={[
+                                    styles.quickDateChipText,
+                                    active && { color: themeColors.strong, fontWeight: '700' },
+                                  ]}
+                                >
+                                  {preset.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                        <TouchableOpacity
+                          style={styles.pickerButton}
+                          onPress={() => setShowDueDatePicker(!showDueDatePicker)}
+                        >
+                          <Text style={styles.pickerButtonText}>
+                            Checklist Date: {dueDate ? formatDatePST(dueDate) : 'Today'}
+                          </Text>
+                          <Ionicons name="calendar-outline" size={14} color="#64748b" />
+                        </TouchableOpacity>
+                        {showDueDatePicker && (
+                          <View style={{ marginTop: 10 }}>
+                            {Platform.OS === 'web' ? (
+                              <View style={styles.webInputContainer}>
+                                <Text style={styles.webLabel}>Select Date:</Text>
+                                <input
+                                  type="date"
+                                  value={getDateInputValue(dueDate)}
+                                  onChange={(e) => {
+                                    if (e.target.value) {
+                                      const [y, m, d] = e.target.value.split('-').map(Number);
+                                      const selectedDate = new Date(y, m - 1, d);
+                                      setDueDate(normalizeDateToUtcNoonIso(selectedDate));
+                                    } else {
+                                      setDueDate(new Date().toISOString());
+                                    }
+                                    setShowDueDatePicker(false);
+                                  }}
+                                  style={{
+                                    padding: 10,
+                                    borderRadius: 8,
+                                    border: '1px solid #e2e8f0',
+                                    fontSize: 16,
+                                    width: '100%',
+                                    fontFamily: 'inherit',
+                                  }}
+                                />
+                              </View>
+                            ) : (
+                              DateTimePicker && (
+                                <DateTimePicker
+                                  value={dueDate ? new Date(dueDate) : new Date()}
+                                  mode="date"
+                                  display="inline"
+                                  onChange={(event: any, selectedDate?: Date) => {
+                                    if (event?.type === 'dismissed') {
+                                      setShowDueDatePicker(false);
+                                      return;
+                                    }
+                                    if (selectedDate) {
+                                      setDueDate(normalizeDateToUtcNoonIso(selectedDate));
+                                    }
+                                    setShowDueDatePicker(false);
+                                  }}
+                                  style={{ height: 300 }}
+                                />
+                              )
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    )}
 
                     {/* Function Type Toggle */}
                     <View style={{ marginTop: 24 }}>
@@ -542,6 +699,7 @@ export default function CreateLoopModal({
                         </View>
 
                         {/* Due Date Toggle */}
+                        {!oneTimeChecklist && (
                         <View>
                            <TouchableOpacity 
                              style={styles.optionToggle}
@@ -557,15 +715,69 @@ export default function CreateLoopModal({
                            
                            {hasDueDate && (
                              <Animated.View entering={FadeIn} style={{ marginTop: 8, marginLeft: 28 }}>
-                                <TouchableOpacity style={styles.pickerButton}>
+                                <TouchableOpacity
+                                  style={styles.pickerButton}
+                                  onPress={() => setShowDueDatePicker(!showDueDatePicker)}
+                                >
                                   <Text style={styles.pickerButtonText}>
                                     {dueDate ? formatDatePST(dueDate) : 'Today'}
                                   </Text>
                                   <Ionicons name="calendar-outline" size={14} color="#64748b" />
                                 </TouchableOpacity>
+                                {showDueDatePicker && (
+                                  <View style={{ marginTop: 8 }}>
+                                    {Platform.OS === 'web' ? (
+                                      <View style={styles.webInputContainer}>
+                                        <Text style={styles.webLabel}>Select Date:</Text>
+                                        <input
+                                          type="date"
+                                          value={getDateInputValue(dueDate)}
+                                          onChange={(e) => {
+                                            if (e.target.value) {
+                                              const [y, m, d] = e.target.value.split('-').map(Number);
+                                              const selectedDate = new Date(y, m - 1, d);
+                                              setDueDate(normalizeDateToUtcNoonIso(selectedDate));
+                                            } else {
+                                              setDueDate('');
+                                            }
+                                            setShowDueDatePicker(false);
+                                          }}
+                                          style={{
+                                            padding: 10,
+                                            borderRadius: 8,
+                                            border: '1px solid #e2e8f0',
+                                            fontSize: 16,
+                                            width: '100%',
+                                            fontFamily: 'inherit',
+                                          }}
+                                        />
+                                      </View>
+                                    ) : (
+                                      DateTimePicker && (
+                                        <DateTimePicker
+                                          value={dueDate ? new Date(dueDate) : new Date()}
+                                          mode="date"
+                                          display="inline"
+                                          onChange={(event: any, selectedDate?: Date) => {
+                                            if (event?.type === 'dismissed') {
+                                              setShowDueDatePicker(false);
+                                              return;
+                                            }
+                                            if (selectedDate) {
+                                              setDueDate(normalizeDateToUtcNoonIso(selectedDate));
+                                            }
+                                            setShowDueDatePicker(false);
+                                          }}
+                                          style={{ height: 300 }}
+                                        />
+                                      )
+                                    )}
+                                  </View>
+                                )}
                              </Animated.View>
                            )}
                         </View>
+                        )}
 
                         {/* Time Estimate Toggle */}
                          <View>
@@ -812,6 +1024,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0f172a',
     fontWeight: '500',
+  },
+  quickDateRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  quickDateChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    backgroundColor: '#f8fafc',
+  },
+  quickDateChipText: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
+  },
+  webInputContainer: {
+    gap: 6,
+  },
+  webLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    fontWeight: '600',
   },
   secondaryInput: {
     backgroundColor: '#f8fafc',
