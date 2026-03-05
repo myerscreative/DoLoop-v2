@@ -65,7 +65,6 @@ export interface Loop {
   
   // Other potential fields
   type?: string;
-  status?: string;
   last_reset?: string;
   completionHistory?: any[];
   members?: LoopMember[];

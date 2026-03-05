@@ -219,7 +219,7 @@ export const LoopDetailScreen: React.FC = () => {
 
     try {
       const isGoal = data.type === 'goals';
-      const category = (data.type ?? loopData.loop_type ?? 'manual') as LoopType;
+      const category = (data.type ?? loopData.category ?? 'manual') as LoopType;
       const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
 
       let nextResetAt: string | null = loopData.next_reset_at || null;
@@ -1060,7 +1060,7 @@ export const LoopDetailScreen: React.FC = () => {
           >
             <TouchableOpacity
               activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
+              onPress={(e: import('react-native').GestureResponderEvent) => e.stopPropagation()}
               style={styles.synopsisInfoCard}
             >
               <Text style={styles.synopsisInfoTitle}>What's the AI Synopsis?</Text>
@@ -1093,7 +1093,7 @@ export const LoopDetailScreen: React.FC = () => {
           >
             <TouchableOpacity
               activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
+              onPress={(e: import('react-native').GestureResponderEvent) => e.stopPropagation()}
               style={styles.infoModalContent}
             >
               {/* Modal Header */}

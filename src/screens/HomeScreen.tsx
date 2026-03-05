@@ -547,7 +547,6 @@ export const HomeScreen: React.FC = () => {
               onLoopPress={onLoopPress}
               onSelectFilter={setSelectedFilter}
               onCreateLoop={openCreateLoopModal}
-              totalStreak={totalStreak}
             />
             
             {/* Overlay Detail Panel */}
