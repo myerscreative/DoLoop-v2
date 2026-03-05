@@ -454,21 +454,19 @@ export const LoopDetailScreen: React.FC = () => {
 
       const insertedTasks = await createTasksBulk(tasksToInsert);
 
-      // Do not treat a failed/empty insert as success.
-      if (!insertedTasks || insertedTasks.length === 0) {
-        throw new Error('No tasks were created.');
-      }
-
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch { /* haptics unavailable on web */ }
       const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
-      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-      setToastMessage(randomMessage);
+      setToastMessage(messages[Math.floor(Math.random() * messages.length)]);
 
       await loadLoopData();
+      console.log(`[handleSaveBulk] Saved ${insertedTasks.length} task(s) to loop ${loopId}`);
       return true;
-    } catch (error) {
-      console.error('Error in bulk save:', error);
-      Alert.alert('Error', 'Failed to save items in bulk');
+    } catch (error: any) {
+      const msg = error?.message || error?.details || 'Unknown error';
+      console.error('[handleSaveBulk] Failed:', msg, error);
+      Alert.alert('Could not save items', msg);
       return false;
     }
   };

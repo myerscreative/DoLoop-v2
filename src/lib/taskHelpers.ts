@@ -629,20 +629,21 @@ export async function createTask(
 /**
  * Creates multiple tasks in bulk in the database.
  */
-export async function createTasksBulk(tasks: any[]): Promise<any[] | null> {
+export async function createTasksBulk(tasks: any[]): Promise<any[]> {
   const { supabase } = await import('../lib/supabase');
-  try {
-     const { data, error } = await supabase
-       .from('tasks')
-       .insert(tasks)
-       .select();
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert(tasks)
+    .select();
 
-     if (error) throw error;
-     return data;
-  } catch (error) {
-     console.error('Error creating bulk tasks:', error);
-     return null;
+  if (error) {
+    console.error('createTasksBulk Supabase error:', JSON.stringify(error));
+    throw error;
   }
+  if (!data || data.length === 0) {
+    throw new Error('Insert returned no rows — check RLS policies for the tasks table.');
+  }
+  return data;
 }
 
 /**

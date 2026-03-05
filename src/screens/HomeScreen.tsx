@@ -1327,54 +1327,72 @@ export const HomeScreen: React.FC = () => {
               width: '100%',
               maxWidth: 420,
               borderRadius: 18,
-              backgroundColor: colors.surface,
+              // Use structure color which is always a solid opaque dark/light tone
+              backgroundColor: colors.structure,
               borderWidth: 1,
-              borderColor: colors.border,
-              padding: 18,
+              borderColor: colors.primary + '40',
+              padding: 20,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.4,
+              shadowRadius: 24,
+              elevation: 16,
             }}
           >
-            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text, marginBottom: 4 }}>
               Create a checklist
             </Text>
-            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 14 }}>
-              Choose checklist type
+            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 18 }}>
+              What kind of checklist?
             </Text>
 
             <TouchableOpacity
               onPress={() => handleChecklistTypeSelect('daily')}
               activeOpacity={0.85}
               style={{
-                paddingVertical: 14,
-                paddingHorizontal: 14,
-                borderRadius: 12,
-                borderWidth: 1,
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderRadius: 14,
+                borderWidth: 2,
                 borderColor: colors.primary,
-                backgroundColor: `${colors.primary}18`,
-                marginBottom: 10,
+                backgroundColor: `${colors.primary}22`,
+                marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
               }}
             >
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Daily checklist</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                Resets every day
-              </Text>
+              <Text style={{ fontSize: 28 }}>☀️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Daily checklist</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                  Repeats every day — resets automatically
+                </Text>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => handleChecklistTypeSelect('one-time')}
               activeOpacity={0.85}
               style={{
-                paddingVertical: 14,
-                paddingHorizontal: 14,
-                borderRadius: 12,
-                borderWidth: 1,
+                paddingVertical: 16,
+                paddingHorizontal: 16,
+                borderRadius: 14,
+                borderWidth: 1.5,
                 borderColor: colors.border,
                 backgroundColor: colors.background,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
               }}
             >
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>One-time checklist</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                Appears for one selected date
-              </Text>
+              <Text style={{ fontSize: 28 }}>✓</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>One-time checklist</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                  For a specific date — archives when done
+                </Text>
+              </View>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
