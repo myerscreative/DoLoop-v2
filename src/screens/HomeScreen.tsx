@@ -201,7 +201,6 @@ export const HomeScreen: React.FC = () => {
           .update({
             status: 'archived',
             archived_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
           })
           .in('id', staleDatedChecklistIds);
 
@@ -459,7 +458,6 @@ export const HomeScreen: React.FC = () => {
         .update({
           status: 'archived',
           archived_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         })
         .eq('id', loop.id)
         .select('id');
@@ -511,7 +509,6 @@ export const HomeScreen: React.FC = () => {
           status: 'active',
           archived_at: null,
           due_date: nextDueDate,
-          updated_at: new Date().toISOString(),
         })
         .eq('id', loop.id);
 

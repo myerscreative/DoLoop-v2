@@ -800,7 +800,6 @@ export const LoopDetailScreen: React.FC = () => {
               .update({
                 status: 'archived',
                 archived_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
               })
               .eq('id', loopId);
             if (error) {
