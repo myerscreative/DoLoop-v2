@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image, LayoutAnimation } from 'react-native';
 import { formatDatePST } from '../../utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -46,6 +46,7 @@ interface TaskEditModalProps {
   onNestUnder?: (parentTaskId: string) => void;
   /** When set, show a "Delete item" button when editing an existing task. */
   onDeleteTask?: (task: TaskWithDetails) => void;
+  onSaveBulk?: (tasksData: Partial<TaskWithDetails>[]) => Promise<boolean>;
   initialShowDetails?: boolean; // NEW: Control initial expansion
   /** Toggle task completion from the detail view header circle */
   onToggle?: (task: Task) => void;
@@ -63,6 +64,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   availableParentTasks,
   onNestUnder,
   onDeleteTask,
+  onSaveBulk,
   initialShowDetails = false,
   onToggle,
 }) => {
@@ -71,6 +73,9 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
   // Ref for input to re-focus after saving
   const descriptionInputRef = useRef<any>(null);
+
+  // Multi-entry state
+  const [inputStack, setInputStack] = useState<{id: string, text: string}[]>([{ id: Date.now().toString(), text: '' }]);
 
   // Form state
   const [description, setDescription] = useState('');
@@ -182,10 +187,10 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     setTaskStack([]); // Reset stack
     setShowDetails(false);   
     setShowDatePicker(false);
-    setShowTagInput(false);
     setShowSubtaskInput(false);
     setNewSubtaskText('');
     setNewTagName('');
+    setInputStack([{ id: Date.now().toString(), text: '' }]);
   };
 
   // Image picker
@@ -285,6 +290,51 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   };
 
   const handleSave = async (closeModal: boolean = true) => {
+    const isCreatingMainTask = !task && taskStack.length === 0;
+
+    if (isCreatingMainTask) {
+        const validEntries = inputStack.filter(item => item.text.trim());
+        if (validEntries.length === 0) {
+            Alert.alert('Error', 'Please enter at least one item');
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const tasksData = validEntries.map(entry => ({
+                description: entry.text.trim(),
+                notes: notes.trim() || undefined,
+                priority,
+                assigned_to: assignedTo,
+                is_one_time: isOneTime,
+                due_date: dueDate?.toISOString(),
+                reminder_at: reminderDate?.toISOString(),
+                time_estimate_minutes: timeEstimate ? parseInt(timeEstimate) : undefined,
+                tags: selectedTags.map(t => t.id),
+            }));
+
+            if (onSaveBulk) {
+                await onSaveBulk(tasksData);
+            } else {
+                for (const t of tasksData) {
+                    await onSave(t, [], pendingAttachments.length > 0 ? pendingAttachments : undefined, false);
+                }
+            }
+
+            if (closeModal) {
+                onClose();
+                resetForm();
+            } else {
+                resetForm();
+            }
+        } catch {
+            Alert.alert('Error', 'Failed to save tasks');
+        } finally {
+            setSaving(false);
+        }
+        return;
+    }
+
     if (!description.trim()) {
       Alert.alert('Error', 'Please enter a task description');
       return;
@@ -512,7 +562,24 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
   // SubtaskRow Removed
 
+  const handleInputStackChange = (id: string, text: string) => {
+    setInputStack(prev => prev.map(item => item.id === id ? { ...item, text } : item));
+  };
 
+  const handleInputStackSubmit = (index: number) => {
+    if (inputStack[index].text.trim()) {
+      setInputStack(prev => [...prev, { id: Date.now().toString(), text: '' }]);
+    }
+  };
+
+  const handleInputStackRemove = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setInputStack(prev => prev.filter(item => item.id !== id));
+  };
+
+  const addInputStackItem = () => {
+    setInputStack(prev => [...prev, { id: Date.now().toString(), text: '' }]);
+  };
   return (
     <Modal
       visible={visible}
@@ -585,42 +652,72 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             <View style={styles.nameInputContainer}>
                 <View style={styles.nameSection}>
                     {task || taskStack.length > 0 ? (
-                        <TouchableOpacity 
-                            style={styles.radioPlaceholder}
-                            onPress={() => {
-                                const currentTask = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
-                                if (currentTask && onToggle) {
-                                    const newCompleted = !isCompleted;
-                                    setIsCompleted(newCompleted);
-                                    onToggle({ ...currentTask, completed: !newCompleted } as Task);
-                                }
-                            }}
-                            activeOpacity={0.6}
-                        >
-                            <View style={[
-                                styles.radioCircle, 
-                                isCompleted 
-                                    ? { backgroundColor: '#FEC00F', borderColor: '#FEC00F' } 
-                                    : { borderColor: colors.textSecondary }
-                            ]}>
-                                {isCompleted && (
-                                    <Ionicons name="checkmark" size={16} color="#fff" />
-                                )}
-                            </View>
-                        </TouchableOpacity>
-                    ) : null}
-                    <TextInput
-                        ref={descriptionInputRef}
-                        style={[styles.nameInput, { color: colors.text, backgroundColor: isDark ? colors.surface : '#f8fafc', borderColor: colors.border }]}
-                        placeholder="Enter Item Name..."
-                        value={description}
-                        onChangeText={setDescription}
-                        placeholderTextColor={colors.textSecondary}
-                        multiline={Platform.OS !== 'web'} 
-                        blurOnSubmit={true}
-                        returnKeyType="done"
-                        onSubmitEditing={() => handleSave(false)}
-                    />
+                        <>
+                            <TouchableOpacity 
+                                style={styles.radioPlaceholder}
+                                onPress={() => {
+                                    const currentTask = taskStack.length > 0 ? taskStack[taskStack.length - 1] : task;
+                                    if (currentTask && onToggle) {
+                                        const newCompleted = !isCompleted;
+                                        setIsCompleted(newCompleted);
+                                        onToggle({ ...currentTask, completed: !newCompleted } as Task);
+                                    }
+                                }}
+                                activeOpacity={0.6}
+                            >
+                                <View style={[
+                                    styles.radioCircle, 
+                                    isCompleted 
+                                        ? { backgroundColor: '#FEC00F', borderColor: '#FEC00F' } 
+                                        : { borderColor: colors.textSecondary }
+                                ]}>
+                                    {isCompleted && (
+                                        <Ionicons name="checkmark" size={16} color="#fff" />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                            <TextInput
+                                ref={descriptionInputRef}
+                                style={[styles.nameInput, { color: colors.text, backgroundColor: isDark ? colors.surface : '#f8fafc', borderColor: colors.border }]}
+                                placeholder="Enter Item Name..."
+                                value={description}
+                                onChangeText={setDescription}
+                                placeholderTextColor={colors.textSecondary}
+                                multiline={Platform.OS !== 'web'} 
+                                blurOnSubmit={true}
+                                returnKeyType="done"
+                                onSubmitEditing={() => handleSave(false)}
+                            />
+                        </>
+                    ) : (
+                        <View style={{ flex: 1 }}>
+                            {inputStack.map((item, index) => (
+                                <View key={item.id} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                                    <TextInput
+                                        style={[styles.nameInput, { flex: 1, color: colors.text, backgroundColor: isDark ? colors.surface : '#f8fafc', borderColor: colors.border }]}
+                                        placeholder="Enter Item Name..."
+                                        value={item.text}
+                                        onChangeText={(text) => handleInputStackChange(item.id, text)}
+                                        placeholderTextColor={colors.textSecondary}
+                                        multiline={Platform.OS !== 'web'}
+                                        blurOnSubmit={false}
+                                        returnKeyType="next"
+                                        onSubmitEditing={() => handleInputStackSubmit(index)}
+                                        autoFocus={index === inputStack.length - 1}
+                                    />
+                                    {inputStack.length > 1 && (
+                                        <TouchableOpacity onPress={() => handleInputStackRemove(item.id)} style={{ padding: 8, marginLeft: 8 }}>
+                                            <Ionicons name="close" size={24} color={colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }} onPress={addInputStackItem}>
+                                <Ionicons name="add" size={20} color="#6B7280" />
+                                <Text style={{ color: '#6B7280', fontSize: 16, marginLeft: 4, fontWeight: '500' }}>Add Another Item</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
                 </View>
 
                 {!showDetails && (

@@ -627,6 +627,25 @@ export async function createTask(
 }
 
 /**
+ * Creates multiple tasks in bulk in the database.
+ */
+export async function createTasksBulk(tasks: any[]): Promise<any[] | null> {
+  const { supabase } = await import('../lib/supabase');
+  try {
+     const { data, error } = await supabase
+       .from('tasks')
+       .insert(tasks)
+       .select();
+
+     if (error) throw error;
+     return data;
+  } catch (error) {
+     console.error('Error creating bulk tasks:', error);
+     return null;
+  }
+}
+
+/**
  * Deletes a task from the database.
  */
 export async function deleteTask(taskId: string): Promise<boolean> {

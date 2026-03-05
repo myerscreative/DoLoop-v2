@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, FOLDER_ICONS, LoopType, Subtask } from '../../types/loop';
 import { AnimatedCircularProgress } from '../native/AnimatedCircularProgress';
 import { TaskEditModal } from '../native/TaskEditModal';
+import { Toast } from '../native/Toast';
 import { InviteModal } from '../native/InviteModal';
 import { MemberAvatars } from '../native/MemberAvatars';
 import { BeeIcon } from '../native/BeeIcon';
@@ -37,6 +38,7 @@ import {
   promoteTask,
   nestTask,
   toggleTaskWithChildren,
+  createTasksBulk,
 } from '../../lib/taskHelpers';
 import { flattenTreeForSync } from '../../lib/treeHelpers';
 import { TaskTree } from '../native/TaskTree';
@@ -69,6 +71,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [loopMembers, setLoopMembers] = useState<LoopMemberProfile[]>([]);
@@ -444,6 +447,50 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     }
   };
 
+  const handleSaveBulk = async (tasksData: Partial<TaskWithDetails>[]): Promise<boolean> => {
+    try {
+      setSaving(true);
+      
+      const topLevelCount = loopData?.tasks.filter(t => !t.parent_task_id).length || 0;
+      
+      const tasksToInsert = tasksData.map((taskData, index) => {
+        return {
+          loop_id: loopId,
+          description: taskData.description,
+          is_one_time: taskData.is_one_time ?? false,
+          completed: false,
+          assigned_to: taskData.assigned_to,
+          priority: taskData.priority || 'none',
+          due_date: taskData.due_date,
+          notes: taskData.notes,
+          time_estimate_minutes: taskData.time_estimate_minutes,
+          reminder_at: taskData.reminder_at,
+          order_index: topLevelCount + index,
+        };
+      });
+
+      const insertedTasks = await createTasksBulk(tasksToInsert);
+      
+      if (insertedTasks) {
+          await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
+          if (Platform.OS !== 'web') {
+              const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
+              const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+              setToastMessage(randomMessage);
+          }
+      }
+
+      await loadLoopData();
+      return true;
+    } catch (error) {
+      console.error('Error in bulk save:', error);
+      Alert.alert('Error', 'Failed to save items in bulk');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleDeleteTask = async (task: Task) => {
     console.log('[DesktopPanel] handleDeleteTask called for task:', task.id, task.description);
     // For desktop web, use window.confirm
@@ -591,8 +638,14 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const oneTimeTasks = loopData.tasks.filter((task: Task) => task.is_one_time) as Task[];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* HEADER SECTION */}
+    <View style={[styles.container, { backgroundColor: '#000000' }]}>
+      <Toast 
+        message={toastMessage || ''} 
+        isVisible={!!toastMessage} 
+        onHide={() => setToastMessage(null)} 
+      />
+      
+      {/* Scrollable Main Content */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.heroEmoji}>
@@ -770,6 +823,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             setEditingTask(null);
         }}
         onSave={handleSaveTask}
+        onSaveBulk={handleSaveBulk}
         task={editingTask}
         user={user}
         availableTags={availableTags}

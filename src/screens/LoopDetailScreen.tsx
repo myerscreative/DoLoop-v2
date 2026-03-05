@@ -28,11 +28,12 @@ import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask }
 import { DraggableTaskList } from '../components/native/DraggableTaskList';
 import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
+import { Toast } from '../components/native/Toast';
 import { InviteModal } from '../components/native/InviteModal';
 import CreateLoopModal from '../components/native/CreateLoopModal';
 import { MemberAvatars, MemberListModal } from '../components/native/MemberAvatars';
 import { BeeIcon } from '../components/native/BeeIcon';
-import { getUserTags, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask } from '../lib/taskHelpers';
+import { getUserTags, updateTaskExtended, createTag, ensureLoopMember, uploadAttachment, toggleTaskWithChildren, promoteTask, nestTask, createTasksBulk } from '../lib/taskHelpers';
 // Removed: getTaskTags, getTaskAttachments, createTag
 import { flattenTreeForSync } from '../lib/treeHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
@@ -59,6 +60,7 @@ export const LoopDetailScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [editingTask, setEditingTask] = useState<TaskWithDetails | null>(null);
   const [initialShowDetails, setInitialShowDetails] = useState(false); // NEW: Control initial modal state
   const [availableTags, setAvailableTags] = useState<Tag[]>([]);
@@ -426,6 +428,44 @@ export const LoopDetailScreen: React.FC = () => {
       console.error('Delete task error:', e);
       Alert.alert('Error', e?.message || 'Failed to delete task');
       await loadLoopData(); // Reload to restore state on error
+    }
+  };
+
+  const handleSaveBulk = async (tasksData: Partial<TaskWithDetails>[]): Promise<boolean> => {
+    try {
+      const topLevelCount = loopData?.tasks.filter(t => !t.parent_task_id).length || 0;
+      
+      const tasksToInsert = tasksData.map((taskData, index) => {
+        return {
+          loop_id: loopId,
+          description: taskData.description,
+          is_one_time: taskData.is_one_time ?? false,
+          completed: false,
+          assigned_to: taskData.assigned_to,
+          priority: taskData.priority || 'none',
+          due_date: taskData.due_date,
+          notes: taskData.notes,
+          time_estimate_minutes: taskData.time_estimate_minutes,
+          reminder_at: taskData.reminder_at,
+          order_index: topLevelCount + index,
+        };
+      });
+
+      const insertedTasks = await createTasksBulk(tasksToInsert);
+      
+      if (insertedTasks) {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
+          const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+          setToastMessage(randomMessage);
+      }
+
+      await loadLoopData();
+      return true;
+    } catch (error) {
+      console.error('Error in bulk save:', error);
+      Alert.alert('Error', 'Failed to save items in bulk');
+      return false;
     }
   };
 
@@ -807,6 +847,11 @@ export const LoopDetailScreen: React.FC = () => {
   
   return (
     <View style={styles.container}>
+      <Toast 
+        message={toastMessage || ''} 
+        isVisible={!!toastMessage} 
+        onHide={() => setToastMessage(null)} 
+      />
       <SafeAreaView style={{ flex: 1, flexBasis: 0 }} edges={['top']}>
           <DraggableTaskList
             tasks={allTasks as Task[]}
@@ -1248,6 +1293,7 @@ export const LoopDetailScreen: React.FC = () => {
           visible={modalVisible}
           onClose={() => setModalVisible(false)}
           onSave={handleSaveTask}
+          onSaveBulk={handleSaveBulk}
           task={editingTask}
           user={user}
           initialShowDetails={initialShowDetails}
