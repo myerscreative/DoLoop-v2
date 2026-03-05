@@ -4,8 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { DoLoopLogo } from '../native/DoLoopLogo';
 
-import { FOLDER_COLORS } from '../../types/loop';
-
 type FilterType = 'all' | 'manual' | 'daily' | 'weekly';
 type SidebarItem = FilterType | 'library' | 'sommelier';
 
@@ -36,8 +34,8 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
   activeItem,
 }) => {
   const { colors } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [hoveredId, setHoveredId] = useState<SidebarItem | null>(null);
-  const ACTIVE_BG = `${colors.primary}20`; // 20% opacity primary
 
   const isItemActive = (id: SidebarItem) => {
     if (activeItem === id) return true;
@@ -50,7 +48,7 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
     // Library uses neutral text color
     if (id === 'library') return colors.text;
     // All other items use gold
-    return colors.primary; // #FEC00F
+    return '#FFB800';
   };
 
   const NavItem = ({ 
@@ -72,6 +70,7 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
       <Pressable
         style={[
           styles.navItem,
+          !isExpanded && { justifyContent: 'center', paddingHorizontal: 0 },
           (active || hovered) && { backgroundColor: `${itemColor}15` } // 15% opacity
         ]}
         onPress={() => {
@@ -89,14 +88,16 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
                 color={itemColor} 
                 style={{ opacity: active ? 1 : 0.8 }}
             />
-            <Text style={[
-                styles.navLabel,
-                { color: active ? colors.text : colors.textSecondary, fontWeight: active ? '700' : '500' }
-            ]}>
-                {label}
-            </Text>
+            {isExpanded && (
+              <Text style={[
+                  styles.navLabel,
+                  { color: active ? colors.text : colors.textSecondary, fontWeight: active ? '700' : '500' }
+              ]} numberOfLines={1}>
+                  {label}
+              </Text>
+            )}
         </View>
-        {count !== undefined && count > 0 && (
+        {isExpanded && count !== undefined && count > 0 && (
             <Text style={[
               styles.navCount, 
               { color: active ? colors.text : colors.textSecondary }
@@ -107,29 +108,47 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* DoLoop Branding */}
-      <View style={{ alignItems: 'center', marginBottom: 24 }}>
-        <DoLoopLogo size={86} color={colors.text} showText={true} />
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: '#111827', // Dark neutral background
+        width: isExpanded ? 240 : 80 
+      }
+    ]}>
+      {/* Header / Branding */}
+      <View style={[styles.headerContainer, { justifyContent: isExpanded ? 'flex-start' : 'center' }]}>
+        <TouchableOpacity 
+          style={styles.toggleBtn}
+          onPress={() => setIsExpanded(!isExpanded)}
+        >
+          <Ionicons name="menu" size={28} color={colors.text} />
+        </TouchableOpacity>
+        {isExpanded && (
+          <View style={styles.logoWrapper}>
+            <DoLoopLogo size={86} color={colors.text} showText={true} />
+          </View>
+        )}
       </View>
 
       {/* Global Search */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={styles.searchIcon} />
-        <TextInput 
-            style={[styles.searchInput, { 
-                backgroundColor: colors.surface, 
-                color: colors.text 
-            }]}
-            placeholder="Search recipes..."
-            placeholderTextColor={colors.textSecondary}
-        />
+      <View style={[styles.searchContainer, !isExpanded && styles.searchContainerCollapsed]}>
+        <Ionicons name="search-outline" size={18} color={colors.textSecondary} style={isExpanded ? styles.searchIcon : undefined} />
+        {isExpanded && (
+          <TextInput 
+              style={[styles.searchInput, { 
+                  backgroundColor: colors.surface, 
+                  color: colors.text 
+              }]}
+              placeholder="Search recipes..."
+              placeholderTextColor={colors.textSecondary}
+          />
+        )}
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
         {/* ===== SECTION 1: MY LOOPS ===== */}
         <View style={styles.navSection}>
-          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY LOOPS</Text>
+          {isExpanded && <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>MY LOOPS</Text>}
           
           <NavItem id="all" label="All Loops" iconName="apps-outline" count={counts.all} />
           <NavItem id="daily" label="My Day" iconName="sunny-outline" count={counts.daily} />
@@ -138,8 +157,8 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
         </View>
 
         {/* ===== SECTION 2: LOOP LIBRARY ===== */}
-        <View style={styles.navSection}>
-          <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LOOP LIBRARY</Text>
+        <View style={[styles.navSection, { marginTop: isExpanded ? 0 : 16 }]}>
+          {isExpanded && <Text style={[styles.sectionHeader, { color: colors.textSecondary }]}>LOOP LIBRARY</Text>}
           
           <NavItem id="library" label="My Templates" iconName="bookmark-outline" />
           <NavItem id="library" label="Community" iconName="people-outline" />
@@ -153,24 +172,25 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
         <View style={styles.createContainer}>
             <TouchableOpacity 
                 style={[styles.createButton, { 
-                    backgroundColor: colors.primary,
-                    shadowColor: colors.primary 
+                    backgroundColor: '#FFB800',
+                    shadowColor: '#FFB800',
+                    paddingHorizontal: isExpanded ? 16 : 0,
                 }]}
                 onPress={onCreatePress}
             >
                 <Ionicons name="add" size={24} color={colors.text} />
-                <Text style={[styles.createButtonText, { color: colors.text }]}>New Loop</Text>
+                {isExpanded && <Text style={[styles.createButtonText, { color: colors.text }]}>New Loop</Text>}
             </TouchableOpacity>
         </View>
       </ScrollView>
 
       {/* Footer Settings */}
       <TouchableOpacity 
-        style={styles.settingsButton}
+        style={[styles.settingsButton, { justifyContent: isExpanded ? 'flex-start' : 'center', paddingHorizontal: isExpanded ? 12 : 0 }]}
         onPress={onNavigateToSettings}
       >
         <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
-        <Text style={[styles.settingsText, { color: colors.textSecondary }]}>Settings</Text>
+        {isExpanded && <Text style={[styles.settingsText, { color: colors.textSecondary }]}>Settings</Text>}
       </TouchableOpacity>
     </View>
   );
@@ -178,9 +198,33 @@ export const WebSidebar: React.FC<WebSidebarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 16,
+    height: '100%',
+    borderRightWidth: 1,
+    borderRightColor: '#374151',
+    flexDirection: 'column',
+    ...Platform.select({
+      web: {
+        transitionProperty: 'width',
+        transitionDuration: '200ms',
+        transitionTimingFunction: 'ease-in-out',
+      }
+    }) as any,
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    height: 40,
+  },
+  toggleBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    marginLeft: 12,
   },
   branding: {
     flexDirection: 'row',
@@ -198,6 +242,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     position: 'relative',
     justifyContent: 'center',
+  },
+  searchContainerCollapsed: {
+    alignItems: 'center',
   },
   searchIcon: {
     position: 'absolute',
