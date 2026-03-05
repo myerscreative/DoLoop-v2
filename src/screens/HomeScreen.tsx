@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Modal,
   Platform,
   useWindowDimensions,
 } from 'react-native';
@@ -48,6 +49,8 @@ export const HomeScreen: React.FC = () => {
   const [currentDate, setCurrentDate] = useState('');
   const [totalStreak, setTotalStreak] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
+  const [creationPreset, setCreationPreset] = useState<'loop' | 'checklist-daily' | 'checklist-one-time'>('loop');
+  const [checklistTypeModalVisible, setChecklistTypeModalVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('all');
   const [creating, setCreating] = useState(false);
   const [selectionModalVisible, setSelectionModalVisible] = useState(false);
@@ -279,11 +282,21 @@ export const HomeScreen: React.FC = () => {
     navigation.navigate('LoopDetail', { loopId: loop.id });
   };
 
-  const openCreateLoopModal = () => {
+  const openCreateLoopModal = (preset: 'loop' | 'checklist-daily' | 'checklist-one-time' = 'loop') => {
+    setCreationPreset(preset);
     setIsEditingLoop(false);
     setEditingLoop(null);
     setModalVisible(true);
     setCommandBarVisible(false); // Close command bar if open
+  };
+
+  const openChecklistTypePicker = () => {
+    setChecklistTypeModalVisible(true);
+  };
+
+  const handleChecklistTypeSelect = (type: 'daily' | 'one-time') => {
+    setChecklistTypeModalVisible(false);
+    openCreateLoopModal(type === 'daily' ? 'checklist-daily' : 'checklist-one-time');
   };
 
   const handleCreateLoop = async (data: any) => {
@@ -649,7 +662,7 @@ export const HomeScreen: React.FC = () => {
                  shadowRadius: 10,
                  elevation: 4
                }}
-               onPress={openCreateLoopModal}
+              onPress={() => openCreateLoopModal('loop')}
              >
                <Text style={{ color: colors.textOnPrimary, fontWeight: '700', fontSize: 16 }}>Create New Loop</Text>
              </TouchableOpacity>
@@ -712,7 +725,8 @@ export const HomeScreen: React.FC = () => {
               onLoopArchive={confirmArchiveLoop}
               onRestoreChecklist={handleRestoreChecklist}
               onSelectFilter={setSelectedFilter}
-              onCreateLoop={openCreateLoopModal}
+              onCreateLoop={() => openCreateLoopModal('loop')}
+              onCreateChecklist={openChecklistTypePicker}
             />
             
             {/* Overlay Detail Panel */}
@@ -862,50 +876,140 @@ export const HomeScreen: React.FC = () => {
               }
             >
             <View style={{ padding: 20 }}>
-              {/* Quick Add Button */}
-              <TouchableOpacity 
-                onPress={openCreateLoopModal}
-                activeOpacity={0.8}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: colors.background,
-                  padding: 16,
-                  borderRadius: 16,
-                  borderWidth: 1.5,
-                  borderStyle: 'dashed',
-                  borderColor: colors.primary,
-                  marginBottom: 24,
-                  shadowColor: colors.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 10,
-                  elevation: 2,
-                }}
-              >
-                <View style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  backgroundColor: `${colors.primary}20`,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginRight: 16,
-                }}>
-                  <Ionicons name="add" size={24} color={colors.primary} />
+              {/* Quick Add Buttons */}
+              {selectedFilter === 'manual' ? (
+                <View style={{ marginBottom: 24, gap: 12 }}>
+                  <TouchableOpacity
+                    onPress={openChecklistTypePicker}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.background,
+                      padding: 16,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderStyle: 'dashed',
+                      borderColor: colors.primary,
+                      shadowColor: colors.primary,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 10,
+                      elevation: 2,
+                    }}
+                  >
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: `${colors.primary}20`,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 16,
+                    }}>
+                      <Ionicons name="checkbox-outline" size={22} color={colors.primary} />
+                    </View>
+                    <View>
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: colors.text,
+                      }}>Create a checklist</Text>
+                      <Text style={{
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                      }}>Choose daily or one-time checklist</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => openCreateLoopModal('loop')}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.background,
+                      padding: 16,
+                      borderRadius: 16,
+                      borderWidth: 1.5,
+                      borderStyle: 'dashed',
+                      borderColor: colors.primary,
+                      shadowColor: colors.primary,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 10,
+                      elevation: 2,
+                    }}
+                  >
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: `${colors.primary}20`,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 16,
+                    }}>
+                      <Ionicons name="add" size={24} color={colors.primary} />
+                    </View>
+                    <View>
+                      <Text style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: colors.text,
+                      }}>Create a loop</Text>
+                      <Text style={{
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                      }}>Track your own custom routine</Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
-                <View>
-                  <Text style={{ 
-                    fontSize: 16, 
-                    fontWeight: '700', 
-                    color: colors.text 
-                  }}>Create a new loop</Text>
-                  <Text style={{ 
-                    fontSize: 13, 
-                    color: colors.textSecondary 
-                  }}>Track your own custom routine</Text>
-                </View>
-              </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  onPress={() => openCreateLoopModal('loop')}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.background,
+                    padding: 16,
+                    borderRadius: 16,
+                    borderWidth: 1.5,
+                    borderStyle: 'dashed',
+                    borderColor: colors.primary,
+                    marginBottom: 24,
+                    shadowColor: colors.primary,
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 10,
+                    elevation: 2,
+                  }}
+                >
+                  <View style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: `${colors.primary}20`,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 16,
+                  }}>
+                    <Ionicons name="add" size={24} color={colors.primary} />
+                  </View>
+                  <View>
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: colors.text,
+                    }}>Create a loop</Text>
+                    <Text style={{
+                      fontSize: 13,
+                      color: colors.textSecondary,
+                    }}>Track your own custom routine</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
 
               {/* Today's Loop Section */}
               {todayLoops.length > 0 && (
@@ -1190,7 +1294,7 @@ export const HomeScreen: React.FC = () => {
                 shadowOpacity: 0.25,
                 shadowRadius: 4,
               }}
-              onPress={openCreateLoopModal}
+              onPress={() => openCreateLoopModal('loop')}
             >
               <Text style={{ fontSize: 24, color: 'white', fontWeight: 'bold' }}>+</Text>
             </TouchableOpacity>
@@ -1199,6 +1303,83 @@ export const HomeScreen: React.FC = () => {
       </View>
       </ResponsiveContainer>
 
+      <Modal
+        visible={checklistTypeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setChecklistTypeModalVisible(false)}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setChecklistTypeModalVisible(false)}
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0, 0, 0, 0.45)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: 20,
+          }}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={(e: any) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 420,
+              borderRadius: 18,
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+              padding: 18,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
+              Create a checklist
+            </Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 14 }}>
+              Choose checklist type
+            </Text>
+
+            <TouchableOpacity
+              onPress={() => handleChecklistTypeSelect('daily')}
+              activeOpacity={0.85}
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.primary,
+                backgroundColor: `${colors.primary}18`,
+                marginBottom: 10,
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Daily checklist</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                Resets every day
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => handleChecklistTypeSelect('one-time')}
+              activeOpacity={0.85}
+              style={{
+                paddingVertical: 14,
+                paddingHorizontal: 14,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.background,
+              }}
+            >
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>One-time checklist</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                Appears for one selected date
+              </Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       <CreateLoopModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
@@ -1206,6 +1387,7 @@ export const HomeScreen: React.FC = () => {
         initialData={editingLoop}
         loading={creating}
         isEditing={isEditingLoop}
+        creationPreset={creationPreset}
       />
 
       {/* Loop Selection Modal */}

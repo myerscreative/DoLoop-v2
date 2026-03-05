@@ -453,13 +453,16 @@ export const LoopDetailScreen: React.FC = () => {
       });
 
       const insertedTasks = await createTasksBulk(tasksToInsert);
-      
-      if (insertedTasks) {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
-          const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-          setToastMessage(randomMessage);
+
+      // Do not treat a failed/empty insert as success.
+      if (!insertedTasks || insertedTasks.length === 0) {
+        throw new Error('No tasks were created.');
       }
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
+      const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+      setToastMessage(randomMessage);
 
       await loadLoopData();
       return true;

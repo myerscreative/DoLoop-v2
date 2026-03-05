@@ -12,6 +12,7 @@ interface DashboardGridProps {
   loops: LoopWithTasks[];
   archivedChecklists?: LoopWithTasks[];
   onCreateLoop: () => void;
+  onCreateChecklist?: () => void;
   onLoopPress: (loop: LoopWithTasks) => void;
   onLoopEdit?: (loop: LoopWithTasks) => void;
   onLoopDelete?: (loop: LoopWithTasks) => void;
@@ -29,6 +30,7 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
   loops,
   archivedChecklists = [],
   onCreateLoop,
+  onCreateChecklist,
   onLoopPress,
   onLoopEdit,
   onLoopDelete,
@@ -159,48 +161,138 @@ export const DashboardGrid: React.FC<DashboardGridProps> = ({
 
         {/* Quick Add Banner */}
         <View style={{ paddingHorizontal: 24, marginBottom: 24 }}>
-          <TouchableOpacity 
-            onPress={onCreateLoop}
-            activeOpacity={0.8}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.background,
-              padding: 16,
-              borderRadius: 20,
-              borderWidth: 1.5,
-              borderStyle: 'dashed',
-              borderColor: colors.primary,
-              shadowColor: colors.primary,
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.1,
-              shadowRadius: 10,
-              elevation: 2,
-            }}
-          >
-            <View style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              backgroundColor: `${colors.primary}20`,
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: 16,
-            }}>
-              <Ionicons name="add" size={24} color={colors.primary} />
+          {activeFilter === 'manual' && onCreateChecklist ? (
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity
+                onPress={onCreateChecklist}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.background,
+                  padding: 16,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
+                  borderColor: colors.primary,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 10,
+                  elevation: 2,
+                }}
+              >
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: `${colors.primary}20`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 16,
+                }}>
+                  <Ionicons name="checkbox-outline" size={22} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color: colors.text,
+                  }}>Create a checklist</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                  }}>Choose daily or one-time checklist</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={onCreateLoop}
+                activeOpacity={0.8}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.background,
+                  padding: 16,
+                  borderRadius: 20,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
+                  borderColor: colors.primary,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 10,
+                  elevation: 2,
+                }}
+              >
+                <View style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: `${colors.primary}20`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 16,
+                }}>
+                  <Ionicons name="add" size={24} color={colors.primary} />
+                </View>
+                <View>
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '700',
+                    color: colors.text,
+                  }}>Create a loop</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    color: colors.textSecondary,
+                  }}>Track your own custom routine</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-            <View>
-              <Text style={{ 
-                fontSize: 16, 
-                fontWeight: '700', 
-                color: colors.text 
-              }}>Create a new loop</Text>
-              <Text style={{ 
-                fontSize: 13, 
-                color: colors.textSecondary 
-              }}>Track your own custom routine</Text>
-            </View>
-          </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={onCreateLoop}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.background,
+                padding: 16,
+                borderRadius: 20,
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: colors.primary,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 10,
+                elevation: 2,
+              }}
+            >
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: `${colors.primary}20`,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginRight: 16,
+              }}>
+                <Ionicons name="add" size={24} color={colors.primary} />
+              </View>
+              <View>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '700',
+                  color: colors.text,
+                }}>Create a loop</Text>
+                <Text style={{
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                }}>Track your own custom routine</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.sectionHeader}>

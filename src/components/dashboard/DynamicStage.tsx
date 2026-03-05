@@ -18,6 +18,7 @@ interface DynamicStageProps {
   onRestoreChecklist?: (loop: LoopWithTasks) => void;
   onSelectFilter: (filter: FilterType) => void;
   onCreateLoop: () => void;
+  onCreateChecklist?: () => void;
 
 }
 
@@ -37,6 +38,7 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
   onRestoreChecklist,
   onSelectFilter,
   onCreateLoop,
+  onCreateChecklist,
 }) => {
   const { colors } = useTheme();
 
@@ -76,6 +78,7 @@ export const DynamicStage: React.FC<DynamicStageProps> = ({
             archivedChecklists={archivedChecklists}
             layout="list"
             onCreateLoop={onCreateLoop}
+            onCreateChecklist={onCreateChecklist}
             onLoopPress={onLoopPress}
             onLoopEdit={onLoopEdit}
             onLoopDelete={onLoopDelete}

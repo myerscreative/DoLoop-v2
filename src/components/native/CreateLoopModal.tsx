@@ -65,6 +65,7 @@ interface CreateLoopModalProps {
   } | null;
   loading: boolean;
   isEditing: boolean;
+  creationPreset?: 'loop' | 'checklist-daily' | 'checklist-one-time';
 }
 
 export default function CreateLoopModal({
@@ -74,6 +75,7 @@ export default function CreateLoopModal({
   initialData,
   loading,
   isEditing,
+  creationPreset = 'loop',
 }: CreateLoopModalProps) {
   const [name, setName] = useState('');
   const [selectedColor, setSelectedColor] = useState('#FFB800');
@@ -238,6 +240,8 @@ export default function CreateLoopModal({
       }
 
     } else if (visible) {
+      const isChecklistDailyPreset = creationPreset === 'checklist-daily';
+      const isChecklistOneTimePreset = creationPreset === 'checklist-one-time';
       setName('');
       setSelectedColor('#FFB800');
       setDescription('');
@@ -245,18 +249,18 @@ export default function CreateLoopModal({
       setPriority('Medium');
       setDueDate(new Date().toISOString());
       setTimeEstimate('');
-      setType('daily');
-      setFunctionType('execution');
-      setOneTimeChecklist(true);
+      setType(isChecklistOneTimePreset ? 'manual' : 'daily');
+      setFunctionType((isChecklistDailyPreset || isChecklistOneTimePreset) ? 'execution' : 'practice');
+      setOneTimeChecklist(isChecklistOneTimePreset);
       setShowDetails(false);
       setShowDueDatePicker(false);
       
       // Reset optional flags
       setHasPriority(false);
-      setHasDueDate(false);
+      setHasDueDate(isChecklistOneTimePreset);
       setHasTimeEstimate(false);
     }
-  }, [visible, initialData]);
+  }, [visible, initialData, creationPreset]);
 
   const handleSave = () => {
     if (!name.trim()) return;
