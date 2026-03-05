@@ -454,25 +454,39 @@ export const HomeScreen: React.FC = () => {
 
   const handleArchiveLoop = async (loop: any) => {
     try {
-      const { error } = await supabase
+      const { data: archivedRows, error } = await supabase
         .from('loops')
         .update({
           status: 'archived',
           archived_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', loop.id);
+        .eq('id', loop.id)
+        .select('id');
 
       if (error) throw error;
+      if (!archivedRows || archivedRows.length === 0) {
+        throw new Error('Archive was blocked. You may not have permission to update this loop.');
+      }
 
       if (selectedLoopId === loop.id) {
         setSelectedLoopId(null);
       }
 
+      // Optimistic local update to avoid stale UI after confirmation.
+      setLoops(prev => prev.filter(l => l.id !== loop.id));
+      setTodayLoops(prev => prev.filter(l => l.id !== loop.id));
+      setUpcomingLoops(prev => prev.filter(l => l.id !== loop.id));
+      setArchivedChecklists(prev => [loop, ...prev.filter(l => l.id !== loop.id)]);
       await loadData();
     } catch (error: any) {
       console.error('[HomeScreen] Error archiving loop:', error);
-      Alert.alert('Error', `Failed to archive loop: ${error?.message || 'Unknown error'}`);
+      const message = `Failed to archive loop: ${error?.message || 'Unknown error'}`;
+      if (Platform.OS === 'web') {
+        window.alert(message);
+      } else {
+        Alert.alert('Error', message);
+      }
     }
   };
 
