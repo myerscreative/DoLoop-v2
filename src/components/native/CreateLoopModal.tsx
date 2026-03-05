@@ -35,7 +35,7 @@ interface CreateLoopModalProps {
     name: string;
     description: string;
     affiliate_link: string;
-    type: ResetRule;
+    type: ResetRule | null;
     custom_days?: number[];
     due_date?: string;
     reset_time?: string;
@@ -44,12 +44,13 @@ interface CreateLoopModalProps {
     priority?: string;
     time_estimate?: string;
     function_type?: string;
+    one_time_checklist?: boolean;
   }) => void;
   initialData?: {
     name: string;
     description: string;
     affiliate_link: string;
-    reset_rule: string;
+    reset_rule: string | null;
     color?: string;
     priority?: string;
     due_date?: string;
@@ -69,7 +70,7 @@ export default function CreateLoopModal({
   isEditing,
 }: CreateLoopModalProps) {
   const [name, setName] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#FEC00F');
+  const [selectedColor, setSelectedColor] = useState('#FFB800');
   const [description, setDescription] = useState('');
   const [affiliateLink, setAffiliateLink] = useState('');
   const [priority, setPriority] = useState('Medium');
@@ -82,6 +83,7 @@ export default function CreateLoopModal({
   const [showDetails, setShowDetails] = useState(true); // Default open for now, can be toggled
   const [isFocused, setIsFocused] = useState(false);
   const [functionType, setFunctionType] = useState<'execution' | 'practice'>('execution');
+  const [oneTimeChecklist, setOneTimeChecklist] = useState(false);
 
   // Optional Field Toggles
   const [hasPriority, setHasPriority] = useState(false);
@@ -90,7 +92,7 @@ export default function CreateLoopModal({
 
   // Color Palette
   const LOOP_COLORS = [
-    '#FEC00F', // Gold (Brand)
+    '#FFB800', // Gold (Brand)
     '#DC2626', // Red
     '#16A34A', // Green
     '#2563EB', // Blue
@@ -134,6 +136,9 @@ export default function CreateLoopModal({
 
   // Get dynamic reset description
   const getResetDescription = () => {
+    if (oneTimeChecklist) {
+      return 'Simple list mode: checks persist, no reloop';
+    }
     const timeLabel = formatTimeDisplay(resetTime);
     const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayLabel = dayLabels[resetDayOfWeek];
@@ -157,10 +162,11 @@ export default function CreateLoopModal({
   useEffect(() => {
     if (visible && initialData) {
       setName(initialData.name || '');
-      setSelectedColor(initialData.color || '#FEC00F');
+      setSelectedColor(initialData.color || '#FFB800');
       setDescription(initialData.description || '');
       setAffiliateLink(initialData.affiliate_link || '');
       setType((initialData.reset_rule as any) || 'manual');
+      setOneTimeChecklist(initialData.reset_rule == null);
       setFunctionType((initialData.function_type as any) || 'execution');
       
       // Initialize optional flags
@@ -179,7 +185,7 @@ export default function CreateLoopModal({
 
     } else if (visible) {
       setName('');
-      setSelectedColor('#FEC00F');
+      setSelectedColor('#FFB800');
       setDescription('');
       setAffiliateLink('');
       setPriority('Medium');
@@ -187,6 +193,7 @@ export default function CreateLoopModal({
       setTimeEstimate('');
       setType('manual');
       setFunctionType('execution');
+      setOneTimeChecklist(false);
       setShowDetails(false);
       
       // Reset optional flags
@@ -198,19 +205,21 @@ export default function CreateLoopModal({
 
   const handleSave = () => {
     if (!name.trim()) return;
+    const selectedType = oneTimeChecklist ? null : type;
     onSave({
       name: name.trim(),
       description: description.trim(),
       affiliate_link: affiliateLink.trim(),
-      type,
-      custom_days: type === 'custom' ? customDays : undefined,
+      type: selectedType,
+      custom_days: selectedType === 'custom' ? customDays : undefined,
       due_date: hasDueDate ? (dueDate || new Date().toISOString()) : undefined,
       reset_time: resetTime,
-      reset_day_of_week: type === 'weekly' ? resetDayOfWeek : undefined,
+      reset_day_of_week: selectedType === 'weekly' ? resetDayOfWeek : undefined,
       color: selectedColor,
       priority: hasPriority ? priority : undefined,
       time_estimate: hasTimeEstimate ? timeEstimate : undefined,
       function_type: functionType,
+      one_time_checklist: oneTimeChecklist,
     });
   };
 
@@ -324,10 +333,33 @@ export default function CreateLoopModal({
                   {/* Loop Type Toggle at Top */}
                   <View style={styles.section}>
                     <Text style={styles.label}>Loop Recurrence</Text>
-                    <LoopTypeToggle
-                      activeTab={type}
-                      onChange={(newType) => setType(newType)}
-                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        const next = !oneTimeChecklist;
+                        setOneTimeChecklist(next);
+                        if (next) setType('manual');
+                      }}
+                      style={styles.simpleListToggle}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={oneTimeChecklist ? 'checkbox' : 'square-outline'}
+                        size={20}
+                        color={oneTimeChecklist ? '#FFB800' : '#94a3b8'}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.simpleListTitle}>One-time Checklist</Text>
+                        <Text style={styles.simpleListHint}>
+                          Treat this loop as a simple list with persistent checkmarks
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    <View pointerEvents={oneTimeChecklist ? 'none' : 'auto'} style={{ opacity: oneTimeChecklist ? 0.45 : 1 }}>
+                      <LoopTypeToggle
+                        activeTab={type}
+                        onChange={(newType) => setType(newType)}
+                      />
+                    </View>
                     <Text style={{ marginTop: 8, fontSize: 12, color: '#94a3b8' }}>
                       {getResetDescription()}
                     </Text>
@@ -382,7 +414,7 @@ export default function CreateLoopModal({
                     </View>
                     
                     {/* Time and Day Pickers */}
-                    {(type === 'daily' || type === 'weekdays' || type === 'weekly') && (
+                    {!oneTimeChecklist && (type === 'daily' || type === 'weekdays' || type === 'weekly') && (
                       <Animated.View
                         entering={FadeIn}
                         layout={Layout.springify()}
@@ -421,7 +453,7 @@ export default function CreateLoopModal({
                     )}
                     
                     {/* Custom Day Selector */}
-                    {type === 'custom' && (
+                    {!oneTimeChecklist && type === 'custom' && (
                       <Animated.View 
                         entering={FadeIn}
                         layout={Layout.springify()}
@@ -659,6 +691,27 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 24,
+  },
+  simpleListToggle: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
+  simpleListTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  simpleListHint: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2,
   },
   inputSection: {
     marginBottom: 20,

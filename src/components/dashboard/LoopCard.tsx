@@ -24,7 +24,7 @@ export const LoopCard: React.FC<LoopCardProps> = ({
 }) => {
   const { colors } = useTheme();
 
-  const getEmoji = (rule: string, category?: string) => {
+  const getEmoji = (rule: string | null | undefined, category?: string) => {
     if (category === 'goals') return '🏆';
     switch (rule) {
       case 'daily': return '☀️';
@@ -34,10 +34,11 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     }
   };
 
-  const getBadgeColors = (rule: string, category?: string) => {
+  const getBadgeColors = (rule: string | null | undefined, category?: string) => {
     const c = colors;
     if (category === 'goals') return [c.accent2, '#FFFFFF']; 
     
+    if (rule == null) return ['#FFB800', '#111827'];
     switch (rule) {
       case 'daily': return [c.accentYellow, '#000000']; 
       case 'weekly': return [c.accent1, '#FFFFFF'];    
@@ -46,9 +47,10 @@ export const LoopCard: React.FC<LoopCardProps> = ({
     }
   };
   
-  const getBadgeLabel = (rule: string, category?: string, functionType?: string) => {
+  const getBadgeLabel = (rule: string | null | undefined, category?: string, functionType?: string) => {
     if (functionType === 'practice') return 'Practice';
     if (category === 'goals') return 'Goal';
+    if (rule == null) return 'Simple List';
     switch (rule) {
       case 'daily': return 'Daily';
       case 'weekly': return 'Weekly';

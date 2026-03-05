@@ -25,7 +25,7 @@ export interface Loop {
   description?: string; // AI Synopsis or user description
   affiliate_link?: string; // Link to order book/training
   category?: LoopType;
-  reset_rule?: ResetRule;
+  reset_rule?: ResetRule | null;
   function_type?: FunctionType; // 'execution' | 'practice'
   custom_days?: number[]; // For custom recurrence: 0=Sun, 1=Mon, etc.
   next_reset_at?: string; // ISO date string
@@ -33,6 +33,8 @@ export interface Loop {
   is_favorite?: boolean;
   created_at?: string;
   updated_at?: string;
+  status?: 'active' | 'paused' | 'archived';
+  archived_at?: string | null;
 
   // --- Star Rating System ---
   average_rating?: number;

@@ -76,7 +76,12 @@ export const HomeScreen: React.FC = () => {
     let filtered = [...loops];
 
     if (selectedFilter !== 'all') {
-      filtered = filtered.filter(loop => loop.reset_rule === selectedFilter);
+      filtered = filtered.filter(loop => {
+        if (selectedFilter === 'manual') {
+          return loop.reset_rule === 'manual' || loop.reset_rule == null;
+        }
+        return loop.reset_rule === selectedFilter;
+      });
     }
 
     const now = new Date();
@@ -97,7 +102,7 @@ export const HomeScreen: React.FC = () => {
     };
 
     const today = filtered.filter(loop => {
-      if (loop.reset_rule !== 'manual') return true;
+      if (loop.reset_rule !== 'manual' && loop.reset_rule != null) return true;
       if (!loop.due_date) return true;
       
       const dueMidnight = getDueMidnight(loop.due_date);
@@ -143,7 +148,8 @@ export const HomeScreen: React.FC = () => {
       const { data: userLoops, error: loopsError } = await supabase
         .from('loops')
         .select('*, loop_streaks(*)')
-        .eq('owner_id', user.id);
+        .eq('owner_id', user.id)
+        .or('status.is.null,status.neq.archived');
       
       console.log('DEBUG DASHBOARD LOOPS:', userLoops?.map(l => ({ name: l.name, author: l.author_name, type: l.function_type })));
 
@@ -221,16 +227,16 @@ export const HomeScreen: React.FC = () => {
     try {
       // Determine reset rule and category
       const isGoal = data.type === 'goals';
-      const category = data.type as LoopType;
+      const category = (data.type ?? 'manual') as LoopType;
       // 'goals' uses 'manual' reset rule in DB
-      const dbResetRule = isGoal ? 'manual' : data.type;
+      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
 
       let nextResetAt: string | null = null;
-      if (data.type === 'daily' || data.type === 'weekdays') {
+      if (dbResetRule === 'daily' || dbResetRule === 'weekdays') {
         nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      } else if (data.type === 'weekly') {
+      } else if (dbResetRule === 'weekly') {
         nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-      } else if (data.type === 'custom' && data.custom_days?.length > 0) {
+      } else if (dbResetRule === 'custom' && data.custom_days?.length > 0) {
         // For custom, calculate next reset based on selected days
         nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       }
@@ -250,6 +256,7 @@ export const HomeScreen: React.FC = () => {
           due_date: data.due_date,
           reset_time: data.reset_time || '04:00:00',
           reset_day_of_week: data.reset_day_of_week,
+          function_type: data.function_type,
         })
         .select()
         .single();
@@ -280,17 +287,17 @@ export const HomeScreen: React.FC = () => {
 
     try {
       const isGoal = data.type === 'goals';
-      const category = data.type as LoopType;
-      const dbResetRule = isGoal ? 'manual' : data.type;
+      const category = (data.type ?? editingLoop.loop_type ?? 'manual') as LoopType;
+      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
 
       let nextResetAt: string | null = editingLoop.next_reset_at ?? null;
 
       if (dbResetRule === 'manual') {
         nextResetAt = null;
-      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
+      } else if (dbResetRule === 'daily' || dbResetRule === 'weekly' || dbResetRule === 'weekdays' || dbResetRule === 'custom') {
         // If type changed or next_reset_at missing, recalculate
         if (editingLoop.reset_rule !== dbResetRule || !editingLoop.next_reset_at) {
-          const days = data.type === 'weekly' ? 7 : 1;
+          const days = dbResetRule === 'weekly' ? 7 : 1;
           nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         }
       }
@@ -307,6 +314,7 @@ export const HomeScreen: React.FC = () => {
           custom_days: data.custom_days || null,
           next_reset_at: nextResetAt,
           due_date: data.due_date,
+          function_type: data.function_type,
         })
         .eq('id', editingLoop.id);
 
@@ -400,7 +408,7 @@ export const HomeScreen: React.FC = () => {
   // Calculate counts for sidebar
   const counts = {
     all: loops.length,
-    manual: loops.filter(l => l.reset_rule === 'manual').length,
+    manual: loops.filter(l => l.reset_rule === 'manual' || l.reset_rule == null).length,
     daily: loops.filter(l => l.reset_rule === 'daily').length,
     weekly: loops.filter(l => l.reset_rule === 'weekly').length,
   };

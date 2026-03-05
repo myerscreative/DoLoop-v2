@@ -44,7 +44,8 @@ import { LoopType } from '../types/loop';
 type LoopDetailScreenRouteProp = RouteProp<RootStackParamList, 'LoopDetail'>;
 type LoopDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'LoopDetail'>;
 
-const BRAND_GOLD = '#FEC00F';
+const BRAND_GOLD = '#FFB800';
+const SUCCESS_GREEN = '#10B981';
 
 export const LoopDetailScreen: React.FC = () => {
   const { colors } = useTheme();
@@ -156,9 +157,12 @@ export const LoopDetailScreen: React.FC = () => {
         };
       });
 
-      // Count only top-level tasks for loop progress
-      const completedCount = tasksWithDetails?.filter(task => task.completed && !task.is_one_time).length || 0;
-      const totalCount = tasksWithDetails?.filter(task => !task.is_one_time).length || 0;
+      const isSimpleList = loop.reset_rule == null;
+      const progressTasks = isSimpleList
+        ? (tasksWithDetails || [])
+        : (tasksWithDetails || []).filter(task => !task.is_one_time);
+      const completedCount = progressTasks.filter(task => task.completed).length;
+      const totalCount = progressTasks.length;
 
       const { data: streaks } = await supabase
         .from('loop_streaks')
@@ -213,16 +217,16 @@ export const LoopDetailScreen: React.FC = () => {
 
     try {
       const isGoal = data.type === 'goals';
-      const category = data.type as LoopType;
-      const dbResetRule = isGoal ? 'manual' : data.type;
+      const category = (data.type ?? loopData.loop_type ?? 'manual') as LoopType;
+      const dbResetRule = data.one_time_checklist ? null : (isGoal ? 'manual' : data.type);
 
       let nextResetAt: string | null = loopData.next_reset_at || null;
 
       if (dbResetRule === 'manual') {
         nextResetAt = null;
-      } else if (data.type === 'daily' || data.type === 'weekly' || data.type === 'weekdays' || data.type === 'custom') {
+      } else if (dbResetRule === 'daily' || dbResetRule === 'weekly' || dbResetRule === 'weekdays' || dbResetRule === 'custom') {
         if (loopData.reset_rule !== dbResetRule || !loopData.next_reset_at) {
-          const days = data.type === 'weekly' ? 7 : 1;
+          const days = dbResetRule === 'weekly' ? 7 : 1;
           nextResetAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
         }
       }
@@ -259,6 +263,7 @@ export const LoopDetailScreen: React.FC = () => {
     if (!loopData) return '';
     const rule = loopData.reset_rule;
 
+    if (rule == null) return 'No reset (Simple List)';
     if (rule === 'daily') return 'Daily at 8 AM';
     if (rule === 'weekdays') return 'Weekdays at 8 AM';
     if (rule === 'weekly') return 'Weekly at 8 AM';
@@ -320,8 +325,11 @@ export const LoopDetailScreen: React.FC = () => {
     const mapTask = (t: TaskWithDetails): TaskWithDetails =>
       t.id === taskId ? setCompletedRecursive(t, newCompleted) : { ...t, children: (t.children || []).map((c) => mapTask(c as TaskWithDetails)) };
     const newTasks = prev.tasks.map((t) => mapTask(t as TaskWithDetails));
-    const completedCount = newTasks.filter((t) => t.completed && !t.is_one_time).length;
-    const totalCount = newTasks.filter((t) => !t.is_one_time).length;
+    const progressTasks = prev.reset_rule == null
+      ? newTasks
+      : newTasks.filter((t) => !t.is_one_time);
+    const completedCount = progressTasks.filter((t) => t.completed).length;
+    const totalCount = progressTasks.length;
     return { ...prev, tasks: newTasks, completedCount, totalCount };
   };
 
@@ -403,8 +411,11 @@ export const LoopDetailScreen: React.FC = () => {
             children: t.children ? removeTask(t.children) : undefined,
           }));
         const newTasks = removeTask(prev.tasks);
-        const completedCount = newTasks.filter(t => t.completed && !t.is_one_time).length;
-        const totalCount = newTasks.filter(t => !t.is_one_time).length;
+        const progressTasks = prev.reset_rule == null
+          ? newTasks
+          : newTasks.filter(t => !t.is_one_time);
+        const completedCount = progressTasks.filter(t => t.completed).length;
+        const totalCount = progressTasks.length;
         return { ...prev, tasks: newTasks, completedCount, totalCount };
       });
 
@@ -432,6 +443,7 @@ export const LoopDetailScreen: React.FC = () => {
       }
 
       let savedTaskId: string | null = null;
+      const shouldForceOneTime = loopData?.reset_rule == null;
 
       if (editingTask) {
         await updateTaskExtended(editingTask.id, {
@@ -445,10 +457,7 @@ export const LoopDetailScreen: React.FC = () => {
         const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
           description: taskData.description,
-          is_one_time: taskData.is_one_time ?? false, // Default to FALSE (recurring) if undefined, but existing check uses ?? false which is fine. 
-          // User said "By default, new tasks should be is_recurring: true". 
-          // My code TaskEditModal passes isOneTime derived from state. 
-          // I will verify TaskEditModal state default.
+          is_one_time: shouldForceOneTime ? true : (taskData.is_one_time ?? false),
           completed: false,
           assigned_to: finalAssignedTo,
           priority: taskData.priority || 'none',
@@ -479,7 +488,7 @@ export const LoopDetailScreen: React.FC = () => {
                   loop_id: loopId,
                   description: sub.description,
                   completed: false,
-                  is_one_time: taskData.is_one_time ?? false,
+                  is_one_time: shouldForceOneTime ? true : (taskData.is_one_time ?? false),
                   priority: 'none',
                   parent_task_id: savedTaskId,
                   order_index: sub.order_index,
@@ -569,6 +578,7 @@ export const LoopDetailScreen: React.FC = () => {
   };
 
   const handleReloop = async () => {
+    if (loopData?.reset_rule == null) return;
     if (currentProgress < 100) {
       Alert.alert(
         'Reset Incomplete Loop?',
@@ -733,6 +743,41 @@ export const LoopDetailScreen: React.FC = () => {
     }
   };
 
+  const handleArchiveList = async () => {
+    if (!loopData) return;
+    Alert.alert(
+      'Archive this list?',
+      'This will hide the completed list from active loops. You can restore it later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive List',
+          style: 'destructive',
+          onPress: async () => {
+            const { error } = await supabase
+              .from('loops')
+              .update({
+                status: 'archived',
+                archived_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', loopId);
+            if (error) {
+              Alert.alert('Error', 'Failed to archive list');
+              return;
+            }
+            setShowLoopInfoModal(false);
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('Home');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // Removed: checkPromptVisibility useEffect
 
 
@@ -747,6 +792,7 @@ export const LoopDetailScreen: React.FC = () => {
   if (!loopData) return null;
 
   // Derived state
+  const isSimpleListMode = loopData.reset_rule == null;
   // Unified Task List - No separation
   const allTasks = loopData.tasks || [];
   const currentProgress = loopData.totalCount && loopData.totalCount > 0
@@ -859,26 +905,28 @@ export const LoopDetailScreen: React.FC = () => {
                         <Text style={[styles.sectionHeaderCount, { color: colors.textSecondary }]}> ({loopData.completedCount}/{loopData.totalCount})</Text>
                       </Text>
 
-                      <TouchableOpacity 
-                         onPress={() => {
-                           if (currentProgress < 100) {
-                               Alert.alert(
-                                   'Reset Incomplete Loop?',
-                                   'You haven\'t finished all tasks. Do you want to reset anyway?',
-                                   [
-                                       { text: 'Cancel', style: 'cancel' },
-                                       { text: 'Reset Loop', onPress: () => resetLoop() }
-                                   ]
-                               );
-                           } else {
-                               resetLoop();
-                           }
-                         }}
-                         activeOpacity={0.6}
-                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                       >
-                         <Text style={styles.resetLoopText}>Reset Loop</Text>
-                       </TouchableOpacity>
+                      {!isSimpleListMode && (
+                        <TouchableOpacity 
+                           onPress={() => {
+                             if (currentProgress < 100) {
+                                 Alert.alert(
+                                     'Reset Incomplete Loop?',
+                                     'You haven\'t finished all tasks. Do you want to reset anyway?',
+                                     [
+                                         { text: 'Cancel', style: 'cancel' },
+                                         { text: 'Reset Loop', onPress: () => resetLoop() }
+                                     ]
+                                 );
+                             } else {
+                                 resetLoop();
+                             }
+                           }}
+                           activeOpacity={0.6}
+                           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                         >
+                           <Text style={styles.resetLoopText}>Reset Loop</Text>
+                         </TouchableOpacity>
+                      )}
                     </View>
                   </View>
                 )}
@@ -1094,7 +1142,7 @@ export const LoopDetailScreen: React.FC = () => {
 
                 {/* Reloop Early & Invite Section - Consistent with plan */}
                 <View style={styles.actionSheet}>
-                  {allTasks.length > 0 && (
+                  {!isSimpleListMode && allTasks.length > 0 && (
                     <TouchableOpacity
                       style={styles.primarySheetButton}
                       onPress={handleReloop}
@@ -1105,6 +1153,16 @@ export const LoopDetailScreen: React.FC = () => {
                           ? 'Complete Checklist'
                           : (currentProgress >= 100 ? 'Reloop Now' : 'Reloop Early')}
                       </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {isSimpleListMode && currentProgress >= 100 && (
+                    <TouchableOpacity
+                      style={[styles.primarySheetButton, { backgroundColor: SUCCESS_GREEN }]}
+                      onPress={handleArchiveList}
+                    >
+                      <Ionicons name="checkmark-done-circle-outline" size={24} color="white" />
+                      <Text style={[styles.primarySheetButtonText, { color: 'white' }]}>Archive List</Text>
                     </TouchableOpacity>
                   )}
 
@@ -1234,7 +1292,7 @@ export const LoopDetailScreen: React.FC = () => {
             name: loopData.name || '',
             description: loopData.description || '',
             affiliate_link: loopData.affiliate_link || '',
-            reset_rule: loopData.reset_rule || 'manual',
+            reset_rule: loopData.reset_rule ?? null,
             color: loopData.color,
             due_date: loopData.due_date,
             function_type: loopData.function_type,

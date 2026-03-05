@@ -53,7 +53,7 @@ export default function LoopTypeToggle({ activeTab, onChange, showDescriptions =
 
   const getTabColors = (tabId: ResetRule) => {
     // Unified gold color for all recurrence options
-    return { bg: '#FFF9E6', text: '#FEC00F' }; // Light gold tint / Gold
+    return { bg: '#FFF9E6', text: '#FFB800' }; // Light gold tint / Gold
   };
 
   const activeColors = getTabColors(activeTab);

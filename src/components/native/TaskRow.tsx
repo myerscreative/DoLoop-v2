@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet, TouchableOpacity as RNTouchableOpacity } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,12 @@ import * as Haptics from 'expo-haptics';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
 import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { 
   PersonIcon, 
   RecurringIcon, 
@@ -36,7 +42,8 @@ interface TaskRowProps extends RenderItemParams<Task> {
 }
 
 const SUBTASK_INDENT = 32;
-const BRAND_GOLD = '#FEC00F';
+const BRAND_GOLD = '#FFB800';
+const SUCCESS_GREEN = '#10B981';
 const ICON_Size = 18;
 
 export const TaskRow: React.FC<TaskRowProps> = ({
@@ -56,6 +63,30 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
+  const checkedProgress = useSharedValue(task.completed ? 1 : 0);
+
+  useEffect(() => {
+    checkedProgress.value = withTiming(task.completed ? 1 : 0, { duration: 200 });
+  }, [task.completed, checkedProgress]);
+
+  const checkboxAnimatedStyle = useAnimatedStyle(() => ({
+    borderColor: interpolateColor(
+      checkedProgress.value,
+      [0, 1],
+      ['rgba(255, 255, 255, 0.2)', SUCCESS_GREEN]
+    ),
+    backgroundColor: interpolateColor(
+      checkedProgress.value,
+      [0, 1],
+      ['transparent', SUCCESS_GREEN]
+    ),
+    transform: [{ scale: 1 + checkedProgress.value * 0.05 }],
+  }));
+
+  const checkIconAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: checkedProgress.value,
+    transform: [{ scale: 0.85 + checkedProgress.value * 0.15 }],
+  }));
 
   const hasAttachments = task.attachments && task.attachments.length > 0;
   // Use task.assigned_to (ID) or task.assigned_user_id (resolved ID from join)
@@ -128,15 +159,12 @@ export const TaskRow: React.FC<TaskRowProps> = ({
               onToggle(task);
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={[
-              styles.checkbox,
-              {
-                borderColor: task.completed ? BRAND_GOLD : 'rgba(255, 255, 255, 0.2)',
-                backgroundColor: task.completed ? BRAND_GOLD : 'transparent',
-              },
-            ]}
           >
-            {task.completed && <Ionicons name="checkmark" size={14} color="white" />}
+            <Animated.View style={[styles.checkbox, checkboxAnimatedStyle]}>
+              <Animated.View style={checkIconAnimatedStyle}>
+                <Ionicons name="checkmark" size={14} color="white" />
+              </Animated.View>
+            </Animated.View>
           </RNTouchableOpacity>
 
           {/* Content: Name + Metadata */}
