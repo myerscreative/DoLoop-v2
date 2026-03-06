@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image, LayoutAnimation } from 'react-native';
+import { View, Text, Modal, TextInput, TouchableOpacity, ScrollView, Alert, Platform, StyleSheet, ActivityIndicator, Image, LayoutAnimation, KeyboardAvoidingView } from 'react-native';
 import { formatDatePST } from '../../utils/dateHelpers';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -313,12 +313,18 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 tags: selectedTags.map(t => t.id),
             }));
 
+            let bulkSaveSucceeded = true;
             if (onSaveBulk) {
-                await onSaveBulk(tasksData);
+                bulkSaveSucceeded = await onSaveBulk(tasksData);
             } else {
                 for (const t of tasksData) {
                     await onSave(t, [], pendingAttachments.length > 0 ? pendingAttachments : undefined, false);
                 }
+            }
+
+            if (!bulkSaveSucceeded) {
+                Alert.alert('Error', 'Failed to save items');
+                return;
             }
 
             if (closeModal) {
@@ -580,12 +586,20 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
   const addInputStackItem = () => {
     setInputStack(prev => [...prev, { id: Date.now().toString(), text: '' }]);
   };
+  const isCreatingMainTask = !task && taskStack.length === 0;
+  const hasValidMainEntries = inputStack.some(item => item.text.trim().length > 0);
+  const canSave = isCreatingMainTask ? hasValidMainEntries : description.trim().length > 0;
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
       onRequestClose={handleSaveAndClose}
     >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
       <View style={[styles.container, { backgroundColor: isDark ? (Platform.OS === 'web' ? 'rgba(0,0,0,0.7)' : colors.background) : (Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white') }]}>
         <View style={[styles.modalContentWrapper, { backgroundColor: isDark ? colors.structure : 'white' }]}>
         {/* Header */}
@@ -595,7 +609,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     <Ionicons name="chevron-back" size={28} color={colors.textOnPrimary} />
                  </TouchableOpacity>
             ) : (
-                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                 <TouchableOpacity onPress={handleSaveAndClose} style={styles.closeButton}>
                     <Ionicons name="close" size={28} color={colors.textOnPrimary} />
                  </TouchableOpacity>
             )}
@@ -604,17 +618,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 <Text style={[styles.headerTitle, { color: colors.textOnPrimary }]}>{taskStack.length > 0 ? 'Edit Sub-Item' : (task ? 'Item Details' : 'Add Item')}</Text>
             </View>
 
-            <TouchableOpacity 
-                onPress={() => handleSave(true)} 
-                style={[styles.saveHeaderButton, !description.trim() && { opacity: 0.5 }]}
-                disabled={saving}
-            >
-                {saving ? (
-                    <ActivityIndicator size="small" color={colors.textOnPrimary} />
-                ) : (
-                    <Text style={[styles.saveHeaderText, { color: colors.textOnPrimary }]}>Save</Text>
-                )}
-            </TouchableOpacity>
+            <View style={styles.headerActionSpacer} />
         </View>
 
         {/* Promote to top-level (only for nested/child tasks) */}
@@ -712,10 +716,6 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                                     )}
                                 </View>
                             ))}
-                            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }} onPress={addInputStackItem}>
-                                <Ionicons name="add" size={20} color="#6B7280" />
-                                <Text style={{ color: '#6B7280', fontSize: 16, marginLeft: 4, fontWeight: '500' }}>Add Another Item</Text>
-                            </TouchableOpacity>
                         </View>
                     )}
                 </View>
@@ -757,7 +757,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                             onPress={() => setShowSubtaskInput(true)}
                         >
                             <Ionicons name="add" size={18} color={colors.textSecondary} />
-                            <Text style={[styles.addSubtaskLinkText, { color: colors.textSecondary }]}>Add Sub-Item</Text>
+                            <Text style={[styles.addSubtaskLinkText, { color: colors.textSecondary }]}>Add Sub Items</Text>
                         </TouchableOpacity>
                     ) : (
                         <View style={styles.addSubtaskRow}>
@@ -790,6 +790,21 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     )}
                 </View>
             </View>
+
+            {isCreatingMainTask && (
+                <>
+                    <View style={styles.separator} />
+                    <TouchableOpacity
+                        style={styles.addAnotherItemFooterLink}
+                        onPress={addInputStackItem}
+                    >
+                        <Ionicons name="add" size={18} color={colors.textSecondary} />
+                        <Text style={[styles.addAnotherItemFooterText, { color: colors.textSecondary }]}>
+                            Add Another Item
+                        </Text>
+                    </TouchableOpacity>
+                </>
+            )}
 
             {showDetails ? (
                 <View>
@@ -1104,7 +1119,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
             <TouchableOpacity 
                 style={[styles.bottomSaveButton, { backgroundColor: saving ? (isDark ? colors.primary + '80' : '#FDE68A') : colors.primary }, saving && { shadowOpacity: 0, elevation: 0 }]}
                 onPress={() => {
-                    if (description.trim()) {
+                    if (canSave) {
                         handleSave(true);
                     } else {
                         onClose();
@@ -1116,7 +1131,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                 {saving ? (
                     <ActivityIndicator size="small" color={colors.textOnPrimary} />
                 ) : (
-                    <Text style={[styles.bottomSaveButtonText, { color: colors.textOnPrimary }]}>Save Changes</Text>
+                    <Text style={[styles.bottomSaveButtonText, { color: colors.textOnPrimary }]}>Close</Text>
                 )}
             </TouchableOpacity>
         </View>
@@ -1124,6 +1139,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
         </View>
       </View>
+      </KeyboardAvoidingView>
       <ImageViewer
         images={[
             ...existingAttachments.filter(a => a.file_type?.startsWith('image/')).map(a => ({ uri: a.file_url })),
@@ -1179,14 +1195,8 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
-  saveHeaderButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  saveHeaderText: {
-    color: '#0f172a',
-    fontSize: 17,
-    fontWeight: '700',
+  headerActionSpacer: {
+    width: 56,
   },
   content: {
     flex: 1,
@@ -1450,6 +1460,18 @@ const styles = StyleSheet.create({
   },
   addSubtaskConfirm: {
       padding: 4,
+  },
+  addAnotherItemFooterLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginLeft: 60,
+      paddingVertical: 12,
+  },
+  addAnotherItemFooterText: {
+      fontSize: 15,
+      fontWeight: '500',
+      textDecorationLine: 'underline',
   },
   // Date Picker
   datePickerContainer: {

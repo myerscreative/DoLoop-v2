@@ -271,7 +271,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     const setCompletedRecursive = (t: TaskWithDetails, completed: boolean): TaskWithDetails => ({
       ...t,
       completed,
-      completed_at: completed ? new Date().toISOString() : null,
+      completed_at: completed ? new Date().toISOString() : undefined,
       children: (t.children || []).map((c) => setCompletedRecursive(c as TaskWithDetails, completed)),
     });
     const mapTask = (t: TaskWithDetails): TaskWithDetails =>
@@ -280,6 +280,31 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     const completedCount = newTasks.filter((t) => t.completed && !t.is_one_time).length;
     const totalCount = newTasks.filter((t) => !t.is_one_time).length;
     return { ...prev, tasks: newTasks, completedCount, totalCount };
+  };
+
+  const applyOptimisticTaskUpsert = (
+    prev: LoopWithTasks | null,
+    taskPatch: TaskWithDetails,
+    mode: 'append' | 'update'
+  ): LoopWithTasks | null => {
+    if (!prev) return null;
+
+    const updateRecursive = (tasks: TaskWithDetails[]): TaskWithDetails[] =>
+      tasks.map((t) => {
+        if (t.id === taskPatch.id) return { ...t, ...taskPatch };
+        return {
+          ...t,
+          children: t.children ? updateRecursive(t.children as TaskWithDetails[]) : t.children,
+        } as TaskWithDetails;
+      });
+
+    const nextTasks = mode === 'append'
+      ? [...(prev.tasks as TaskWithDetails[]), taskPatch]
+      : updateRecursive(prev.tasks as TaskWithDetails[]);
+
+    const completedCount = nextTasks.filter((t) => t.completed && !t.is_one_time).length;
+    const totalCount = nextTasks.filter((t) => !t.is_one_time).length;
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
   };
 
   const toggleTask = async (task: Task) => {
@@ -396,6 +421,18 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
       if (editingTask) {
         await updateTaskExtended(editingTask.id, { ...taskData, assigned_to: finalAssignedTo });
         savedTaskId = editingTask.id;
+        setLoopData(prev =>
+          applyOptimisticTaskUpsert(
+            prev,
+            {
+              ...(editingTask as TaskWithDetails),
+              ...taskData,
+              assigned_to: finalAssignedTo,
+              updated_at: new Date().toISOString(),
+            } as TaskWithDetails,
+            'update'
+          )
+        );
       } else {
         const { data: newTask, error } = await supabase.from('tasks').insert({
           loop_id: loopId,
@@ -408,10 +445,23 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           notes: taskData.notes,
           time_estimate_minutes: taskData.time_estimate_minutes,
           reminder_at: taskData.reminder_at,
-        }).select('id').single();
+        }).select('*').single();
         
         if (error) throw error;
-        if (newTask) savedTaskId = newTask.id;
+        if (newTask) {
+          savedTaskId = newTask.id;
+          const optimisticTask: TaskWithDetails = {
+            ...(newTask as TaskWithDetails),
+            tag_details: taskData.tags
+              ? availableTags.filter(t => taskData.tags?.includes(t.id))
+              : [],
+            subtasks: [],
+            children: [],
+            attachments: [],
+            assigned_user_id: undefined,
+          };
+          setLoopData(prev => applyOptimisticTaskUpsert(prev, optimisticTask, 'append'));
+        }
 
         if (savedTaskId && taskData.tags && taskData.tags.length > 0) {
             await updateTaskExtended(savedTaskId, { tags: taskData.tags });
@@ -434,7 +484,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         }
       }
 
-      await loadLoopData();
+      setTimeout(() => {
+        void loadLoopData();
+      }, 1200);
       if (closeModal) {
         setModalVisible(false);
         setEditingTask(null);
@@ -470,6 +522,23 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
       });
 
       const insertedTasks = await createTasksBulk(tasksToInsert);
+
+      const optimisticTasks: TaskWithDetails[] = insertedTasks.map((inserted: any) => ({
+        ...inserted,
+        tag_details: [],
+        subtasks: [],
+        children: [],
+        attachments: [],
+        assigned_user_id: null,
+      })) as TaskWithDetails[];
+
+      setLoopData(prev => {
+        if (!prev) return prev;
+        const nextTasks = [...(prev.tasks as TaskWithDetails[]), ...optimisticTasks];
+        const completedCount = nextTasks.filter((t) => t.completed && !t.is_one_time).length;
+        const totalCount = nextTasks.filter((t) => !t.is_one_time).length;
+        return { ...prev, tasks: nextTasks, completedCount, totalCount };
+      });
       
       if (insertedTasks) {
           await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
@@ -480,7 +549,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
           }
       }
 
-      await loadLoopData();
+      setTimeout(() => {
+        void loadLoopData();
+      }, 1200);
       return true;
     } catch (error) {
       console.error('Error in bulk save:', error);

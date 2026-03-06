@@ -336,6 +336,40 @@ export const LoopDetailScreen: React.FC = () => {
     return { ...prev, tasks: newTasks, completedCount, totalCount };
   };
 
+  const recalculateProgressFromTasks = (tasks: TaskWithDetails[], resetRule: string | null | undefined) => {
+    const progressTasks = resetRule == null
+      ? tasks
+      : tasks.filter((t) => !t.is_one_time);
+    return {
+      completedCount: progressTasks.filter((t) => t.completed).length,
+      totalCount: progressTasks.length,
+    };
+  };
+
+  const applyOptimisticTaskUpsert = (
+    prev: LoopWithTasks | null,
+    taskPatch: TaskWithDetails,
+    mode: 'append' | 'update'
+  ): LoopWithTasks | null => {
+    if (!prev) return null;
+
+    const updateRecursive = (tasks: TaskWithDetails[]): TaskWithDetails[] =>
+      tasks.map((t) => {
+        if (t.id === taskPatch.id) return { ...t, ...taskPatch };
+        return {
+          ...t,
+          children: t.children ? updateRecursive(t.children as TaskWithDetails[]) : t.children,
+        } as TaskWithDetails;
+      });
+
+    const nextTasks = mode === 'append'
+      ? [...(prev.tasks as TaskWithDetails[]), taskPatch]
+      : updateRecursive(prev.tasks as TaskWithDetails[]);
+
+    const { completedCount, totalCount } = recalculateProgressFromTasks(nextTasks, prev.reset_rule);
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
+  };
+
   const toggleTask = async (task: Task) => {
     const newCompleted = !task.completed;
     if (!loopData) return;
@@ -454,13 +488,31 @@ export const LoopDetailScreen: React.FC = () => {
 
       const insertedTasks = await createTasksBulk(tasksToInsert);
 
+      const optimisticTasks: TaskWithDetails[] = insertedTasks.map((inserted: any) => ({
+        ...inserted,
+        tag_details: [],
+        subtasks: [],
+        children: [],
+        attachments: [],
+        assigned_user_id: null,
+      })) as TaskWithDetails[];
+
+      setLoopData(prev => {
+        if (!prev) return prev;
+        const mergedTasks = [...(prev.tasks as TaskWithDetails[]), ...optimisticTasks];
+        const { completedCount, totalCount } = recalculateProgressFromTasks(mergedTasks, prev.reset_rule);
+        return { ...prev, tasks: mergedTasks, completedCount, totalCount };
+      });
+
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch { /* haptics unavailable on web */ }
       const messages = ["Recipe updated! 🐝", "Ingredients added! ✨", "Items looped! 🔄"];
       setToastMessage(messages[Math.floor(Math.random() * messages.length)]);
 
-      await loadLoopData();
+      setTimeout(() => {
+        void loadLoopData();
+      }, 1200);
       console.log(`[handleSaveBulk] Saved ${insertedTasks.length} task(s) to loop ${loopId}`);
       return true;
     } catch (error: any) {
@@ -493,6 +545,18 @@ export const LoopDetailScreen: React.FC = () => {
             assigned_to: finalAssignedTo
         });
         savedTaskId = editingTask.id;
+        setLoopData(prev =>
+          applyOptimisticTaskUpsert(
+            prev,
+            {
+              ...(editingTask as TaskWithDetails),
+              ...taskData,
+              assigned_to: finalAssignedTo,
+              updated_at: new Date().toISOString(),
+            } as TaskWithDetails,
+            'update'
+          )
+        );
       } else {
         // Calculate order_index for new top-level task
         const topLevelCount = loopData?.tasks.filter(t => !t.parent_task_id).length || 0;
@@ -509,7 +573,7 @@ export const LoopDetailScreen: React.FC = () => {
           reminder_at: taskData.reminder_at,
           order_index: topLevelCount,
         })
-        .select('id')
+        .select('*')
         .single();
 
         if (error) throw error;
@@ -519,6 +583,18 @@ export const LoopDetailScreen: React.FC = () => {
             if (taskData.tags && taskData.tags.length > 0) {
                 await updateTaskExtended(newTask.id, { tags: taskData.tags });
             }
+
+            const optimisticTask: TaskWithDetails = {
+              ...(newTask as TaskWithDetails),
+              tag_details: taskData.tags
+                ? availableTags.filter(t => taskData.tags?.includes(t.id))
+                : [],
+              subtasks: [],
+              children: [],
+              attachments: [],
+              assigned_user_id: null,
+            };
+            setLoopData(prev => applyOptimisticTaskUpsert(prev, optimisticTask, 'append'));
         }
       }
 
@@ -554,7 +630,9 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      await loadLoopData();
+      setTimeout(() => {
+        void loadLoopData();
+      }, 1200);
 
       if (closeModal) {
         setModalVisible(false);
