@@ -5,11 +5,14 @@ import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Task } from '../../types/loop';
 import { PriorityBadge } from './PriorityBadge';
-import { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
+import { RenderItemParams } from 'react-native-draggable-flatlist';
 import Animated, {
+  Easing,
+  LinearTransition,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 import { 
@@ -39,6 +42,10 @@ interface TaskRowProps extends RenderItemParams<Task> {
   onDelete?: () => void;
   /** Visual variant: 'default' (dashboard) or 'modal' (inside edit modal) */
   variant?: 'default' | 'modal';
+  /** Triggers one-time task reloop exit animation. */
+  isExitingOneTime?: boolean;
+  /** Optional stagger delay for one-time exit animation. */
+  oneTimeExitDelayMs?: number;
 }
 
 const SUBTASK_INDENT = 32;
@@ -60,14 +67,42 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   onPromote,
   onDelete,
   variant = 'default',
+  isExitingOneTime = false,
+  oneTimeExitDelayMs = 0,
 }) => {
   const depth = depthProp !== undefined ? depthProp : (task.depth ?? 0);
   const isSubtask = depth > 0 || !!task.parent_task_id;
   const checkedProgress = useSharedValue(task.completed ? 1 : 0);
+  const exitOpacity = useSharedValue(1);
+  const exitTranslateX = useSharedValue(0);
+  const exitGlow = useSharedValue(0);
+  const isRowLocked = isDragActive || isExitingOneTime;
 
   useEffect(() => {
     checkedProgress.value = withTiming(task.completed ? 1 : 0, { duration: 200 });
   }, [task.completed, checkedProgress]);
+
+  useEffect(() => {
+    if (!isExitingOneTime) {
+      exitOpacity.value = 1;
+      exitTranslateX.value = 0;
+      exitGlow.value = 0;
+      return;
+    }
+
+    exitGlow.value = withDelay(
+      oneTimeExitDelayMs,
+      withTiming(1, { duration: 160, easing: Easing.out(Easing.quad) })
+    );
+    exitOpacity.value = withDelay(
+      oneTimeExitDelayMs,
+      withTiming(0, { duration: 400, easing: Easing.inOut(Easing.quad) })
+    );
+    exitTranslateX.value = withDelay(
+      oneTimeExitDelayMs,
+      withTiming(-100, { duration: 400, easing: Easing.inOut(Easing.quad) })
+    );
+  }, [isExitingOneTime, oneTimeExitDelayMs, exitGlow, exitOpacity, exitTranslateX]);
 
   const checkboxAnimatedStyle = useAnimatedStyle(() => ({
     borderColor: interpolateColor(
@@ -88,6 +123,20 @@ export const TaskRow: React.FC<TaskRowProps> = ({
     transform: [{ scale: 0.85 + checkedProgress.value * 0.15 }],
   }));
 
+  const exitAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: exitOpacity.value,
+    transform: [{ translateX: exitTranslateX.value }],
+    borderColor: interpolateColor(
+      exitGlow.value,
+      [0, 1],
+      ['rgba(255, 255, 255, 0.08)', 'rgba(255, 184, 0, 0.92)']
+    ),
+    shadowColor: '#FFB800',
+    shadowOpacity: exitGlow.value * 0.45,
+    shadowRadius: 10 + exitGlow.value * 8,
+    elevation: exitGlow.value * 8,
+  }));
+
   const hasAttachments = task.attachments && task.attachments.length > 0;
   // Use task.assigned_to (ID) or task.assigned_user_id (resolved ID from join)
   // @ts-ignore
@@ -97,7 +146,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
   const isRecurring = !task.is_one_time;
 
   return (
-    <View style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}>
+    <Animated.View
+      layout={LinearTransition.duration(240)}
+      style={isSubtask ? [styles.subtaskWrapper, { marginLeft: SUBTASK_INDENT }] : undefined}
+    >
         {isSubtask && <View style={styles.subtaskConnector} />}
         <View style={styles.rowOuter}>
     <Pressable
@@ -119,9 +171,10 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
             onPress(task, shouldExpand);
           }}
-          disabled={isDragActive}
+          disabled={isRowLocked}
           style={[
             styles.container,
+            exitAnimatedStyle,
             {
               backgroundColor: isSubtask
                 ? (variant === 'modal' ? 'rgba(0,0,0,0.05)' : 'rgba(255, 255, 255, 0.04)')
@@ -143,7 +196,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
         >
           {/* Drag Handle */}
           <TouchableOpacity 
-            onPressIn={drag}
+            onPressIn={isExitingOneTime ? undefined : drag}
             delayLongPress={100}
             style={styles.dragHandle}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -153,6 +206,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
           {/* Checkbox */}
           <RNTouchableOpacity
+            disabled={isExitingOneTime}
             onPress={(e) => {
               // Stop propagation to prevent opening the modal
               e?.stopPropagation();
@@ -256,7 +310,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
 
           </View>
         </Pressable>
-          {onDelete ? (
+          {onDelete && !isExitingOneTime ? (
             <TouchableOpacity
               onPress={() => onDelete()}
               style={styles.deleteIconButtonOuter}
@@ -266,7 +320,7 @@ export const TaskRow: React.FC<TaskRowProps> = ({
             </TouchableOpacity>
           ) : null}
         </View>
-      </View>
+      </Animated.View>
   );
 };
 

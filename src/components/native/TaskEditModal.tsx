@@ -598,6 +598,7 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         style={{ flex: 1 }}
       >
       <View style={[styles.container, { backgroundColor: isDark ? (Platform.OS === 'web' ? 'rgba(0,0,0,0.7)' : colors.background) : (Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white') }]}>
@@ -815,11 +816,14 @@ export const TaskEditModal: React.FC<TaskEditModalProps> = ({
                     {/* Loop Type */}
                     <OptionRow
                         customIcon={<RecurringIcon size={22} color={!isOneTime ? '#FEC00F' : colors.text} />}
-                        label="Set as Loop item or one time task"
-                        value={isOneTime ? "One time task" : "Loop item"}
+                        label="One-time item"
+                        value={isOneTime ? "One-time item" : "Recurring item"}
                         onPress={() => setIsOneTime(!isOneTime)}
                         // No clear for this, it's a toggle
                     />
+                    <Text style={[styles.optionHelperText, { color: colors.textSecondary }]}>
+                      One-time items are removed from the list when you Reloop.
+                    </Text>
                     <View style={[styles.separator, { backgroundColor: colors.border }]} />
 
                     {/* Due Date */}
@@ -1160,12 +1164,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, // Inset modal content from screen edges
     backgroundColor: Platform.OS === 'web' ? 'rgba(0,0,0,0.5)' : 'white',
     alignItems: Platform.OS === 'web' ? 'center' : undefined,
-    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end', // On mobile, slide from bottom
+    justifyContent: 'flex-end', // Keep sheet anchored above keyboard
   },
   modalContentWrapper: {
       width: '100%',
       maxWidth: 800,
-      maxHeight: Platform.OS === 'web' ? '90%' : '95%', // Use maxHeight to avoid gap
+      maxHeight: Platform.OS === 'web' ? '82%' : '88%', // Keep header/input visible when keyboard opens
       backgroundColor: 'white',
       borderRadius: Platform.OS === 'web' ? 16 : 0,
       borderTopLeftRadius: 20, // Nice rounded corners for mobile bottom sheet feel
@@ -1174,7 +1178,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FEC00F',
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
+    paddingTop: 20,
     paddingBottom: 20,
     paddingHorizontal: 16,
     flexDirection: 'row',
@@ -1340,6 +1344,14 @@ const styles = StyleSheet.create({
   },
   optionClear: {
       padding: 4,
+  },
+  optionHelperText: {
+      marginTop: -8,
+      marginBottom: 14,
+      marginLeft: 60,
+      marginRight: 20,
+      fontSize: 13,
+      lineHeight: 18,
   },
   noteSection: {
       

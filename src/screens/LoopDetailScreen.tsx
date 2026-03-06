@@ -26,7 +26,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Task, LoopWithTasks, TaskWithDetails, Tag, PendingAttachment, Subtask } from '../types/loop';
 import { DraggableTaskList } from '../components/native/DraggableTaskList';
-import { LoopIcon } from '../components/native/LoopIcon';
 import { TaskEditModal } from '../components/native/TaskEditModal';
 import { Toast } from '../components/native/Toast';
 import { InviteModal } from '../components/native/InviteModal';
@@ -39,6 +38,8 @@ import { flattenTreeForSync } from '../lib/treeHelpers';
 import { getLoopMemberProfiles, LoopMemberProfile } from '../lib/profileHelpers';
 import { useSharedMomentum } from '../hooks/useSharedMomentum';
 import { LoopType } from '../types/loop';
+import { Easing, runOnJS, useSharedValue, withTiming } from 'react-native-reanimated';
+import { AnimatedCircularProgress } from '../components/native/AnimatedCircularProgress';
 // Removed: StarRatingInput
 // Removed: getUserRating
 
@@ -70,9 +71,131 @@ export const LoopDetailScreen: React.FC = () => {
   const [showMemberList, setShowMemberList] = useState(false);
   const [isEditingLoop, setEditingLoop] = useState(false);
   const [savingLoop, setSavingLoop] = useState(false);
+  const [isReloopAnimating, setIsReloopAnimating] = useState(false);
+  const progressRingFill = useSharedValue(0);
+  const [exitingOneTimeTaskIds, setExitingOneTimeTaskIds] = useState<Set<string>>(new Set());
+  const [oneTimeExitDelayById, setOneTimeExitDelayById] = useState<Record<string, number>>({});
 
   // Removed: isSubmittingRating, showRatingPrompt
   // Removed: memberJoinedAt, lastDismissedPrompt
+
+  const currentProgress = loopData?.totalCount && loopData.totalCount > 0
+    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
+    : 0;
+
+  useEffect(() => {
+    if (isReloopAnimating) return;
+    progressRingFill.value = withTiming(currentProgress, {
+      duration: 600,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [currentProgress, isReloopAnimating, progressRingFill]);
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const computeNextResetAt = (rule: string | null | undefined): string | null => {
+    if (!rule || rule === 'manual') return null;
+    const now = Date.now();
+    if (rule === 'weekly') return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    return new Date(now + 24 * 60 * 60 * 1000).toISOString();
+  };
+
+  const flattenTaskOrder = (tasks: TaskWithDetails[]): TaskWithDetails[] => {
+    const ordered: TaskWithDetails[] = [];
+    tasks.forEach((task) => {
+      ordered.push(task);
+      if (task.children?.length) {
+        ordered.push(...flattenTaskOrder(task.children as TaskWithDetails[]));
+      }
+    });
+    return ordered;
+  };
+
+  const applyRecurringResetStep = (prev: LoopWithTasks | null, task: TaskWithDetails): LoopWithTasks | null => {
+    if (!prev) return null;
+
+    const updateTree = (items: TaskWithDetails[]): TaskWithDetails[] =>
+      items
+        .map((item) => {
+          if (item.id === task.id) {
+            return { ...item, completed: false, completed_at: undefined } as TaskWithDetails;
+          }
+          return {
+            ...item,
+            children: item.children ? updateTree(item.children as TaskWithDetails[]) : item.children,
+          } as TaskWithDetails;
+        });
+
+    const nextTasks = updateTree(prev.tasks as TaskWithDetails[]);
+    const { completedCount, totalCount } = recalculateProgressFromTasks(nextTasks, prev.reset_rule);
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
+  };
+
+  const removeTasksByIds = (prev: LoopWithTasks | null, taskIdsToRemove: Set<string>): LoopWithTasks | null => {
+    if (!prev || taskIdsToRemove.size === 0) return prev;
+
+    const filterTree = (items: TaskWithDetails[]): TaskWithDetails[] =>
+      items
+        .filter((item) => !taskIdsToRemove.has(item.id))
+        .map((item) => ({
+          ...item,
+          children: item.children ? filterTree(item.children as TaskWithDetails[]) : item.children,
+        })) as TaskWithDetails[];
+
+    const nextTasks = filterTree(prev.tasks as TaskWithDetails[]);
+    const { completedCount, totalCount } = recalculateProgressFromTasks(nextTasks, prev.reset_rule);
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
+  };
+
+  const runRecurringResetWave = async (tasks: TaskWithDetails[]) => {
+    let previousDelay = 0;
+    for (const [index, task] of tasks.entries()) {
+      const delay = index * 50;
+      await wait(delay - previousDelay);
+      previousDelay = delay;
+
+      setLoopData((prev) => applyRecurringResetStep(prev, task));
+      if (task.completed) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  };
+
+  const runOneTimeExitAnimation = async (tasks: TaskWithDetails[]) => {
+    if (tasks.length === 0) return;
+
+    const delayMap = tasks.reduce<Record<string, number>>((acc, task, index) => {
+      acc[task.id] = index * 60;
+      return acc;
+    }, {});
+    const taskIds = new Set(tasks.map((task) => task.id));
+
+    setOneTimeExitDelayById(delayMap);
+    setExitingOneTimeTaskIds(taskIds);
+
+    const maxDelay = Math.max(...Object.values(delayMap), 0);
+    await wait(maxDelay + 400);
+    setLoopData((prev) => removeTasksByIds(prev, taskIds));
+    setExitingOneTimeTaskIds(new Set());
+    setOneTimeExitDelayById({});
+  };
+
+  const animateProgressDrainToZero = async () => {
+    setIsReloopAnimating(true);
+    await new Promise<void>((resolve) => {
+      progressRingFill.value = withTiming(
+        0,
+        {
+          duration: 1000,
+          easing: Easing.inOut(Easing.quad),
+        },
+        () => {
+          runOnJS(resolve)();
+        }
+      );
+    });
+    setIsReloopAnimating(false);
+  };
 
 
   // NEW: Loop Info Modal state
@@ -716,6 +839,12 @@ export const LoopDetailScreen: React.FC = () => {
   const resetLoop = async () => {
     try {
       await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
+      const orderedTasks = flattenTaskOrder((loopData?.tasks || []) as TaskWithDetails[]);
+      const recurringTasks = orderedTasks.filter((task) => !task.is_one_time);
+      const oneTimeTasks = orderedTasks.filter((task) => task.is_one_time);
+      const recurringWavePromise = runRecurringResetWave(recurringTasks);
+      const oneTimeExitPromise = runOneTimeExitAnimation(oneTimeTasks);
+      const drainPromise = animateProgressDrainToZero();
 
       if (loopData && loopData.function_type === 'practice' && loopData.completedCount === loopData.totalCount) {
           const today = new Date().toISOString().split('T')[0];
@@ -820,7 +949,9 @@ export const LoopDetailScreen: React.FC = () => {
         }
       }
 
-      // Reset recurring tasks
+      await Promise.all([recurringWavePromise, oneTimeExitPromise, drainPromise]);
+
+      // Persist recurring reset after wave animation completes.
       const { error } = await supabase
         .from('tasks')
         .update({
@@ -831,24 +962,17 @@ export const LoopDetailScreen: React.FC = () => {
 
       if (error) throw error;
 
-      // Delete completed one-time tasks
-      // Note: We only delete COMPLETED one-time tasks. Uncompleted ones stay.
+      // Persist one-time removal after exit animation completes.
       const { error: deleteError } = await supabase
         .from('tasks')
         .delete()
         .eq('loop_id', loopId)
-        .eq('is_one_time', true)
-        .eq('completed', true);
+        .eq('is_one_time', true);
       
       if (deleteError) throw deleteError;
 
       if (loopData && loopData.reset_rule !== 'manual') {
-        let nextResetAt: string;
-        if (loopData.reset_rule === 'daily') {
-          nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        } else {
-          nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        }
+        const nextResetAt = computeNextResetAt(loopData.reset_rule);
 
         await supabase
           .from('loops')
@@ -859,6 +983,8 @@ export const LoopDetailScreen: React.FC = () => {
       await loadLoopData();
       setShowLoopInfoModal(false); // Close modal after reloop
     } catch {
+      setExitingOneTimeTaskIds(new Set());
+      setOneTimeExitDelayById({});
       Alert.alert('Error', 'Failed to reset loop');
     }
   };
@@ -914,9 +1040,6 @@ export const LoopDetailScreen: React.FC = () => {
   const isSimpleListMode = loopData.reset_rule == null;
   // Unified Task List - No separation
   const allTasks = loopData.tasks || [];
-  const currentProgress = loopData.totalCount && loopData.totalCount > 0
-    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
-    : 0;
 
   // Get category label
   const getCategoryLabel = () => {
@@ -958,6 +1081,8 @@ export const LoopDetailScreen: React.FC = () => {
             onPromoteTask={handlePromoteTask}
             onEditTask={handleEditTask}
             onToggleTask={toggleTask}
+            exitingOneTimeTaskIds={exitingOneTimeTaskIds}
+            oneTimeExitDelayById={oneTimeExitDelayById}
             ListHeaderComponent={
               <View>
                 {/* Header Row: Back + Title + Icons */}
@@ -981,9 +1106,14 @@ export const LoopDetailScreen: React.FC = () => {
                 {/* Compact Header: Icon + Title + Actions in one row */}
                 <View style={styles.compactHeader}>
                   <View style={styles.compactRingWrapper}>
-                    <LoopIcon
+                    <AnimatedCircularProgress
                       size={48}
-                      color={loopData.color || colors.primary}
+                      width={5}
+                      fill={currentProgress}
+                      animatedFillValue={progressRingFill}
+                      animationDuration={600}
+                      tintColor={loopData.color || colors.primary}
+                      backgroundColor={colors.structure}
                     />
                     <View style={styles.ringCountOverlay}>
                       <Text style={[styles.compactRingCountText, { color: colors.text }]}>
@@ -1061,7 +1191,7 @@ export const LoopDetailScreen: React.FC = () => {
                 <BeeIcon size={100} />
                 <Text style={styles.emptyTitle}>No steps yet</Text>
                 <Text style={styles.emptySubtitle}>
-                  Tap the + button to add your first step
+                  Tap the + button to add your first item
                 </Text>
                 <TouchableOpacity
                   style={styles.emptyAddButton}
@@ -1083,7 +1213,7 @@ export const LoopDetailScreen: React.FC = () => {
                   >
                     <View style={styles.addStepInner}>
                       <Ionicons name="add" size={20} color={colors.primary} />
-                      <Text style={styles.addStepText}>Add new step</Text>
+                      <Text style={styles.addStepText}>Add new item</Text>
                     </View>
                   </TouchableOpacity>
                 )}

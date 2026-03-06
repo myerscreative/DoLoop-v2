@@ -48,7 +48,75 @@ import { useSharedMomentum } from '../../hooks/useSharedMomentum';
 import { LoopProvenance } from '../loops/LoopProvenance';
 import { StarRatingInput } from '../native/StarRatingInput';
 import { getUserRating, submitRating, getLoopRatingStats } from '../../lib/ratingHelpers';
+import { Easing, runOnJS, useSharedValue, withTiming } from 'react-native-reanimated';
 const BRAND_GOLD = '#FEC00F';
+
+const motion = Platform.OS === 'web' ? require('framer-motion').motion : null;
+
+interface WebMotionRingProps {
+  size: number;
+  width: number;
+  fill: number; // 0-100
+  tintColor: string;
+  backgroundColor: string;
+  children?: React.ReactNode;
+}
+
+const WebMotionRing: React.FC<WebMotionRingProps> = ({
+  size,
+  width,
+  fill,
+  tintColor,
+  backgroundColor,
+  children,
+}) => {
+  if (Platform.OS !== 'web' || !motion) return null;
+
+  const radius = (size - width) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const clampedFill = Math.max(0, Math.min(100, fill));
+  const dashOffset = circumference - (clampedFill / 100) * circumference;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+      {React.createElement(
+        motion.svg,
+        {
+          width: size,
+          height: size,
+          style: { position: 'absolute', overflow: 'visible' },
+        },
+        <>
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={backgroundColor}
+            strokeWidth={width}
+            fill="transparent"
+          />
+          {React.createElement(motion.circle, {
+            cx: size / 2,
+            cy: size / 2,
+            r: radius,
+            stroke: tintColor,
+            strokeWidth: width,
+            fill: 'transparent',
+            strokeLinecap: 'round',
+            strokeDasharray: `${circumference} ${circumference}`,
+            initial: false,
+            animate: { strokeDashoffset: dashOffset },
+            transition: { duration: 1, ease: 'easeInOut' },
+            transform: `rotate(-90 ${size / 2} ${size / 2})`,
+          })}
+        </>
+      )}
+      <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center', maxWidth: size * 0.7 }}>
+        {children}
+      </View>
+    </View>
+  );
+};
 
 // Props: accepts loopId directly
 interface DesktopLoopDetailPanelProps {
@@ -82,6 +150,131 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
   const [expandedHints, setExpandedHints] = useState<Set<string>>(new Set());
   const [userRating, setUserRating] = useState<number>(0);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+  const [isReloopAnimating, setIsReloopAnimating] = useState(false);
+  const [webRingFill, setWebRingFill] = useState(0);
+  const nativeRingFill = useSharedValue(0);
+  const [exitingOneTimeTaskIds, setExitingOneTimeTaskIds] = useState<Set<string>>(new Set());
+  const [oneTimeExitDelayById, setOneTimeExitDelayById] = useState<Record<string, number>>({});
+
+  const currentProgress = loopData?.totalCount && loopData.totalCount > 0
+    ? Math.round((loopData.completedCount / loopData.totalCount) * 100)
+    : 0;
+
+  useEffect(() => {
+    if (isReloopAnimating) return;
+    setWebRingFill(currentProgress);
+    nativeRingFill.value = withTiming(currentProgress, {
+      duration: 600,
+      easing: Easing.inOut(Easing.ease),
+    });
+  }, [currentProgress, isReloopAnimating, nativeRingFill]);
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const computeNextResetAt = (rule: string | null | undefined): string | null => {
+    if (!rule || rule === 'manual') return null;
+    const now = Date.now();
+    if (rule === 'weekly') return new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString();
+    return new Date(now + 24 * 60 * 60 * 1000).toISOString();
+  };
+
+  const flattenTaskOrder = (tasks: TaskWithDetails[]): TaskWithDetails[] => {
+    const ordered: TaskWithDetails[] = [];
+    tasks.forEach((task) => {
+      ordered.push(task);
+      if (task.children?.length) {
+        ordered.push(...flattenTaskOrder(task.children as TaskWithDetails[]));
+      }
+    });
+    return ordered;
+  };
+
+  const applyRecurringResetStep = (prev: LoopWithTasks | null, task: TaskWithDetails): LoopWithTasks | null => {
+    if (!prev) return null;
+
+    const updateTree = (items: TaskWithDetails[]): TaskWithDetails[] =>
+      items
+        .map((item) => {
+          if (item.id === task.id) {
+            return { ...item, completed: false, completed_at: undefined } as TaskWithDetails;
+          }
+          return {
+            ...item,
+            children: item.children ? updateTree(item.children as TaskWithDetails[]) : item.children,
+          } as TaskWithDetails;
+        });
+
+    const nextTasks = updateTree(prev.tasks as TaskWithDetails[]);
+    const completedCount = nextTasks.filter((t) => t.completed && !t.is_one_time).length;
+    const totalCount = nextTasks.filter((t) => !t.is_one_time).length;
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
+  };
+
+  const removeTasksByIds = (prev: LoopWithTasks | null, taskIdsToRemove: Set<string>): LoopWithTasks | null => {
+    if (!prev || taskIdsToRemove.size === 0) return prev;
+
+    const filterTree = (items: TaskWithDetails[]): TaskWithDetails[] =>
+      items
+        .filter((item) => !taskIdsToRemove.has(item.id))
+        .map((item) => ({
+          ...item,
+          children: item.children ? filterTree(item.children as TaskWithDetails[]) : item.children,
+        })) as TaskWithDetails[];
+
+    const nextTasks = filterTree(prev.tasks as TaskWithDetails[]);
+    const completedCount = nextTasks.filter((t) => t.completed && !t.is_one_time).length;
+    const totalCount = nextTasks.filter((t) => !t.is_one_time).length;
+    return { ...prev, tasks: nextTasks, completedCount, totalCount };
+  };
+
+  const runRecurringResetWave = async (tasks: TaskWithDetails[]) => {
+    let previousDelay = 0;
+    for (const [index, task] of tasks.entries()) {
+      const delay = index * 50;
+      await wait(delay - previousDelay);
+      previousDelay = delay;
+
+      setLoopData((prev) => applyRecurringResetStep(prev, task));
+      if (task.completed) {
+        await safeHapticImpact(Haptics.ImpactFeedbackStyle.Light);
+      }
+    }
+  };
+
+  const runOneTimeExitAnimation = async (tasks: TaskWithDetails[]) => {
+    if (tasks.length === 0) return;
+
+    const delayMap = tasks.reduce<Record<string, number>>((acc, task, index) => {
+      acc[task.id] = index * 60;
+      return acc;
+    }, {});
+    const taskIds = new Set(tasks.map((task) => task.id));
+
+    setOneTimeExitDelayById(delayMap);
+    setExitingOneTimeTaskIds(taskIds);
+
+    const maxDelay = Math.max(...Object.values(delayMap), 0);
+    await wait(maxDelay + 400);
+    setLoopData((prev) => removeTasksByIds(prev, taskIds));
+    setExitingOneTimeTaskIds(new Set());
+    setOneTimeExitDelayById({});
+  };
+
+  const animateProgressDrainToZero = async () => {
+    setIsReloopAnimating(true);
+    setWebRingFill(0);
+    await new Promise<void>((resolve) => {
+      nativeRingFill.value = withTiming(
+        0,
+        {
+          duration: 1000,
+          easing: Easing.inOut(Easing.quad),
+        },
+        () => runOnJS(resolve)()
+      );
+    });
+    setIsReloopAnimating(false);
+  };
 
   // Helper formatting
   const formatNextReset = (nextResetAt: string | null) => {
@@ -605,6 +798,12 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
       }
       
       await safeHapticImpact(Haptics.ImpactFeedbackStyle.Medium);
+      const orderedTasks = flattenTaskOrder((loopData.tasks || []) as TaskWithDetails[]);
+      const recurringTasks = orderedTasks.filter((task) => !task.is_one_time);
+      const oneTimeTasks = orderedTasks.filter((task) => task.is_one_time);
+      const recurringWavePromise = runRecurringResetWave(recurringTasks);
+      const oneTimeExitPromise = runOneTimeExitAnimation(oneTimeTasks);
+      const drainPromise = animateProgressDrainToZero();
 
       // === PER-LOOP STREAK LOGIC for Practice Loops ===
       if (loopData.function_type === 'practice' && loopData.completedCount === loopData.totalCount) {
@@ -643,7 +842,9 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
         // For consistency we should probably include it, but the per-loop streak is most important for Practice Mode
       }
 
-      // Reset tasks
+      await Promise.all([recurringWavePromise, oneTimeExitPromise, drainPromise]);
+
+      // Persist recurring reset after wave animation completes.
       const { error } = await supabase
         .from('tasks')
         .update({ completed: false })
@@ -652,14 +853,18 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
       if (error) throw error;
 
+      // Persist one-time removal after exit animation completes.
+      const { error: deleteError } = await supabase
+        .from('tasks')
+        .delete()
+        .eq('loop_id', loopId)
+        .eq('is_one_time', true);
+
+      if (deleteError) throw deleteError;
+
       // Update next reset time if scheduled
       if (loopData.reset_rule !== 'manual') {
-        let nextResetAt: string;
-        if (loopData.reset_rule === 'daily') {
-          nextResetAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-        } else { // weekly or others
-          nextResetAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        }
+        const nextResetAt = computeNextResetAt(loopData.reset_rule);
 
         await supabase
           .from('loops')
@@ -669,6 +874,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
 
       await loadLoopData();
     } catch (err) {
+      setExitingOneTimeTaskIds(new Set());
+      setOneTimeExitDelayById({});
       console.error('Reset error', err);
       Alert.alert('Error', 'Failed to reset loop');
     }
@@ -703,7 +910,6 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
     );
   }
 
-  const currentProgress = loopData.totalCount > 0 ? Math.round((loopData.completedCount / loopData.totalCount) * 100) : 0;
   /** Recurring tasks as tree (top-level with .children) for TaskTree */
   const recurringTasks = loopData.tasks.filter((task: Task) => !task.is_one_time) as Task[];
   const oneTimeTasks = loopData.tasks.filter((task: Task) => task.is_one_time) as Task[];
@@ -757,19 +963,36 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             {loopData.function_type === 'practice' ? (
                 <MomentumRing size={100} strokeWidth={10} streak={loopData.currentStreak || 0} />
             ) : (
-                <AnimatedCircularProgress
-                size={100}
-                width={10}
-                fill={currentProgress}
-                tintColor={colors.primary}
-                backgroundColor={colors.structure}
-                >
-                <View style={styles.progressCircle}>
-                <Text style={[styles.progressCircleStatus, { color: colors.text }]}>
-                  {Math.round(currentProgress)}% Done
-                </Text>
-                </View>
-                </AnimatedCircularProgress>
+                Platform.OS === 'web' ? (
+                  <WebMotionRing
+                    size={100}
+                    width={10}
+                    fill={webRingFill}
+                    tintColor={colors.primary}
+                    backgroundColor={colors.structure}
+                  >
+                    <View style={styles.progressCircle}>
+                      <Text style={[styles.progressCircleStatus, { color: colors.text }]}>
+                        {Math.round(currentProgress)}% Done
+                      </Text>
+                    </View>
+                  </WebMotionRing>
+                ) : (
+                  <AnimatedCircularProgress
+                    size={100}
+                    width={10}
+                    fill={currentProgress}
+                    animatedFillValue={nativeRingFill}
+                    tintColor={colors.primary}
+                    backgroundColor={colors.structure}
+                  >
+                    <View style={styles.progressCircle}>
+                      <Text style={[styles.progressCircleStatus, { color: colors.text }]}>
+                        {Math.round(currentProgress)}% Done
+                      </Text>
+                    </View>
+                  </AnimatedCircularProgress>
+                )
             )}
             
             <View style={styles.progressTextContainer}>
@@ -828,6 +1051,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
               onPromoteTask={handlePromoteTask}
               onEditTask={handleEditTask}
               onToggleTask={toggleTask}
+              exitingOneTimeTaskIds={exitingOneTimeTaskIds}
+              oneTimeExitDelayById={oneTimeExitDelayById}
             />
           )}
 
@@ -836,7 +1061,7 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
             onPress={openAddTaskModal}
           >
             <Ionicons name="add" size={18} color={colors.primary} />
-            <Text style={[styles.addTaskText, { color: colors.primary }]}>Add new step</Text>
+            <Text style={[styles.addTaskText, { color: colors.primary }]}>Add new item</Text>
           </TouchableOpacity>
         </View>
 
@@ -870,6 +1095,8 @@ export const DesktopLoopDetailPanel: React.FC<DesktopLoopDetailPanelProps> = ({
               onPromoteTask={handlePromoteTask}
               onEditTask={handleEditTask}
               onToggleTask={toggleTask}
+              exitingOneTimeTaskIds={exitingOneTimeTaskIds}
+              oneTimeExitDelayById={oneTimeExitDelayById}
             />
           </View>
         )}

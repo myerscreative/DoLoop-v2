@@ -6,6 +6,7 @@ import Animated, {
   useAnimatedProps,
   withTiming,
   Easing,
+  type SharedValue,
 } from 'react-native-reanimated';
 
 interface AnimatedCircularProgressProps {
@@ -15,6 +16,12 @@ interface AnimatedCircularProgressProps {
   tintColor: string;
   backgroundColor: string;
   children?: React.ReactNode;
+  /**
+   * Optional external shared value (0-100).
+   * When provided, the ring stroke reads directly from this animated value.
+   */
+  animatedFillValue?: SharedValue<number>;
+  animationDuration?: number;
 }
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
@@ -26,20 +33,25 @@ export const AnimatedCircularProgress: React.FC<AnimatedCircularProgressProps> =
   tintColor,
   backgroundColor,
   children,
+  animatedFillValue,
+  animationDuration = 600,
 }) => {
   const radius = (size - width) / 2;
   const circumference = radius * 2 * Math.PI;
-  const progressValue = useSharedValue(0);
+  const internalProgressValue = useSharedValue(fill);
 
   useEffect(() => {
-    progressValue.value = withTiming(fill / 100, { 
-      duration: 600,
+    if (animatedFillValue) return;
+    internalProgressValue.value = withTiming(fill, {
+      duration: animationDuration,
       easing: Easing.inOut(Easing.ease),
     });
-  }, [fill, progressValue]);
+  }, [fill, animationDuration, animatedFillValue, internalProgressValue]);
 
   const animatedProps = useAnimatedProps(() => {
-    const strokeDashoffset = circumference - progressValue.value * circumference;
+    const sourceFill = animatedFillValue ? animatedFillValue.value : internalProgressValue.value;
+    const normalizedFill = Math.min(Math.max(sourceFill, 0), 100) / 100;
+    const strokeDashoffset = circumference - normalizedFill * circumference;
     return {
       strokeDashoffset,
     };

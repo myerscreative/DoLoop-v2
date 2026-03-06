@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { StyleSheet } from 'react-native';
 import DraggableFlatList, { RenderItemParams, ScaleDecorator } from 'react-native-draggable-flatlist';
 import { Task } from '../../types/loop';
 import { TaskRow } from './TaskRow';
@@ -23,6 +22,10 @@ interface TaskTreeProps {
   ListEmptyComponent?: React.ReactElement;
   /** Whether the list should scroll (default true) */
   scrollEnabled?: boolean;
+  /** One-time tasks currently animating out during reloop. */
+  exitingOneTimeTaskIds?: Set<string>;
+  /** Staggered exit delay map in milliseconds by task ID. */
+  oneTimeExitDelayById?: Record<string, number>;
 }
 
 export const TaskTree: React.FC<TaskTreeProps> = ({ 
@@ -35,7 +38,9 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
   ListHeaderComponent,
   ListFooterComponent,
   ListEmptyComponent,
-  scrollEnabled = true
+  scrollEnabled = true,
+  exitingOneTimeTaskIds,
+  oneTimeExitDelayById,
 }) => {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   
@@ -77,6 +82,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
           onToggleExpand={() => toggleExpanded(item.id)}
           onPromote={isSubtask && onPromoteTask ? () => onPromoteTask(item.id) : undefined}
           onDelete={onDeleteTask ? () => onDeleteTask(item) : undefined}
+          isExitingOneTime={!!item.is_one_time && !!exitingOneTimeTaskIds?.has(item.id)}
+          oneTimeExitDelayMs={oneTimeExitDelayById?.[item.id] ?? 0}
         />
       </ScaleDecorator>
     );
